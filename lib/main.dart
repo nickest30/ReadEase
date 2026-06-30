@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'screens/shared/splash_screen.dart';
 
 void main() {
   runApp(const ReadEaseApp());
@@ -19,19 +20,10 @@ class ReadEaseApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Nunito',
       ),
-      home: const Scaffold(
-        backgroundColor: Color(0xFFFCF0D9),
-        body: Center(
-          child: Text(
-            'ReadEase 🎉',
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2E3A3A),
-            ),
-          ),
-        ),
-      ),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const SplashScreen(),
+      },
     );
   }
 }
