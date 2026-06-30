@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/shared/splash_screen.dart';
+import 'screens/shared/role_selection_screen.dart';
 
 void main() {
   runApp(const ReadEaseApp());
@@ -23,6 +24,7 @@ class ReadEaseApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
+        '/role-selection': (context) => const RoleSelectionScreen(),
       },
     );
   }
