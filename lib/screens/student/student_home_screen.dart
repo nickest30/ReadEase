@@ -70,7 +70,12 @@ class StudentHomeScreen extends StatelessWidget {
                 label: 'My Badges',
                 sublabel: 'See what you earned',
                 color: const Color(0xFFE8A93B),
-                onTap: () {},
+                onTap: () {
+                  Navigator.of(context).pushNamed(
+                    '/badges', 
+                    arguments: student
+                  );
+                },
               ),
               const SizedBox(height: 14),
               _HomeCard(
@@ -78,7 +83,12 @@ class StudentHomeScreen extends StatelessWidget {
                 label: 'Progress',
                 sublabel: 'Track your journey',
                 color: const Color(0xFF2BAFA0),
-                onTap: () {},
+                onTap: () {
+                  Navigator.of(context).pushNamed(
+                    '/progress', 
+                    arguments: student
+                  );
+                },
               ),
               const SizedBox(height: 14),
               _HomeCard(
@@ -86,7 +96,12 @@ class StudentHomeScreen extends StatelessWidget {
                 label: 'Leaderboard',
                 sublabel: 'See your ranking',
                 color: const Color(0xFF8B5FBF),
-                onTap: () {},
+                onTap: () {
+                  Navigator.of(context).pushNamed(
+                    '/leaderboard', 
+                    arguments: student
+                  );
+                },
               ),
               const SizedBox(height: 14),
               _HomeCard(
@@ -94,7 +109,12 @@ class StudentHomeScreen extends StatelessWidget {
                 label: 'Settings',
                 sublabel: 'Edit profile and audio',
                 color: const Color(0xFF6B7878),
-                onTap: () {},
+                onTap: () {
+                  Navigator.of(context).pushNamed(
+                    '/settings', 
+                    arguments: student
+                  );
+                },
               ),
 
               const Spacer(),

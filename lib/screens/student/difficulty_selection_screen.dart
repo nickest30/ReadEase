@@ -11,7 +11,6 @@ class DifficultySelectionScreen extends StatefulWidget {
 
 class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
   bool _loading = true;
-  final bool _easyUnlocked = true; // always unlocked
   bool _mediumUnlocked = false;
   bool _hardUnlocked = false;
 

@@ -12,6 +12,10 @@ import 'screens/student/lesson_screen.dart';
 import 'screens/student/quiz_screen.dart';
 import 'screens/student/results_screen.dart';
 import 'utils/seed_data.dart';
+import 'screens/student/progress_dashboard_screen.dart';
+import 'screens/student/badge_collection_screen.dart';
+import 'screens/student/leaderboard_screen.dart';
+import 'screens/student/student_settings_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,6 +52,10 @@ class ReadEaseApp extends StatelessWidget {
         '/lesson': (context) => const LessonScreen(),
         '/quiz': (context) => const QuizScreen(),
         '/results': (context) => const ResultsScreen(),
+        '/progress': (context) => const ProgressDashboardScreen(),
+        '/badges': (context) => const BadgeCollectionScreen(),
+        '/leaderboard': (context) => const LeaderboardScreen(),
+        '/settings': (context) => const StudentSettingsScreen(),
       },
     );
   }
