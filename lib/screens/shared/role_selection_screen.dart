@@ -129,7 +129,7 @@ class _RoleButton extends StatelessWidget {
           backgroundColor: color,
           foregroundColor: Colors.white,
           elevation: 3,
-          shadowColor: color.withOpacity(0.4),
+          shadowColor: color.withValues(alpha: 0.4),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),

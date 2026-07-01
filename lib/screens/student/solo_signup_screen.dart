@@ -67,6 +67,8 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
       final createdStudent = await DatabaseService.instance
           .getStudentById(newId);
 
+      if (!mounted) return;
+
       Navigator.of(context).pushReplacementNamed(
         '/set-pin',
         arguments: createdStudent,

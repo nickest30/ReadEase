@@ -1,9 +1,10 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/student.dart';
+import '../models/word.dart';
+import '../models/quiz_result.dart';
 
 class DatabaseService {
-  // Singleton pattern: only one DatabaseService exists for the whole app
   static final DatabaseService instance = DatabaseService._internal();
   DatabaseService._internal();
 
@@ -41,9 +42,36 @@ class DatabaseService {
         created_at TEXT NOT NULL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE words (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        text TEXT NOT NULL,
+        grade_level INTEGER NOT NULL,
+        difficulty TEXT NOT NULL,
+        image_asset TEXT NOT NULL,
+        audio_asset TEXT NOT NULL,
+        quiz_choices TEXT NOT NULL,
+        correct_answer TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE quiz_results (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        grade_level INTEGER NOT NULL,
+        difficulty TEXT NOT NULL,
+        score INTEGER NOT NULL,
+        total_questions INTEGER NOT NULL,
+        points_earned INTEGER NOT NULL,
+        completed_at TEXT NOT NULL,
+        FOREIGN KEY (student_id) REFERENCES students (id)
+      )
+    ''');
   }
 
-  // ---------- Student CRUD operations ----------
+  // ---------- Student methods ----------
 
   Future<int> insertStudent(Student student) async {
     final db = await database;
@@ -59,9 +87,7 @@ class DatabaseService {
   Future<Student?> getStudentByUsername(String username) async {
     final db = await database;
     final maps = await db.query(
-      'students',
-      where: 'username = ?',
-      whereArgs: [username],
+      'students', where: 'username = ?', whereArgs: [username],
     );
     if (maps.isEmpty) return null;
     return Student.fromMap(maps.first);
@@ -69,11 +95,7 @@ class DatabaseService {
 
   Future<Student?> getStudentById(int id) async {
     final db = await database;
-    final maps = await db.query(
-      'students',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final maps = await db.query('students', where: 'id = ?', whereArgs: [id]);
     if (maps.isEmpty) return null;
     return Student.fromMap(maps.first);
   }
@@ -81,10 +103,67 @@ class DatabaseService {
   Future<int> updatePin(int studentId, String pinHash) async {
     final db = await database;
     return await db.update(
+      'students', {'pin_hash': pinHash}, where: 'id = ?', whereArgs: [studentId],
+    );
+  }
+
+  Future<int> addPoints(int studentId, int points) async {
+    final db = await database;
+    final student = await getStudentById(studentId);
+    if (student == null) return 0;
+    return await db.update(
       'students',
-      {'pin_hash': pinHash},
+      {'total_points': student.totalPoints + points},
       where: 'id = ?',
       whereArgs: [studentId],
     );
+  }
+
+  // ---------- Word methods ----------
+
+  Future<int> insertWord(Word word) async {
+    final db = await database;
+    return await db.insert('words', word.toMap());
+  }
+
+  Future<List<Word>> getWords(int gradeLevel, String difficulty) async {
+    final db = await database;
+    final maps = await db.query(
+      'words',
+      where: 'grade_level = ? AND difficulty = ?',
+      whereArgs: [gradeLevel, difficulty],
+    );
+    return maps.map((map) => Word.fromMap(map)).toList();
+  }
+
+  Future<int> getWordCount() async {
+    final db = await database;
+    final result = await db.rawQuery('SELECT COUNT(*) as count FROM words');
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  // ---------- QuizResult methods ----------
+
+  Future<int> insertQuizResult(QuizResult result) async {
+    final db = await database;
+    return await db.insert('quiz_results', result.toMap());
+  }
+
+  Future<List<QuizResult>> getResultsForStudent(int studentId) async {
+    final db = await database;
+    final maps = await db.query(
+      'quiz_results', where: 'student_id = ?', whereArgs: [studentId],
+    );
+    return maps.map((map) => QuizResult.fromMap(map)).toList();
+  }
+
+  Future<bool> hasPassedDifficulty(int studentId, int gradeLevel, String difficulty) async {
+    final db = await database;
+    final maps = await db.query(
+      'quiz_results',
+      where: 'student_id = ? AND grade_level = ? AND difficulty = ? AND (score * 1.0 / total_questions) >= 0.70',
+      whereArgs: [studentId, gradeLevel, difficulty],
+    );
+    return maps.isNotEmpty;
   }
 }

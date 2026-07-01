@@ -58,7 +58,10 @@ class StudentHomeScreen extends StatelessWidget {
                 sublabel: 'Pick a grade and lesson',
                 color: const Color(0xFFFF6F61),
                 onTap: () {
-                  // Will connect to Grade Selection screen soon
+                  Navigator.of(context).pushNamed(
+                    '/grade-selection',
+                    arguments: student,
+                  );
                 },
               ),
               const SizedBox(height: 14),
@@ -159,7 +162,7 @@ class _HomeCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color),
