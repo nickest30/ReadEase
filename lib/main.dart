@@ -16,6 +16,12 @@ import 'screens/student/progress_dashboard_screen.dart';
 import 'screens/student/badge_collection_screen.dart';
 import 'screens/student/leaderboard_screen.dart';
 import 'screens/student/student_settings_screen.dart';
+import 'screens/parent/parent_welcome_screen.dart';
+import 'screens/parent/parent_signup_screen.dart';
+import 'screens/parent/parent_login_screen.dart';
+import 'screens/parent/parent_dashboard_screen.dart';
+import 'screens/parent/add_child_screen.dart';
+import 'screens/parent/child_progress_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,6 +62,12 @@ class ReadEaseApp extends StatelessWidget {
         '/badges': (context) => const BadgeCollectionScreen(),
         '/leaderboard': (context) => const LeaderboardScreen(),
         '/settings': (context) => const StudentSettingsScreen(),
+        '/parent-welcome': (context) => const ParentWelcomeScreen(),
+        '/parent-signup': (context) => const ParentSignupScreen(),
+        '/parent-login': (context) => const ParentLoginScreen(),
+        '/parent-dashboard': (context) => const ParentDashboardScreen(),
+        '/add-child': (context) => const AddChildScreen(),
+        '/child-progress': (context) => const ChildProgressScreen(),
       },
     );
   }

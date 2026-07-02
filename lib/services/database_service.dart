@@ -3,6 +3,7 @@ import 'package:path/path.dart';
 import '../models/student.dart';
 import '../models/word.dart';
 import '../models/quiz_result.dart';
+import '../models/parent.dart';
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._internal();
@@ -67,6 +68,17 @@ class DatabaseService {
         points_earned INTEGER NOT NULL,
         completed_at TEXT NOT NULL,
         FOREIGN KEY (student_id) REFERENCES students (id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE parents (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        full_name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        created_at TEXT NOT NULL
       )
     ''');
   }
@@ -165,5 +177,62 @@ class DatabaseService {
       whereArgs: [studentId, gradeLevel, difficulty],
     );
     return maps.isNotEmpty;
+  }
+
+  // ---------- Parent methods ----------
+
+  Future<int> insertParent(Parent parent) async {
+    final db = await database;
+    return await db.insert('parents', parent.toMap());
+  }
+
+  Future<Parent?> getParentByUsername(String username) async {
+    final db = await database;
+    final maps = await db.query(
+      'parents', where: 'username = ?', whereArgs: [username],
+    );
+    if (maps.isEmpty) return null;
+    return Parent.fromMap(maps.first);
+  }
+
+  Future<Parent?> getParentById(int id) async {
+    final db = await database;
+    final maps = await db.query(
+      'parents', where: 'id = ?', whereArgs: [id],
+    );
+    if (maps.isEmpty) return null;
+    return Parent.fromMap(maps.first);
+  }
+
+  Future<List<Student>> getChildrenOfParent(int parentId) async {
+    final db = await database;
+    final maps = await db.query(
+      'students',
+      where: 'parent_id = ? AND is_linked = 1',
+      whereArgs: [parentId],
+    );
+    return maps.map((map) => Student.fromMap(map)).toList();
+  }
+
+  Future<int> insertLinkedStudent(Student student) async {
+    final db = await database;
+    return await db.insert('students', student.toMap());
+  }
+
+  Future<int> updateStudentDisplayName(int studentId, String displayName) async {
+    final db = await database;
+    return await db.update(
+      'students',
+      {'display_name': displayName},
+      where: 'id = ?',
+      whereArgs: [studentId],
+    );
+  }
+
+  Future<int> deleteStudent(int studentId) async {
+    final db = await database;
+    return await db.delete(
+      'students', where: 'id = ?', whereArgs: [studentId],
+    );
   }
 }
