@@ -22,6 +22,15 @@ import 'screens/parent/parent_login_screen.dart';
 import 'screens/parent/parent_dashboard_screen.dart';
 import 'screens/parent/add_child_screen.dart';
 import 'screens/parent/child_progress_screen.dart';
+import 'screens/teacher/teacher_welcome_screen.dart';
+import 'screens/teacher/teacher_signup_screen.dart';
+import 'screens/teacher/teacher_login_screen.dart';
+import 'screens/teacher/teacher_dashboard_screen.dart';
+import 'screens/teacher/create_class_screen.dart';
+import 'screens/teacher/class_overview_screen.dart';
+import 'screens/teacher/teacher_student_progress_screen.dart';
+import 'screens/teacher/class_analytics_screen.dart';
+import 'screens/teacher/class_leaderboard_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -68,6 +77,15 @@ class ReadEaseApp extends StatelessWidget {
         '/parent-dashboard': (context) => const ParentDashboardScreen(),
         '/add-child': (context) => const AddChildScreen(),
         '/child-progress': (context) => const ChildProgressScreen(),
+        '/teacher-welcome': (context) => const TeacherWelcomeScreen(),
+        '/teacher-signup': (context) => const TeacherSignupScreen(),
+        '/teacher-login': (context) => const TeacherLoginScreen(),
+        '/teacher-dashboard': (context) => const TeacherDashboardScreen(),
+        '/create-class': (context) => const CreateClassScreen(),
+        '/class-overview': (context) => const ClassOverviewScreen(),
+        '/teacher-student-progress': (context) => const TeacherStudentProgressScreen(),
+        '/class-analytics': (context) => const ClassAnalyticsScreen(),
+        '/class-leaderboard': (context) => const ClassLeaderboardScreen(),
       },
     );
   }

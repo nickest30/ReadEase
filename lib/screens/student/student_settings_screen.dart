@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/student.dart';
+import '../../services/database_service.dart';
+
 
 class StudentSettingsScreen extends StatefulWidget {
   const StudentSettingsScreen({super.key});
@@ -139,6 +141,16 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                   );
                 },
               ),
+              const SizedBox(height: 10),
+
+              _SettingsTile(
+                label: 'Join a Class',
+                trailing: const Icon(
+                  Icons.chevron_right,
+                  color: Color(0xFF6B7878),
+                ),
+                onTap: () => _showJoinClassDialog(context, student),
+              ),
 
               const Spacer(),
 
@@ -170,6 +182,97 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showJoinClassDialog(BuildContext context, Student student) {
+    final codeController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
+        title: const Text(
+          'Join a Class',
+          style: TextStyle(
+            fontFamily: 'Nunito',
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        content: TextField(
+          controller: codeController,
+          textCapitalization: TextCapitalization.characters,
+          maxLength: 6,
+          decoration: InputDecoration(
+            hintText: 'Enter 6-character code',
+            filled: true,
+            fillColor: const Color(0xFFFCF0D9),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE9DCBE)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(fontFamily: 'Nunito'),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final code = codeController.text.trim().toUpperCase();
+              final group = await DatabaseService.instance
+                  .getClassGroupByJoinCode(code);
+              if (!ctx.mounted) return;
+              if (group == null) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(content: Text('Class not found.')),
+                );
+                return;
+              }
+              final alreadyEnrolled =
+                  await DatabaseService.instance
+                      .isStudentEnrolled(group.id!, student.id!);
+              if (!ctx.mounted) return;
+              if (alreadyEnrolled) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(
+                      content: Text('Already enrolled in this class.')),
+                );
+                return;
+              }
+              await DatabaseService.instance
+                  .enrollStudent(group.id!, student.id!);
+              if (!ctx.mounted) return;
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content:
+                      Text('Joined ${group.className} successfully!'),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2BAFA0),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Join',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

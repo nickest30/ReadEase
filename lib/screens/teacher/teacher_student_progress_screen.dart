@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
-import '../../models/quiz_result.dart';
 import '../../models/student.dart';
+import '../../models/quiz_result.dart';
 import '../../services/database_service.dart';
 
-class ChildProgressScreen extends StatefulWidget {
-  const ChildProgressScreen({super.key});
+class TeacherStudentProgressScreen extends StatefulWidget {
+  const TeacherStudentProgressScreen({super.key});
 
   @override
-  State<ChildProgressScreen> createState() => _ChildProgressScreenState();
+  State<TeacherStudentProgressScreen> createState() =>
+      _TeacherStudentProgressScreenState();
 }
 
-class _ChildProgressScreenState extends State<ChildProgressScreen> {
+class _TeacherStudentProgressScreenState
+    extends State<TeacherStudentProgressScreen> {
   List<QuizResult> _results = [];
   bool _loading = true;
   bool _initialized = false;
@@ -27,9 +29,9 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
   Future<void> _loadResults() async {
     final args = ModalRoute.of(context)!.settings.arguments
         as Map<String, dynamic>;
-    final child = args['child'] as Student;
+    final student = args['student'] as Student;
     final results =
-        await DatabaseService.instance.getResultsForStudent(child.id!);
+        await DatabaseService.instance.getResultsForStudent(student.id!);
     if (!mounted) return;
     setState(() {
       _results = results;
@@ -47,9 +49,6 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
   int get _completedLevels =>
       _results.where((r) => r.isPassing).length;
 
-  int get _totalPoints =>
-      _results.fold(0, (sum, r) => sum + r.pointsEarned);
-
   String _capitalize(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
@@ -57,7 +56,7 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)!.settings.arguments
         as Map<String, dynamic>;
-    final child = args['child'] as Student;
+    final student = args['student'] as Student;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFCF0D9),
@@ -79,7 +78,7 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '${child.displayName}\'s Progress',
+                      student.displayName,
                       style: const TextStyle(
                         fontFamily: 'Nunito',
                         fontSize: 18,
@@ -96,7 +95,8 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
                   : SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 28),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 28),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -105,45 +105,35 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
                               _StatCard(
                                 label: 'Levels Done',
                                 value: '$_completedLevels',
-                                color: const Color(0xFF8B5FBF),
+                                color: const Color(0xFFE8A93B),
                               ),
                               const SizedBox(width: 10),
                               _StatCard(
                                 label: 'Points',
-                                value: '$_totalPoints',
-                                color: const Color(0xFFE8A93B),
+                                value: '${student.totalPoints}',
+                                color: const Color(0xFF2BAFA0),
                               ),
                               const SizedBox(width: 10),
                               _StatCard(
                                 label: 'Accuracy',
                                 value:
                                     '${(_overallAccuracy * 100).toStringAsFixed(0)}%',
-                                color: const Color(0xFF2BAFA0),
+                                color: const Color(0xFF8B5FBF),
                               ),
                             ],
                           ),
                           const SizedBox(height: 20),
 
-                          const Text(
-                            'OVERALL COMPLETION',
-                            style: TextStyle(
-                              fontFamily: 'Nunito',
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: .05,
-                              color: Color(0xFF6B7878),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: LinearProgressIndicator(
                               value: _completedLevels / 18,
                               minHeight: 12,
-                              backgroundColor: const Color(0xFFE9DCBE),
+                              backgroundColor:
+                                  const Color(0xFFE9DCBE),
                               valueColor:
                                   const AlwaysStoppedAnimation<Color>(
-                                Color(0xFF8B5FBF),
+                                Color(0xFFE8A93B),
                               ),
                             ),
                           ),
@@ -171,28 +161,20 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
                                 ),
                               ),
                             )
-                          else ...[
-                            const Text(
-                              'QUIZ SCORES',
-                              style: TextStyle(
-                                fontFamily: 'Nunito',
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: .05,
-                                color: Color(0xFF6B7878),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
+                          else
                             ..._results.map((result) {
                               return Container(
-                                margin: const EdgeInsets.only(bottom: 8),
+                                margin:
+                                    const EdgeInsets.only(bottom: 8),
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 14, vertical: 12),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius:
+                                      BorderRadius.circular(12),
                                   border: Border.all(
-                                      color: const Color(0xFFE9DCBE)),
+                                      color:
+                                          const Color(0xFFE9DCBE)),
                                 ),
                                 child: Row(
                                   children: [
@@ -203,7 +185,6 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
                                           fontFamily: 'Nunito',
                                           fontWeight: FontWeight.w600,
                                           fontSize: 13,
-                                          color: Color(0xFF2E3A3A),
                                         ),
                                       ),
                                     ),
@@ -214,7 +195,7 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
                                         fontWeight: FontWeight.w700,
                                         fontSize: 13,
                                         color: result.isPassing
-                                            ? const Color(0xFF8B5FBF)
+                                            ? const Color(0xFF2BAFA0)
                                             : const Color(0xFFFF6F61),
                                       ),
                                     ),
@@ -225,14 +206,13 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
                                           : Icons.cancel,
                                       size: 16,
                                       color: result.isPassing
-                                          ? const Color(0xFF8B5FBF)
+                                          ? const Color(0xFF2BAFA0)
                                           : const Color(0xFFFF6F61),
                                     ),
                                   ],
                                 ),
                               );
                             }),
-                          ],
                         ],
                       ),
                     ),

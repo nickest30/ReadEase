@@ -4,6 +4,8 @@ import '../models/student.dart';
 import '../models/word.dart';
 import '../models/quiz_result.dart';
 import '../models/parent.dart';
+import '../models/teacher.dart';
+import '../models/class_group.dart';
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._internal();
@@ -79,6 +81,41 @@ class DatabaseService {
         full_name TEXT NOT NULL,
         email TEXT NOT NULL,
         created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE teachers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        full_name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        school_name TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE class_groups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        teacher_id INTEGER NOT NULL,
+        class_name TEXT NOT NULL,
+        grade_level INTEGER NOT NULL,
+        join_code TEXT UNIQUE NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (teacher_id) REFERENCES teachers (id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE class_enrollments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        class_group_id INTEGER NOT NULL,
+        student_id INTEGER NOT NULL,
+        enrolled_at TEXT NOT NULL,
+        FOREIGN KEY (class_group_id) REFERENCES class_groups (id),
+        FOREIGN KEY (student_id) REFERENCES students (id)
       )
     ''');
   }
@@ -234,5 +271,112 @@ class DatabaseService {
     return await db.delete(
       'students', where: 'id = ?', whereArgs: [studentId],
     );
+  }
+
+  // ---------- Teacher methods ----------
+
+  Future<int> insertTeacher(Teacher teacher) async {
+    final db = await database;
+    return await db.insert('teachers', teacher.toMap());
+  }
+
+  Future<Teacher?> getTeacherByUsername(String username) async {
+    final db = await database;
+    final maps = await db.query(
+      'teachers', where: 'username = ?', whereArgs: [username],
+    );
+    if (maps.isEmpty) return null;
+    return Teacher.fromMap(maps.first);
+  }
+
+  Future<Teacher?> getTeacherById(int id) async {
+    final db = await database;
+    final maps = await db.query(
+      'teachers', where: 'id = ?', whereArgs: [id],
+    );
+    if (maps.isEmpty) return null;
+    return Teacher.fromMap(maps.first);
+  }
+
+  // ---------- ClassGroup methods ----------
+
+  Future<int> insertClassGroup(ClassGroup group) async {
+    final db = await database;
+    return await db.insert('class_groups', group.toMap());
+  }
+
+  Future<List<ClassGroup>> getClassGroupsByTeacher(int teacherId) async {
+    final db = await database;
+    final maps = await db.query(
+      'class_groups',
+      where: 'teacher_id = ?',
+      whereArgs: [teacherId],
+      orderBy: 'created_at DESC',
+    );
+    return maps.map((map) => ClassGroup.fromMap(map)).toList();
+  }
+
+  Future<ClassGroup?> getClassGroupByJoinCode(String joinCode) async {
+    final db = await database;
+    final maps = await db.query(
+      'class_groups',
+      where: 'join_code = ?',
+      whereArgs: [joinCode],
+    );
+    if (maps.isEmpty) return null;
+    return ClassGroup.fromMap(maps.first);
+  }
+
+  Future<ClassGroup?> getClassGroupById(int id) async {
+    final db = await database;
+    final maps = await db.query(
+      'class_groups', where: 'id = ?', whereArgs: [id],
+    );
+    if (maps.isEmpty) return null;
+    return ClassGroup.fromMap(maps.first);
+  }
+
+  // ---------- Enrollment methods ----------
+
+  Future<void> enrollStudent(int classGroupId, int studentId) async {
+    final db = await database;
+    await db.insert('class_enrollments', {
+      'class_group_id': classGroupId,
+      'student_id': studentId,
+      'enrolled_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<List<Student>> getStudentsInClass(int classGroupId) async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT s.* FROM students s
+      INNER JOIN class_enrollments ce ON ce.student_id = s.id
+      WHERE ce.class_group_id = ?
+      ORDER BY s.total_points DESC
+    ''', [classGroupId]);
+    return maps.map((map) => Student.fromMap(map)).toList();
+  }
+
+  Future<bool> isStudentEnrolled(int classGroupId, int studentId) async {
+    final db = await database;
+    final maps = await db.query(
+      'class_enrollments',
+      where: 'class_group_id = ? AND student_id = ?',
+      whereArgs: [classGroupId, studentId],
+    );
+    return maps.isNotEmpty;
+  }
+
+  String generateJoinCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final random = DateTime.now().millisecondsSinceEpoch;
+    String code = '';
+    int seed = random;
+    for (int i = 0; i < 6; i++) {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      code += chars[seed % chars.length];
+    }
+    return code;
   }
 }
