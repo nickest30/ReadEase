@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/word.dart';
 import '../../services/database_service.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class LessonScreen extends StatefulWidget {
   const LessonScreen({super.key});
@@ -14,6 +15,7 @@ class _LessonScreenState extends State<LessonScreen> {
   int _currentIndex = 0;
   bool _loading = true;
   bool _initialized = false;
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void didChangeDependencies() {
@@ -22,6 +24,12 @@ class _LessonScreenState extends State<LessonScreen> {
       _initialized = true;
       _loadWords();
     }
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
   }
 
   Future<void> _loadWords() async {
@@ -52,9 +60,30 @@ class _LessonScreenState extends State<LessonScreen> {
     }
   }
 
-  void _playAudio() {
-    // Audio playback wired up later once the audioplayers package
-    // and real MP3 assets are in place. For now this is a no-op.
+  Future<void> _playAudio() async {
+    final args = ModalRoute.of(context)!.settings.arguments
+        as Map<String, dynamic>;
+    final word = _words[_currentIndex];
+
+    // Audio file must exist at the asset path stored in word.audioAsset
+    // For now we handle the case where the file doesn't exist yet gracefully
+    try {
+      await _audioPlayer.play(AssetSource(
+        word.audioAsset.replaceFirst('assets/', ''),
+      ));
+    } catch (e) {
+      // Audio file not yet available — placeholder action
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Audio for "${word.text}" not available yet.',
+            ),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    }
   }
 
   void _startQuiz() {

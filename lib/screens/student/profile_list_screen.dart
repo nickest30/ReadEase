@@ -110,6 +110,32 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
                   ),
                 ),
               ),
+
+              const SizedBox(height: 12),
+              
+              SizedBox(
+                height: 52,
+                child: OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed('/student-signin');
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF2BAFA0),
+                    side: const BorderSide(color: Color(0xFF2BAFA0)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text(
+                    'Log In with Credentials',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 12),
               SizedBox(
                 height: 52,

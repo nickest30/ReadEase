@@ -121,7 +121,9 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.of(context).pop();
+                      Navigator.of(context).pushReplacementNamed(
+                        '/student-signin',
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2BAFA0),
@@ -131,8 +133,34 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
                       ),
                     ),
                     child: const Text(
+                      'Log In with Password',
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 50,
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF6B7878),
+                      side: const BorderSide(color: Color(0xFFE9DCBE)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
                       'Back to Profiles',
-                      style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
