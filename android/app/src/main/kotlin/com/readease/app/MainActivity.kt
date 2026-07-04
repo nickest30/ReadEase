@@ -1,4 +1,4 @@
-package com.stiglobalcity.readease
+package com.readease.app
 
 import io.flutter.embedding.android.FlutterActivity
 
