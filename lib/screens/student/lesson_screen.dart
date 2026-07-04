@@ -61,8 +61,6 @@ class _LessonScreenState extends State<LessonScreen> {
   }
 
   Future<void> _playAudio() async {
-    final args = ModalRoute.of(context)!.settings.arguments
-        as Map<String, dynamic>;
     final word = _words[_currentIndex];
 
     // Audio file must exist at the asset path stored in word.audioAsset

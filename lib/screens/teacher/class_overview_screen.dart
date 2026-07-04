@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../models/teacher.dart';
 import '../../models/class_group.dart';
 import '../../models/student.dart';
-import '../../models/quiz_result.dart';
 import '../../services/database_service.dart';
 
 class ClassOverviewScreen extends StatefulWidget {
