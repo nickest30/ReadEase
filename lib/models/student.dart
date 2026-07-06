@@ -9,6 +9,7 @@ class Student {
   final int? parentId; // null if solo student
   final int totalPoints;
   final String createdAt;
+  final String? firebaseUid;
 
   Student({
     this.id,
@@ -21,6 +22,7 @@ class Student {
     this.parentId,
     this.totalPoints = 0,
     required this.createdAt,
+    this.firebaseUid,
   });
 
   // Converts a Student object into a Map, which is what sqflite
@@ -37,6 +39,7 @@ class Student {
       'parent_id': parentId,
       'total_points': totalPoints,
       'created_at': createdAt,
+      'firebase_uid': firebaseUid,
     };
   }
 

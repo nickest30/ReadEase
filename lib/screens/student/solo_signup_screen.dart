@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:bcrypt/bcrypt.dart';
 import '../../services/database_service.dart';
 import '../../models/student.dart';
+import '../../services/auth_service.dart';
 
 class SoloSignupScreen extends StatefulWidget {
   const SoloSignupScreen({super.key});
@@ -40,6 +41,7 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
           .getStudentByUsername(_usernameController.text.trim());
 
       if (existing != null) {
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'That username is already taken.';
           _isSubmitting = false;
@@ -52,20 +54,39 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
         BCrypt.gensalt(),
       );
 
+      // Attempt Firebase registration — works when online
+      // Uses username@readease.app as a synthetic email
+      // since Firebase Auth requires an email format
+      final syntheticEmail =
+          '${_usernameController.text.trim().toLowerCase()}@readease.app';
+
+      String? firebaseUid;
+      try {
+        firebaseUid = await AuthService.instance.registerUser(
+          syntheticEmail,
+          _passwordController.text,
+        );
+      } catch (_) {
+        // Firebase unavailable — continue with local-only registration
+        firebaseUid = null;
+      }
+
       final newStudent = Student(
         username: _usernameController.text.trim(),
         passwordHash: hashedPassword,
         displayName: _usernameController.text.trim(),
         gradeLevel: _selectedGrade,
+        firebaseUid: firebaseUid,
         createdAt: DateTime.now().toIso8601String(),
       );
 
-      final newId = await DatabaseService.instance.insertStudent(newStudent);
+      final newId =
+          await DatabaseService.instance.insertStudent(newStudent);
 
       if (!mounted) return;
 
-      final createdStudent = await DatabaseService.instance
-          .getStudentById(newId);
+      final createdStudent =
+          await DatabaseService.instance.getStudentById(newId);
 
       if (!mounted) return;
 
@@ -74,6 +95,7 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
         arguments: createdStudent,
       );
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Something went wrong. Please try again.';
         _isSubmitting = false;

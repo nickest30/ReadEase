@@ -42,6 +42,7 @@ class DatabaseService {
         is_linked INTEGER NOT NULL DEFAULT 0,
         parent_id INTEGER,
         total_points INTEGER NOT NULL DEFAULT 0,
+        firebase_uid TEXT,
         created_at TEXT NOT NULL
       )
     ''');
