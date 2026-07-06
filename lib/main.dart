@@ -32,9 +32,11 @@ import 'screens/teacher/teacher_student_progress_screen.dart';
 import 'screens/teacher/class_analytics_screen.dart';
 import 'screens/teacher/class_leaderboard_screen.dart';
 import 'screens/student/student_signin_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   seedWordsIfEmpty();
   runApp(const ReadEaseApp());
 }
