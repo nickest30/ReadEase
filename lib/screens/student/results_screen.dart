@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/student.dart';
 import '../../models/quiz_result.dart';
 import '../../services/database_service.dart';
+import '../../services/firestore_service.dart';
 
 class ResultsScreen extends StatefulWidget {
   const ResultsScreen({super.key});
@@ -48,6 +49,34 @@ class _ResultsScreenState extends State<ResultsScreen> {
     await DatabaseService.instance.insertQuizResult(result);
     await DatabaseService.instance.addPoints(student.id!, pointsEarned);
 
+    // Sync to Firestore if student has a Firebase account
+    if (student.firebaseUid != null) {
+      try {
+        final updatedStudent =
+            await DatabaseService.instance.getStudentById(student.id!);
+        final allResults = await DatabaseService.instance
+            .getResultsForStudent(student.id!);
+
+        if (!mounted) return;
+
+        await FirestoreService.instance.syncStudentProgress(
+          student.firebaseUid!,
+          student.displayName,
+          updatedStudent?.totalPoints ?? student.totalPoints,
+          allResults,
+        );
+
+        await FirestoreService.instance.updateLeaderboardEntry(
+          student.firebaseUid!,
+          student.displayName,
+          updatedStudent?.totalPoints ?? student.totalPoints,
+          student.gradeLevel,
+        );
+      } catch (_) {
+        // Sync failed — offline, will sync next time
+      }
+    }
+    
     if (!mounted) return;
     setState(() {
       _isPassing = result.isPassing;

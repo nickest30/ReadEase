@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:bcrypt/bcrypt.dart';
 import '../../models/teacher.dart';
 import '../../services/database_service.dart';
+import '../../services/auth_service.dart';
+import '../../services/firestore_service.dart';
 
 class TeacherSignupScreen extends StatefulWidget {
   const TeacherSignupScreen({super.key});
@@ -54,6 +56,22 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
         return;
       }
 
+      // Firebase Auth registration
+      final firebaseUid = await AuthService.instance.registerUser(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+
+      if (firebaseUid == null) {
+        if (!mounted) return;
+        setState(() {
+          _errorMessage =
+              'Registration failed. Check your internet connection.';
+          _isSubmitting = false;
+        });
+        return;
+      }
+
       final hashedPassword = BCrypt.hashpw(
         _passwordController.text,
         BCrypt.gensalt(),
@@ -65,6 +83,7 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
         fullName: _fullNameController.text.trim(),
         email: _emailController.text.trim(),
         schoolName: _schoolNameController.text.trim(),
+        firebaseUid: firebaseUid,
         createdAt: DateTime.now().toIso8601String(),
       );
 
@@ -75,6 +94,12 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
 
       final createdTeacher =
           await DatabaseService.instance.getTeacherById(newId);
+
+      if (!mounted) return;
+
+      // Save to Firestore
+      await FirestoreService.instance
+          .saveTeacher(createdTeacher!, firebaseUid);
 
       if (!mounted) return;
 

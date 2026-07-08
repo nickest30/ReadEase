@@ -65,9 +65,11 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
         firebaseUid = await AuthService.instance.registerUser(
           syntheticEmail,
           _passwordController.text,
+        ).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => null,
         );
       } catch (_) {
-        // Firebase unavailable — continue with local-only registration
         firebaseUid = null;
       }
 
