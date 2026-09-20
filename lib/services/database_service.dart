@@ -246,6 +246,17 @@ class DatabaseService {
     return Parent.fromMap(maps.first);
   }
 
+  Future<bool> updateParentFirebaseUid(int parentId, String firebaseUid) async {
+    final db = await database;
+    final rows = await db.update(
+      'parents',
+      {'firebase_uid': firebaseUid},
+      where: 'id = ?',
+      whereArgs: [parentId],
+    );
+    return rows > 0;
+  }
+
   Future<Parent?> getParentById(int id) async {
     final db = await database;
     final maps = await db.query(
@@ -301,6 +312,17 @@ class DatabaseService {
     );
     if (maps.isEmpty) return null;
     return Teacher.fromMap(maps.first);
+  }
+
+  Future<bool> updateTeacherFirebaseUid(int teacherId, String firebaseUid) async {
+    final db = await database;
+    final rows = await db.update(
+      'teachers',
+      {'firebase_uid': firebaseUid},
+      where: 'id = ?',
+      whereArgs: [teacherId],
+    );
+    return rows > 0;
   }
 
   Future<Teacher?> getTeacherById(int id) async {

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:bcrypt/bcrypt.dart';
-import '../../models/parent.dart';
 import '../../models/student.dart';
 import '../../services/database_service.dart';
+import 'package:provider/provider.dart';
+import '../../providers/parent_provider.dart';
 
 class AddChildScreen extends StatefulWidget {
   const AddChildScreen({super.key});
@@ -44,8 +45,12 @@ class _AddChildScreenState extends State<AddChildScreen> {
     });
 
     try {
-      final parent =
-          ModalRoute.of(context)!.settings.arguments as Parent;
+      final parent = context.read<ParentProvider>().currentParent;
+      if (parent == null) {
+        if (!mounted) return;
+        Navigator.of(context).pop();
+        return;
+      }
 
       final existing = await DatabaseService.instance
           .getStudentByUsername(_usernameController.text.trim());

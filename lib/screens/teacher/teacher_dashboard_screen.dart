@@ -1,34 +1,33 @@
 import 'package:flutter/material.dart';
-import '../../models/teacher.dart';
+import 'package:provider/provider.dart';
+
 import '../../models/class_group.dart';
 import '../../services/database_service.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/teacher_provider.dart';
+import '../../utils/app_theme.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({super.key});
 
   @override
-  State<TeacherDashboardScreen> createState() =>
-      _TeacherDashboardScreenState();
+  State<TeacherDashboardScreen> createState() => _TeacherDashboardScreenState();
 }
 
-class _TeacherDashboardScreenState
-    extends State<TeacherDashboardScreen> {
+class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   List<ClassGroup> _classes = [];
   bool _loading = true;
-  bool _initialized = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_initialized) {
-      _initialized = true;
-      _loadClasses();
-    }
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadClasses());
   }
 
   Future<void> _loadClasses() async {
-    final teacher =
-        ModalRoute.of(context)!.settings.arguments as Teacher;
+    final teacher = context.read<TeacherProvider>().currentTeacher;
+    if (teacher == null) return;
+
     final classes = await DatabaseService.instance
         .getClassGroupsByTeacher(teacher.id!);
     if (!mounted) return;
@@ -38,13 +37,81 @@ class _TeacherDashboardScreenState
     });
   }
 
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Log out?',
+          style: TextStyle(
+            fontFamily: 'Nunito',
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+          ),
+        ),
+        content: const Text(
+          'Your classes stay saved. Log back in anytime.',
+          style: TextStyle(fontFamily: 'Nunito', fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel',
+                style: TextStyle(
+                    fontFamily: 'Nunito', color: AppColors.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentCoral,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Log Out',
+                style: TextStyle(
+                    fontFamily: 'Nunito', fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    context.read<AuthProvider>().signOut();
+    context.read<TeacherProvider>().logout();
+
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/teacher-welcome',
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final teacher =
-        ModalRoute.of(context)!.settings.arguments as Teacher;
+    final teacher = context.watch<TeacherProvider>().currentTeacher;
+
+    if (teacher == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/teacher-welcome',
+            (route) => false,
+          );
+        }
+      });
+      return const Scaffold(
+        backgroundColor: AppColors.teacherBg,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.teacherBg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -54,21 +121,9 @@ class _TeacherDashboardScreenState
               const SizedBox(height: 16),
               Text(
                 'Hello, ${teacher.fullName.split(' ').first}!',
-                style: const TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF2E3A3A),
-                ),
+                style: AppText.h2,
               ),
-              Text(
-                teacher.schoolName,
-                style: const TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 13,
-                  color: Color(0xFF6B7878),
-                ),
-              ),
+              Text(teacher.schoolName, style: AppText.caption),
               const SizedBox(height: 20),
 
               const Text(
@@ -77,7 +132,7 @@ class _TeacherDashboardScreenState
                   fontFamily: 'Nunito',
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF2E3A3A),
+                  color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 10),
@@ -93,7 +148,7 @@ class _TeacherDashboardScreenState
                               style: TextStyle(
                                 fontFamily: 'Nunito',
                                 fontSize: 14,
-                                color: Color(0xFF6B7878),
+                                color: AppColors.textMuted,
                               ),
                             ),
                           )
@@ -113,10 +168,7 @@ class _TeacherDashboardScreenState
                                 onTap: () async {
                                   await Navigator.of(context).pushNamed(
                                     '/class-overview',
-                                    arguments: {
-                                      'teacher': teacher,
-                                      'classGroup': group,
-                                    },
+                                    arguments: {'classGroup': group},
                                   );
                                   _loadClasses();
                                 },
@@ -126,26 +178,21 @@ class _TeacherDashboardScreenState
               ),
 
               SizedBox(
-                height: 52,
+                height: 56,
                 child: ElevatedButton.icon(
                   onPressed: () async {
-                    await Navigator.of(context).pushNamed(
-                      '/create-class',
-                      arguments: teacher,
-                    );
+                    await Navigator.of(context).pushNamed('/create-class');
                     _loadClasses();
                   },
                   icon: const Icon(Icons.add),
                   label: const Text(
                     'Create Class',
                     style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                    ),
+                        fontFamily: 'Nunito', fontWeight: FontWeight.w700),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE8A93B),
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.accentYellow,
+                    foregroundColor: AppColors.textPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -157,22 +204,18 @@ class _TeacherDashboardScreenState
               SizedBox(
                 height: 50,
                 child: OutlinedButton(
-                  onPressed: () => Navigator.of(context)
-                      .popUntil((route) => route.isFirst),
+                  onPressed: _handleLogout,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFFF6F61),
-                    side: const BorderSide(color: Color(0xFFFF6F61)),
+                    foregroundColor: AppColors.textCoral,
+                    side: const BorderSide(color: AppColors.accentCoral),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: const Text(
-                    'Log Out',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  child: const Text('Log Out',
+                      style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w700)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -194,22 +237,19 @@ class _ClassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppRadius.large),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE9DCBE)),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.large),
+          border: Border.all(color: AppColors.border),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.class_rounded,
-              color: Color(0xFFE8A93B),
-              size: 32,
-            ),
+            const Icon(Icons.class_rounded,
+                color: AppColors.accentYellow, size: 32),
             const SizedBox(height: 8),
             Text(
               group.className,
@@ -219,7 +259,7 @@ class _ClassCard extends StatelessWidget {
                 fontFamily: 'Nunito',
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
-                color: Color(0xFF2E3A3A),
+                color: AppColors.textPrimary,
               ),
             ),
             Text(
@@ -227,15 +267,15 @@ class _ClassCard extends StatelessWidget {
               style: const TextStyle(
                 fontFamily: 'Nunito',
                 fontSize: 11,
-                color: Color(0xFF6B7878),
+                color: AppColors.textMuted,
               ),
             ),
             const SizedBox(height: 4),
             Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 8, vertical: 2),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: const Color(0xFFFBF0D9),
+                color: AppColors.introBg,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -244,7 +284,7 @@ class _ClassCard extends StatelessWidget {
                   fontFamily: 'Nunito',
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFFE8A93B),
+                  color: AppColors.textYellow,
                   letterSpacing: 1.5,
                 ),
               ),

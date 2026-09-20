@@ -25,8 +25,7 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
   }
 
   Future<void> _loadResults() async {
-    final args = ModalRoute.of(context)!.settings.arguments
-        as Map<String, dynamic>;
+    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     final child = args['child'] as Student;
     final results =
         await DatabaseService.instance.getResultsForStudent(child.id!);

@@ -1,35 +1,35 @@
 import 'package:flutter/material.dart';
-import '../../models/parent.dart';
+import 'package:provider/provider.dart';
+
 import '../../models/student.dart';
 import '../../services/database_service.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/parent_provider.dart';
+import '../../utils/app_theme.dart';
 
 class ParentDashboardScreen extends StatefulWidget {
   const ParentDashboardScreen({super.key});
 
   @override
-  State<ParentDashboardScreen> createState() =>
-      _ParentDashboardScreenState();
+  State<ParentDashboardScreen> createState() => _ParentDashboardScreenState();
 }
 
 class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   List<Student> _children = [];
   bool _loading = true;
-  bool _initialized = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_initialized) {
-      _initialized = true;
-      _loadChildren();
-    }
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadChildren());
   }
 
   Future<void> _loadChildren() async {
-    final parent =
-        ModalRoute.of(context)!.settings.arguments as Parent;
-    final children = await DatabaseService.instance
-        .getChildrenOfParent(parent.id!);
+    final parent = context.read<ParentProvider>().currentParent;
+    if (parent == null) return;
+
+    final children =
+        await DatabaseService.instance.getChildrenOfParent(parent.id!);
     if (!mounted) return;
     setState(() {
       _children = children;
@@ -37,13 +37,81 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
     });
   }
 
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Log out?',
+          style: TextStyle(
+            fontFamily: 'Nunito',
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+          ),
+        ),
+        content: const Text(
+          'You can log back in anytime with your username and password.',
+          style: TextStyle(fontFamily: 'Nunito', fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel',
+                style: TextStyle(
+                    fontFamily: 'Nunito', color: AppColors.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentCoral,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Log Out',
+                style: TextStyle(
+                    fontFamily: 'Nunito', fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    context.read<AuthProvider>().signOut();
+    context.read<ParentProvider>().logout();
+
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/parent-welcome',
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final parent =
-        ModalRoute.of(context)!.settings.arguments as Parent;
+    final parent = context.watch<ParentProvider>().currentParent;
+
+    if (parent == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/parent-welcome',
+            (route) => false,
+          );
+        }
+      });
+      return const Scaffold(
+        backgroundColor: AppColors.parentBg,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.parentBg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -53,21 +121,9 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
               const SizedBox(height: 16),
               Text(
                 'Hello, ${parent.fullName.split(' ').first}!',
-                style: const TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF2E3A3A),
-                ),
+                style: AppText.h2,
               ),
-              const Text(
-                'My Children',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 14,
-                  color: Color(0xFF6B7878),
-                ),
-              ),
+              const Text('My Children', style: AppText.caption),
               const SizedBox(height: 20),
 
               Expanded(
@@ -81,7 +137,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                               style: TextStyle(
                                 fontFamily: 'Nunito',
                                 fontSize: 14,
-                                color: Color(0xFF6B7878),
+                                color: AppColors.textMuted,
                               ),
                             ),
                           )
@@ -98,15 +154,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                               final child = _children[index];
                               return _ChildCard(
                                 child: child,
-                                onTap: () {
-                                  Navigator.of(context).pushNamed(
-                                    '/child-progress',
-                                    arguments: {
-                                      'parent': parent,
-                                      'child': child,
-                                    },
-                                  );
-                                },
+                                onTap: () => Navigator.of(context).pushNamed(
+                                  '/child-progress',
+                                  arguments: {'child': child},
+                                ),
                               );
                             },
                           ),
@@ -114,25 +165,20 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
 
               if (_children.length < 4) ...[
                 SizedBox(
-                  height: 52,
+                  height: 56,
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      await Navigator.of(context).pushNamed(
-                        '/add-child',
-                        arguments: parent,
-                      );
-                      _loadChildren(); // refresh on return
+                      await Navigator.of(context).pushNamed('/add-child');
+                      _loadChildren();
                     },
                     icon: const Icon(Icons.add),
                     label: const Text(
                       'Add Child',
                       style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w700,
-                      ),
+                          fontFamily: 'Nunito', fontWeight: FontWeight.w700),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF8B5FBF),
+                      backgroundColor: AppColors.accentPurple,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -146,24 +192,18 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
               SizedBox(
                 height: 50,
                 child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.of(context)
-                        .popUntil((route) => route.isFirst);
-                  },
+                  onPressed: _handleLogout,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFFF6F61),
-                    side: const BorderSide(color: Color(0xFFFF6F61)),
+                    foregroundColor: AppColors.textCoral,
+                    side: const BorderSide(color: AppColors.accentCoral),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: const Text(
-                    'Log Out',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  child: const Text('Log Out',
+                      style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w700)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -183,24 +223,28 @@ class _ChildCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final initial = child.displayName.isNotEmpty
+        ? child.displayName[0].toUpperCase()
+        : '?';
+
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppRadius.large),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE9DCBE)),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.large),
+          border: Border.all(color: AppColors.border),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircleAvatar(
               radius: 26,
-              backgroundColor: const Color(0xFF8B5FBF),
+              backgroundColor: AppColors.accentPurple,
               child: Text(
-                child.displayName[0].toUpperCase(),
+                initial,
                 style: const TextStyle(
                   fontFamily: 'Nunito',
                   color: Colors.white,
@@ -218,7 +262,7 @@ class _ChildCard extends StatelessWidget {
                 fontFamily: 'Nunito',
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
-                color: Color(0xFF2E3A3A),
+                color: AppColors.textPrimary,
               ),
             ),
             Text(
@@ -226,7 +270,7 @@ class _ChildCard extends StatelessWidget {
               style: const TextStyle(
                 fontFamily: 'Nunito',
                 fontSize: 11,
-                color: Color(0xFF6B7878),
+                color: AppColors.textMuted,
               ),
             ),
             const SizedBox(height: 4),
@@ -236,7 +280,7 @@ class _ChildCard extends StatelessWidget {
                 fontFamily: 'Nunito',
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFFE8A93B),
+                color: AppColors.textYellow,
               ),
             ),
           ],

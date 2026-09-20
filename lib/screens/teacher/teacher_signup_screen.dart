@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:bcrypt/bcrypt.dart';
 import '../../models/teacher.dart';
 import '../../services/database_service.dart';
-import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/teacher_provider.dart';
+import '../../utils/app_theme.dart';
 
 class TeacherSignupScreen extends StatefulWidget {
   const TeacherSignupScreen({super.key});
@@ -38,6 +41,9 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final authProvider = context.read<AuthProvider>();
+    final teacherProvider = context.read<TeacherProvider>();
+
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
@@ -46,7 +52,6 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
     try {
       final existing = await DatabaseService.instance
           .getTeacherByUsername(_usernameController.text.trim());
-
       if (existing != null) {
         if (!mounted) return;
         setState(() {
@@ -56,9 +61,10 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
         return;
       }
 
-      // Firebase Auth registration
-      final firebaseUid = await AuthService.instance.registerUser(
-        _emailController.text.trim(),
+      final email = _emailController.text.trim().toLowerCase();
+
+      final firebaseUid = await authProvider.register(
+        email,
         _passwordController.text,
       );
 
@@ -66,7 +72,7 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
         if (!mounted) return;
         setState(() {
           _errorMessage =
-              'Registration failed. Check your internet connection.';
+              'Email is already registered or network failed. Try a different email.';
           _isSubmitting = false;
         });
         return;
@@ -81,7 +87,7 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
         username: _usernameController.text.trim(),
         passwordHash: hashedPassword,
         fullName: _fullNameController.text.trim(),
-        email: _emailController.text.trim(),
+        email: email,
         schoolName: _schoolNameController.text.trim(),
         firebaseUid: firebaseUid,
         createdAt: DateTime.now().toIso8601String(),
@@ -89,24 +95,23 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
 
       final newId =
           await DatabaseService.instance.insertTeacher(newTeacher);
-
       if (!mounted) return;
 
       final createdTeacher =
           await DatabaseService.instance.getTeacherById(newId);
+      if (!mounted || createdTeacher == null) return;
+
+      teacherProvider.setTeacher(createdTeacher);
+
+      try {
+        await FirestoreService.instance
+            .saveTeacher(createdTeacher, firebaseUid);
+      } catch (_) {
+        // Offline — Firestore will sync later
+      }
 
       if (!mounted) return;
-
-      // Save to Firestore
-      await FirestoreService.instance
-          .saveTeacher(createdTeacher!, firebaseUid);
-
-      if (!mounted) return;
-
-      Navigator.of(context).pushReplacementNamed(
-        '/teacher-dashboard',
-        arguments: createdTeacher,
-      );
+      Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -119,7 +124,7 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.teacherBg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(
@@ -206,7 +211,7 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
                   child: ElevatedButton(
                     onPressed: _isSubmitting ? null : _handleSignup,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE8A93B),
+                      backgroundColor: AppColors.accentYellow,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -302,7 +307,7 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(
-                  color: Color(0xFFE8A93B), width: 2),
+                  color: AppColors.accentYellow)
             ),
           ),
         ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../models/teacher.dart';
 import '../../models/class_group.dart';
 import '../../services/database_service.dart';
+import 'package:provider/provider.dart';
+import '../../providers/teacher_provider.dart';
+import '../../utils/app_theme.dart';
 
 class CreateClassScreen extends StatefulWidget {
   const CreateClassScreen({super.key});
@@ -34,8 +36,12 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     });
 
     try {
-      final teacher =
-          ModalRoute.of(context)!.settings.arguments as Teacher;
+      final teacher = context.read<TeacherProvider>().currentTeacher;
+      if (teacher == null) {
+        if (!mounted) return;
+        Navigator.of(context).pop();
+        return;
+      }
 
       final joinCode =
           DatabaseService.instance.generateJoinCode();
@@ -103,7 +109,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
             ElevatedButton(
               onPressed: () => Navigator.of(ctx).pop(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE8A93B),
+                backgroundColor: AppColors.teacherBg,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),

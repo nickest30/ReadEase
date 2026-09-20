@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../models/teacher.dart';
 import '../../models/class_group.dart';
 import '../../models/student.dart';
 import '../../services/database_service.dart';
+import 'package:provider/provider.dart';
+import '../../providers/teacher_provider.dart';
+import '../../utils/app_theme.dart';
 
 class ClassOverviewScreen extends StatefulWidget {
   const ClassOverviewScreen({super.key});
@@ -41,13 +43,12 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments
-        as Map<String, dynamic>;
-    final teacher = args['teacher'] as Teacher;
+    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     final classGroup = args['classGroup'] as ClassGroup;
+    final teacher = context.read<TeacherProvider>().currentTeacher;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.teacherBg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -187,8 +188,7 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
                                     children: [
                                       CircleAvatar(
                                         radius: 18,
-                                        backgroundColor:
-                                            const Color(0xFFE8A93B),
+                                        backgroundColor: AppColors.teacherBg,
                                         child: Text(
                                           student.displayName[0]
                                               .toUpperCase(),
