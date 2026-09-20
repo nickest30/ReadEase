@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:bcrypt/bcrypt.dart';
-import '../../services/database_service.dart';
+import 'package:provider/provider.dart';
+
 import '../../models/student.dart';
-import '../../services/auth_service.dart';
+import '../../services/database_service.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/student_provider.dart';
+import '../../utils/app_theme.dart';
 
 class SoloSignupScreen extends StatefulWidget {
   const SoloSignupScreen({super.key});
@@ -31,52 +35,44 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // ── Capture providers BEFORE any await ──
+    final authProvider = context.read<AuthProvider>();
+    final studentProvider = context.read<StudentProvider>();
+
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
     });
 
     try {
-      final existing = await DatabaseService.instance
-          .getStudentByUsername(_usernameController.text.trim());
+      final username = _usernameController.text.trim().toLowerCase();
 
+      final existing =
+          await DatabaseService.instance.getStudentByUsername(username);
       if (existing != null) {
         if (!mounted) return;
         setState(() {
-          _errorMessage = 'That username is already taken.';
+          _errorMessage = 'That username is already taken on this device.';
           _isSubmitting = false;
         });
         return;
       }
 
-      final hashedPassword = BCrypt.hashpw(
+      final hashedPassword =
+          BCrypt.hashpw(_passwordController.text, BCrypt.gensalt());
+
+      final syntheticEmail = '$username@readease.app';
+      final firebaseUid = await authProvider.register(
+        syntheticEmail,
         _passwordController.text,
-        BCrypt.gensalt(),
       );
 
-      // Attempt Firebase registration — works when online
-      // Uses username@readease.app as a synthetic email
-      // since Firebase Auth requires an email format
-      final syntheticEmail =
-          '${_usernameController.text.trim().toLowerCase()}@readease.app';
-
-      String? firebaseUid;
-      try {
-        firebaseUid = await AuthService.instance.registerUser(
-          syntheticEmail,
-          _passwordController.text,
-        ).timeout(
-          const Duration(seconds: 10),
-          onTimeout: () => null,
-        );
-      } catch (_) {
-        firebaseUid = null;
-      }
+      final hasFirebase = firebaseUid != null;
 
       final newStudent = Student(
-        username: _usernameController.text.trim(),
+        username: username,
         passwordHash: hashedPassword,
-        displayName: _usernameController.text.trim(),
+        displayName: username,
         gradeLevel: _selectedGrade,
         firebaseUid: firebaseUid,
         createdAt: DateTime.now().toIso8601String(),
@@ -90,8 +86,22 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
       final createdStudent =
           await DatabaseService.instance.getStudentById(newId);
 
-      if (!mounted) return;
+      if (!mounted || createdStudent == null) return;
 
+      studentProvider.setStudent(createdStudent);
+
+      if (!hasFirebase) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Signed up offline. Cloud features will activate when online.',
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+
+      if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(
         '/set-pin',
         arguments: createdStudent,
@@ -108,7 +118,7 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.studentBg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
@@ -117,23 +127,11 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'Create Account',
-                  style: TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF2E3A3A),
-                  ),
-                ),
+                const Text('Create Account', style: AppText.h1),
                 const SizedBox(height: 4),
                 const Text(
                   'Fill in your details below',
-                  style: TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 13,
-                    color: Color(0xFF6B7878),
-                  ),
+                  style: AppText.caption,
                 ),
                 const SizedBox(height: 24),
 
@@ -162,11 +160,13 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
                       onSelected: (_) {
                         setState(() => _selectedGrade = grade);
                       },
-                      selectedColor: const Color(0xFF2BAFA0),
+                      selectedColor: AppColors.accentTeal,
                       labelStyle: TextStyle(
                         fontFamily: 'Nunito',
                         fontWeight: FontWeight.w700,
-                        color: isSelected ? Colors.white : const Color(0xFF2E3A3A),
+                        color: isSelected
+                            ? Colors.white
+                            : AppColors.textPrimary,
                       ),
                     );
                   }),
@@ -205,7 +205,7 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
                   Text(
                     _errorMessage!,
                     style: const TextStyle(
-                      color: Color(0xFFFF6F61),
+                      color: AppColors.textCoral,
                       fontFamily: 'Nunito',
                       fontWeight: FontWeight.w600,
                     ),
@@ -215,11 +215,11 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
                 const SizedBox(height: 28),
 
                 SizedBox(
-                  height: 52,
+                  height: 56,
                   child: ElevatedButton(
                     onPressed: _isSubmitting ? null : _handleSignup,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2BAFA0),
+                      backgroundColor: AppColors.accentTeal,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -249,8 +249,8 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
                   child: OutlinedButton(
                     onPressed: () => Navigator.of(context).pop(),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF6B7878),
-                      side: const BorderSide(color: Color(0xFFE9DCBE)),
+                      foregroundColor: AppColors.textMuted,
+                      side: BorderSide(color: AppColors.border),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -276,19 +276,20 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
     return InputDecoration(
       hintText: hint,
       filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      fillColor: AppColors.surface,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE9DCBE)),
+        borderSide: BorderSide(color: AppColors.border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE9DCBE)),
+        borderSide: BorderSide(color: AppColors.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF2BAFA0), width: 2),
+        borderSide: const BorderSide(color: AppColors.accentTeal, width: 2),
       ),
     );
   }
@@ -308,7 +309,7 @@ class _Label extends StatelessWidget {
           fontFamily: 'Nunito',
           fontSize: 13,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF6B7878),
+          color: AppColors.textMuted,
         ),
       ),
     );

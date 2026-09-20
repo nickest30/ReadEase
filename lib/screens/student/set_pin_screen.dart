@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:bcrypt/bcrypt.dart';
 import '../../models/student.dart';
 import '../../services/database_service.dart';
+import 'package:provider/provider.dart';
+import '../../providers/student_provider.dart';
 
 class SetPinScreen extends StatefulWidget {
   const SetPinScreen({super.key});
@@ -59,10 +61,17 @@ class _SetPinScreenState extends State<SetPinScreen> {
     await DatabaseService.instance.updatePin(student.id!, hashedPin);
 
     if (!mounted) return;
+
+    final refreshed =
+        await DatabaseService.instance.getStudentById(student.id!);
+
+    if (!mounted || refreshed == null) return;
+
+    context.read<StudentProvider>().setStudent(refreshed);
+
     Navigator.of(context).pushNamedAndRemoveUntil(
       '/student-home',
       (route) => false,
-      arguments: student,
     );
   }
 

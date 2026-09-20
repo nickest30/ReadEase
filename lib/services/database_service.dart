@@ -159,6 +159,17 @@ class DatabaseService {
     );
   }
 
+  Future<bool> updateStudentFirebaseUid(int studentId, String firebaseUid) async {
+    final db = await database;
+    final rows = await db.update(
+      'students',
+      {'firebase_uid': firebaseUid},
+      where: 'id = ?',
+      whereArgs: [studentId],
+    );
+    return rows > 0;
+  }
+
   Future<int> addPoints(int studentId, int points) async {
     final db = await database;
     final student = await getStudentById(studentId);

@@ -1,132 +1,179 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import '../../models/student.dart';
+import '../../providers/student_provider.dart';
+import '../../utils/app_theme.dart';
 
 class StudentHomeScreen extends StatelessWidget {
   const StudentHomeScreen({super.key});
 
+  Future<void> _confirmExit(BuildContext context) async {
+    final studentProvider = context.read<StudentProvider>();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Exit?',
+          style: TextStyle(
+            fontFamily: 'Nunito',
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to exit?\nProgress will be saved.',
+          style: TextStyle(
+            fontFamily: 'Nunito',
+            fontSize: 14,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text(
+              'No',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentCoral,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Yes',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    // Clear the session
+    studentProvider.logout();
+
+    // Return to profile list, clearing stack
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/student-profile-list',
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final student = ModalRoute.of(context)!.settings.arguments as Student;
+    final student = context.watch<StudentProvider>().currentStudent;
+
+    // Guard: no session → redirect to profile list
+    if (student == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/student-profile-list',
+            (route) => false,
+          );
+        }
+      });
+      return const Scaffold(
+        backgroundColor: AppColors.studentBg,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.studentBg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 22,
-                    backgroundColor: Color(0xFF2BAFA0),
-                    child: Icon(Icons.person, color: Colors.white),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Hello, ${student.displayName}!',
-                          style: const TextStyle(
-                            fontFamily: 'Nunito',
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF2E3A3A),
-                          ),
-                        ),
-                        const Text(
-                          'What do you want to do today?',
-                          style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontSize: 12,
-                            color: Color(0xFF6B7878),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 28),
+              _Header(student: student),
+              const SizedBox(height: 24),
 
               _HomeCard(
                 icon: Icons.menu_book_rounded,
                 label: 'Start Learning',
                 sublabel: 'Pick a grade and lesson',
-                color: const Color(0xFFFF6F61),
-                onTap: () {
-                  Navigator.of(context).pushNamed(
-                    '/grade-selection',
-                    arguments: student,
-                  );
-                },
+                color: AppColors.accentCoral,
+                onTap: () => Navigator.of(context).pushNamed(
+                  '/grade-selection',
+                  arguments: student,
+                ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               _HomeCard(
                 icon: Icons.emoji_events_rounded,
                 label: 'My Badges',
                 sublabel: 'See what you earned',
-                color: const Color(0xFFE8A93B),
-                onTap: () {
-                  Navigator.of(context).pushNamed(
-                    '/badges', 
-                    arguments: student
-                  );
-                },
+                color: AppColors.accentYellow,
+                onTap: () => Navigator.of(context).pushNamed(
+                  '/badges',
+                  arguments: student,
+                ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               _HomeCard(
                 icon: Icons.bar_chart_rounded,
                 label: 'Progress',
                 sublabel: 'Track your journey',
-                color: const Color(0xFF2BAFA0),
-                onTap: () {
-                  Navigator.of(context).pushNamed(
-                    '/progress', 
-                    arguments: student
-                  );
-                },
+                color: AppColors.accentTeal,
+                onTap: () => Navigator.of(context).pushNamed(
+                  '/progress',
+                  arguments: student,
+                ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               _HomeCard(
                 icon: Icons.leaderboard_rounded,
                 label: 'Leaderboard',
                 sublabel: 'See your ranking',
-                color: const Color(0xFF8B5FBF),
-                onTap: () {
-                  Navigator.of(context).pushNamed(
-                    '/leaderboard', 
-                    arguments: student
-                  );
-                },
+                color: AppColors.accentPurple,
+                onTap: () => Navigator.of(context).pushNamed(
+                  '/leaderboard',
+                  arguments: student,
+                ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               _HomeCard(
                 icon: Icons.settings_rounded,
                 label: 'Settings',
                 sublabel: 'Edit profile and audio',
-                color: const Color(0xFF6B7878),
-                onTap: () {
-                  Navigator.of(context).pushNamed(
-                    '/settings', 
-                    arguments: student
-                  );
-                },
+                color: AppColors.textMuted,
+                onTap: () => Navigator.of(context).pushNamed(
+                  '/settings',
+                  arguments: student,
+                ),
               ),
 
               const Spacer(),
 
               SizedBox(
-                height: 50,
+                height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                  },
+                  onPressed: () => _confirmExit(context),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6F61),
+                    backgroundColor: AppColors.accentCoral,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -137,6 +184,7 @@ class StudentHomeScreen extends StatelessWidget {
                     style: TextStyle(
                       fontFamily: 'Nunito',
                       fontWeight: FontWeight.w700,
+                      fontSize: 15,
                     ),
                   ),
                 ),
@@ -145,6 +193,49 @@ class StudentHomeScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  final Student student;
+  const _Header({required this.student});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const CircleAvatar(
+          radius: 22,
+          backgroundColor: AppColors.accentTeal,
+          child: Icon(Icons.person, color: Colors.white),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Hello, ${student.displayName}!',
+                style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              Text(
+                '${student.totalPoints} points earned',
+                style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 12,
+                  color: AppColors.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -168,13 +259,13 @@ class _HomeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppRadius.large),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE9DCBE)),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.large),
+          border: Border.all(color: AppColors.border),
         ),
         child: Row(
           children: [
@@ -183,7 +274,7 @@ class _HomeCard extends StatelessWidget {
               height: 44,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.medium),
               ),
               child: Icon(icon, color: color),
             ),
@@ -198,7 +289,7 @@ class _HomeCard extends StatelessWidget {
                       fontFamily: 'Nunito',
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
-                      color: Color(0xFF2E3A3A),
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   Text(
@@ -206,7 +297,7 @@ class _HomeCard extends StatelessWidget {
                     style: const TextStyle(
                       fontFamily: 'Nunito',
                       fontSize: 12,
-                      color: Color(0xFF6B7878),
+                      color: AppColors.textMuted,
                     ),
                   ),
                 ],

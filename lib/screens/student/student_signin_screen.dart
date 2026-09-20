@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:bcrypt/bcrypt.dart';
+import 'package:provider/provider.dart';
+
+import '../../models/student.dart';
 import '../../services/database_service.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/student_provider.dart';
+import '../../utils/app_theme.dart';
 
 class StudentSignInScreen extends StatefulWidget {
   const StudentSignInScreen({super.key});
 
   @override
-  State<StudentSignInScreen> createState() =>
-      _StudentSignInScreenState();
+  State<StudentSignInScreen> createState() => _StudentSignInScreenState();
 }
 
 class _StudentSignInScreenState extends State<StudentSignInScreen> {
@@ -30,81 +35,123 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
       return;
     }
 
+    // ── Capture providers BEFORE any await ──
+    final authProvider = context.read<AuthProvider>();
+    final studentProvider = context.read<StudentProvider>();
+
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
     });
 
-    final student = await DatabaseService.instance
-        .getStudentByUsername(_usernameController.text.trim());
+    try {
+      final username = _usernameController.text.trim().toLowerCase();
 
-    if (!mounted) return;
+      final student =
+          await DatabaseService.instance.getStudentByUsername(username);
 
-    if (student == null) {
+      if (!mounted) return;
+
+      if (student == null) {
+        setState(() {
+          _errorMessage = 'Username not found on this device.';
+          _isSubmitting = false;
+        });
+        return;
+      }
+
+      final isCorrect = BCrypt.checkpw(
+        _passwordController.text,
+        student.passwordHash,
+      );
+
+      if (!mounted) return;
+
+      if (!isCorrect) {
+        setState(() {
+          _errorMessage = 'Incorrect password.';
+          _isSubmitting = false;
+        });
+        return;
+      }
+
+      // ── Firebase sign-in ──
+      final syntheticEmail = '$username@readease.app';
+      final firebaseOk = await authProvider.signIn(
+        syntheticEmail,
+        _passwordController.text,
+      );
+
+      if (!mounted) return;
+
+      // Backfill firebase_uid if missing
+      Student finalStudent = student;
+      if (firebaseOk && student.firebaseUid == null) {
+        final uid = authProvider.uid;
+        if (uid != null) {
+          final updated = await DatabaseService.instance
+              .updateStudentFirebaseUid(student.id!, uid);
+          if (updated) {
+            final refreshed = await DatabaseService.instance
+                .getStudentById(student.id!);
+            if (refreshed != null) {
+              finalStudent = refreshed;
+            }
+          }
+        }
+      }
+
+      if (!mounted) return;
+
+      studentProvider.setStudent(finalStudent);
+
+      if (!firebaseOk) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Signed in offline. Cloud features will sync later.',
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed(
+        '/set-pin',
+        arguments: finalStudent,
+      );
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _errorMessage = 'Username not found.';
+        _errorMessage = 'Something went wrong. Please try again.';
         _isSubmitting = false;
       });
-      return;
     }
-
-    final isCorrect = BCrypt.checkpw(
-      _passwordController.text,
-      student.passwordHash,
-    );
-
-    if (!mounted) return;
-
-    if (!isCorrect) {
-      setState(() {
-        _errorMessage = 'Incorrect password.';
-        _isSubmitting = false;
-      });
-      return;
-    }
-
-    // On a new device, take them to Set PIN first
-    Navigator.of(context).pushReplacementNamed(
-      '/set-pin',
-      arguments: student,
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.studentBg,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 28, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               IconButton(
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.arrow_back,
-                    color: Color(0xFF2E3A3A)),
+                    color: AppColors.textPrimary),
                 alignment: Alignment.centerLeft,
                 padding: EdgeInsets.zero,
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Sign In',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF2E3A3A),
-                ),
-              ),
+              const Text('Sign In', style: AppText.h1),
               const Text(
                 'Log in with your credentials',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 13,
-                  color: Color(0xFF6B7878),
-                ),
+                style: AppText.caption,
               ),
               const SizedBox(height: 28),
 
@@ -114,7 +161,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
                   fontFamily: 'Nunito',
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF6B7878),
+                  color: AppColors.textMuted,
                 ),
               ),
               const SizedBox(height: 5),
@@ -130,7 +177,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
                   fontFamily: 'Nunito',
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF6B7878),
+                  color: AppColors.textMuted,
                 ),
               ),
               const SizedBox(height: 5),
@@ -145,7 +192,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
                 Text(
                   _errorMessage!,
                   style: const TextStyle(
-                    color: Color(0xFFFF6F61),
+                    color: AppColors.textCoral,
                     fontFamily: 'Nunito',
                     fontWeight: FontWeight.w600,
                   ),
@@ -155,11 +202,11 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
               const SizedBox(height: 28),
 
               SizedBox(
-                height: 52,
+                height: 56,
                 child: ElevatedButton(
                   onPressed: _isSubmitting ? null : _handleSignIn,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2BAFA0),
+                    backgroundColor: AppColors.accentTeal,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -194,21 +241,20 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
     return InputDecoration(
       hintText: hint,
       filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14, vertical: 14),
+      fillColor: AppColors.surface,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE9DCBE)),
+        borderSide: BorderSide(color: AppColors.border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE9DCBE)),
+        borderSide: BorderSide(color: AppColors.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(
-            color: Color(0xFF2BAFA0), width: 2),
+        borderSide: const BorderSide(color: AppColors.accentTeal, width: 2),
       ),
     );
   }

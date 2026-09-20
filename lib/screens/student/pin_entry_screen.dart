@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:bcrypt/bcrypt.dart';
 import '../../models/student.dart';
+import 'package:provider/provider.dart';
+import '../../providers/student_provider.dart';
 
 class PinEntryScreen extends StatefulWidget {
   const PinEntryScreen({super.key});
@@ -39,10 +41,11 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
     final isCorrect = BCrypt.checkpw(_enteredPin, student.pinHash ?? '');
 
     if (isCorrect) {
+      context.read<StudentProvider>().setStudent(student);
+
       Navigator.of(context).pushNamedAndRemoveUntil(
         '/student-home',
         (route) => false,
-        arguments: student,
       );
     } else {
       setState(() {
