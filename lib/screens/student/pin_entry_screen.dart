@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:bcrypt/bcrypt.dart';
-import '../../models/student.dart';
 import 'package:provider/provider.dart';
+
+import '../../models/student.dart';
 import '../../providers/student_provider.dart';
+import '../../utils/app_theme.dart';
 
 class PinEntryScreen extends StatefulWidget {
   const PinEntryScreen({super.key});
@@ -42,7 +44,6 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
 
     if (isCorrect) {
       context.read<StudentProvider>().setStudent(student);
-
       Navigator.of(context).pushNamedAndRemoveUntil(
         '/student-home',
         (route) => false,
@@ -63,64 +64,81 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
     final student = ModalRoute.of(context)!.settings.arguments as Student;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.studentBg,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const CircleAvatar(
-                radius: 32,
-                backgroundColor: Color(0xFF2BAFA0),
-                child: Icon(Icons.person, color: Colors.white, size: 32),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                student.displayName,
-                style: const TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF2E3A3A),
+              // Avatar
+              Container(
+                width: 72,
+                height: 72,
+                decoration: const BoxDecoration(
+                  color: AppColors.accentTeal,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    student.displayName.isNotEmpty
+                        ? student.displayName[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
+              const SizedBox(height: AppSpacing.md),
+
+              Text(student.displayName, style: AppText.h2),
 
               if (_isLocked) ...[
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
+
+                // Locked state
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFBF0D9),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE8A93B)),
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.large),
+                    border: Border.all(color: AppColors.accentCoral, width: 2),
                   ),
-                  child: const Column(
+                  child: Column(
                     children: [
-                      Text(
+                      const Icon(
+                        Icons.lock_rounded,
+                        size: 44,
+                        color: AppColors.accentCoral,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      const Text(
                         'PROFILE LOCKED',
                         style: TextStyle(
                           fontFamily: 'Nunito',
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF8B5FBF),
+                          fontSize: 16,
+                          color: AppColors.textCoral,
                         ),
                       ),
-                      SizedBox(height: 6),
-                      Text(
+                      const SizedBox(height: AppSpacing.xs),
+                      const Text(
                         'Too many incorrect attempts.\nFull login is required to regain access.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 12,
-                          color: Color(0xFF6B7878),
-                        ),
+                        style: AppText.caption,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+
+                const SizedBox(height: AppSpacing.lg),
+
                 SizedBox(
-                  height: 50,
+                  height: 52,
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
@@ -129,10 +147,10 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2BAFA0),
+                      backgroundColor: AppColors.accentTeal,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(AppRadius.large),
                       ),
                     ),
                     child: const Text(
@@ -144,18 +162,19 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
                     ),
                   ),
                 ),
-                
-                const SizedBox(height: 10),
+
+                const SizedBox(height: AppSpacing.sm),
+
                 SizedBox(
                   height: 50,
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: () => Navigator.of(context).pop(),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF6B7878),
-                      side: const BorderSide(color: Color(0xFFE9DCBE)),
+                      foregroundColor: AppColors.textMuted,
+                      side: const BorderSide(color: AppColors.border),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(AppRadius.large),
                       ),
                     ),
                     child: const Text(
@@ -168,35 +187,30 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
                   ),
                 ),
               ] else ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   '$_attemptsRemaining attempts remaining',
-                  style: const TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 12,
-                    color: Color(0xFF6B7878),
-                  ),
+                  style: AppText.caption,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
 
+                // PIN dots
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(4, (index) {
                     final filled = index < _enteredPin.length;
                     return Container(
                       margin: const EdgeInsets.symmetric(horizontal: 8),
-                      width: 18,
-                      height: 18,
+                      width: 20,
+                      height: 20,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: filled
-                            ? const Color(0xFF2BAFA0)
-                            : const Color(0xFFE9DCBE),
+                        color: filled ? AppColors.accentTeal : AppColors.border,
                       ),
                     );
                   }),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: AppSpacing.xl),
 
                 _NumberPad(
                   onDigit: (digit) => _onDigitPressed(digit, student),
@@ -232,13 +246,13 @@ class _NumberPad extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: row.map((key) {
             if (key.isEmpty) {
-              return const SizedBox(width: 72, height: 60);
+              return const SizedBox(width: 72, height: 64);
             }
             return Padding(
               padding: const EdgeInsets.all(6),
               child: SizedBox(
-                width: 60,
-                height: 60,
+                width: 64,
+                height: 64,
                 child: ElevatedButton(
                   onPressed: () {
                     if (key == '⌫') {
@@ -248,8 +262,8 @@ class _NumberPad extends StatelessWidget {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF2E3A3A),
+                    backgroundColor: AppColors.surface,
+                    foregroundColor: AppColors.textPrimary,
                     elevation: 1,
                     shape: const CircleBorder(),
                   ),
@@ -257,7 +271,7 @@ class _NumberPad extends StatelessWidget {
                     key,
                     style: const TextStyle(
                       fontFamily: 'Nunito',
-                      fontSize: 20,
+                      fontSize: 22,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

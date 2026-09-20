@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../services/database_service.dart';
+
 import '../../models/student.dart';
+import '../../services/database_service.dart';
+import '../../utils/app_theme.dart';
 
 class ProfileListScreen extends StatefulWidget {
   const ProfileListScreen({super.key});
@@ -21,6 +23,7 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
 
   Future<void> _loadProfiles() async {
     final students = await DatabaseService.instance.getAllStudents();
+    if (!mounted) return;
     setState(() {
       _profiles = students;
       _loading = false;
@@ -30,142 +33,174 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.studentBg,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Center(
-                child: Text(
-                  "Who's reading today?",
-                  style: TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF2E3A3A),
-                  ),
-                ),
+              const SizedBox(height: AppSpacing.md),
+
+              // Back button
+              IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                alignment: Alignment.centerLeft,
+                padding: EdgeInsets.zero,
               ),
-              const SizedBox(height: 28),
 
-              if (_loading)
-                const Center(child: CircularProgressIndicator())
-              else if (_profiles.isEmpty)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    child: Text(
-                      'No profiles yet.\nRegister to get started!',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 15,
-                        color: Color(0xFF6B7878),
-                      ),
+              const SizedBox(height: AppSpacing.sm),
+
+              // Header with Yse peeking
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text("Who's reading\ntoday?", style: AppText.h1),
+                        SizedBox(height: AppSpacing.xs),
+                        Text(
+                          'Pick your profile to start',
+                          style: AppText.caption,
+                        ),
+                      ],
                     ),
                   ),
-                )
-              else
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  alignment: WrapAlignment.center,
-                  children: _profiles.map((student) {
-                    return _ProfileCard(
-                      student: student,
-                      onTap: () {
-                        Navigator.of(context).pushNamed(
-                          '/pin-entry',
-                          arguments: student,
-                        );
-                      },
-                    );
-                  }).toList(),
-                ),
+                  _YseImage(
+                    assetPath: 'assets/images/mascot/yse_thinking.png',
+                    size: 90,
+                  ),
+                ],
+              ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.xl),
 
+              // Profile grid / empty state
+              Expanded(
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _profiles.isEmpty
+                        ? _buildEmptyState()
+                        : _buildProfileGrid(),
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
+              // Primary CTA — Register
               SizedBox(
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pushNamed('/solo-signup');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2BAFA0),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Text(
+                height: 56,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.of(context).pushNamed('/solo-signup'),
+                  icon: const Icon(Icons.person_add_alt_1_rounded),
+                  label: const Text(
                     'Register on Your Own',
                     style: TextStyle(
                       fontFamily: 'Nunito',
                       fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentTeal,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.large),
                     ),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 12),
-              
+              const SizedBox(height: AppSpacing.md),
+
+              // Secondary CTA — Login
               SizedBox(
                 height: 52,
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.of(context).pushNamed('/student-signin');
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF2BAFA0),
-                    side: const BorderSide(color: Color(0xFF2BAFA0)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Text(
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).pushNamed('/student-signin'),
+                  icon: const Icon(Icons.login_rounded),
+                  label: const Text(
                     'Log In with Credentials',
                     style: TextStyle(
                       fontFamily: 'Nunito',
                       fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.accentTeal,
+                    side: const BorderSide(color: AppColors.accentTeal, width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.large),
                     ),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 52,
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF6B7878),
-                    side: const BorderSide(color: Color(0xFFE9DCBE)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Text(
-                    'Back',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
+              const SizedBox(height: AppSpacing.lg),
             ],
           ),
         ),
       ),
     );
   }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(
+            Icons.person_outline_rounded,
+            size: 64,
+            color: AppColors.textMuted,
+          ),
+          SizedBox(height: AppSpacing.md),
+          Text(
+            'No profiles yet.',
+            style: AppText.h2,
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: AppSpacing.xs),
+          Text(
+            'Tap "Register on Your Own"\nto create your first profile.',
+            textAlign: TextAlign.center,
+            style: AppText.caption,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileGrid() {
+    return GridView.builder(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: AppSpacing.md,
+        crossAxisSpacing: AppSpacing.md,
+        childAspectRatio: 0.95,
+      ),
+      itemCount: _profiles.length,
+      itemBuilder: (context, index) {
+        final student = _profiles[index];
+        return _ProfileCard(
+          student: student,
+          onTap: () => Navigator.of(context).pushNamed(
+            '/pin-entry',
+            arguments: student,
+          ),
+        );
+      },
+    );
+  }
 }
+
+// ─────────────────────────────────────────────────────────
+// Private widgets
+// ─────────────────────────────────────────────────────────
 
 class _ProfileCard extends StatelessWidget {
   final Student student;
@@ -175,37 +210,107 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final initial = student.displayName.isNotEmpty
+        ? student.displayName[0].toUpperCase()
+        : '?';
+
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppRadius.large),
       child: Container(
-        width: 100,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE9DCBE)),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.large),
+          border: Border.all(color: AppColors.border),
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircleAvatar(
-              radius: 28,
-              backgroundColor: Color(0xFF2BAFA0),
-              child: Icon(Icons.person, color: Colors.white, size: 30),
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                color: AppColors.accentTeal,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               student.displayName,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontFamily: 'Nunito',
+                fontSize: 15,
                 fontWeight: FontWeight.w700,
-                fontSize: 13,
+                color: AppColors.textPrimary,
               ),
-              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.accentTeal.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Grade ${student.gradeLevel}',
+                style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textTeal,
+                ),
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _YseImage extends StatelessWidget {
+  final String assetPath;
+  final double size;
+
+  const _YseImage({required this.assetPath, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      assetPath,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(size * 0.25),
+            border: Border.all(color: AppColors.border, width: 2),
+          ),
+          child: Icon(
+            Icons.auto_stories_rounded,
+            size: size * 0.5,
+            color: AppColors.accentTeal,
+          ),
+        );
+      },
     );
   }
 }

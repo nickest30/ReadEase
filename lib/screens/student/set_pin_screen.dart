@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:bcrypt/bcrypt.dart';
+import 'package:provider/provider.dart';
+
 import '../../models/student.dart';
 import '../../services/database_service.dart';
-import 'package:provider/provider.dart';
 import '../../providers/student_provider.dart';
+import '../../utils/app_theme.dart';
 
 class SetPinScreen extends StatefulWidget {
   const SetPinScreen({super.key});
@@ -56,6 +58,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
     }
 
     final student = ModalRoute.of(context)!.settings.arguments as Student;
+    final studentProvider = context.read<StudentProvider>();
     final hashedPin = BCrypt.hashpw(_pin, BCrypt.gensalt());
 
     await DatabaseService.instance.updatePin(student.id!, hashedPin);
@@ -67,7 +70,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
 
     if (!mounted || refreshed == null) return;
 
-    context.read<StudentProvider>().setStudent(refreshed);
+    studentProvider.setStudent(refreshed);
 
     Navigator.of(context).pushNamedAndRemoveUntil(
       '/student-home',
@@ -80,64 +83,65 @@ class _SetPinScreenState extends State<SetPinScreen> {
     final currentPin = _isConfirming ? _confirmPin : _pin;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.studentBg,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              const Icon(
+                Icons.lock_outline_rounded,
+                size: 56,
+                color: AppColors.accentTeal,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+
               Text(
                 _isConfirming ? 'Confirm Your PIN' : 'Set Your PIN',
-                style: const TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF2E3A3A),
-                ),
+                style: AppText.h1,
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: AppSpacing.xs),
               const Text(
                 'Choose a 4-digit PIN for quick access',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 13,
-                  color: Color(0xFF6B7878),
-                ),
+                style: AppText.caption,
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.xl),
 
+              // PIN dots
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(4, (index) {
                   final filled = index < currentPin.length;
                   return Container(
                     margin: const EdgeInsets.symmetric(horizontal: 8),
-                    width: 18,
-                    height: 18,
+                    width: 20,
+                    height: 20,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: filled
-                          ? const Color(0xFF2BAFA0)
-                          : const Color(0xFFE9DCBE),
+                      color: filled ? AppColors.accentTeal : AppColors.border,
                     ),
                   );
                 }),
               ),
 
               if (_errorMessage != null) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 Text(
                   _errorMessage!,
                   style: const TextStyle(
-                    color: Color(0xFFFF6F61),
+                    color: AppColors.textCoral,
                     fontFamily: 'Nunito',
                     fontWeight: FontWeight.w600,
+                    fontSize: 13,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ],
 
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.xxl),
 
               _NumberPad(
                 onDigit: _onDigitPressed,
@@ -150,6 +154,10 @@ class _SetPinScreenState extends State<SetPinScreen> {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────
+// Number pad — shared design
+// ─────────────────────────────────────────────────────────
 
 class _NumberPad extends StatelessWidget {
   final void Function(String) onDigit;
@@ -172,13 +180,13 @@ class _NumberPad extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: row.map((key) {
             if (key.isEmpty) {
-              return const SizedBox(width: 72, height: 60);
+              return const SizedBox(width: 72, height: 64);
             }
             return Padding(
               padding: const EdgeInsets.all(6),
               child: SizedBox(
-                width: 60,
-                height: 60,
+                width: 64,
+                height: 64,
                 child: ElevatedButton(
                   onPressed: () {
                     if (key == '⌫') {
@@ -188,8 +196,8 @@ class _NumberPad extends StatelessWidget {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF2E3A3A),
+                    backgroundColor: AppColors.surface,
+                    foregroundColor: AppColors.textPrimary,
                     elevation: 1,
                     shape: const CircleBorder(),
                   ),
@@ -197,7 +205,7 @@ class _NumberPad extends StatelessWidget {
                     key,
                     style: const TextStyle(
                       fontFamily: 'Nunito',
-                      fontSize: 20,
+                      fontSize: 22,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
