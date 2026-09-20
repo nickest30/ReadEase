@@ -5,6 +5,7 @@ class Parent {
   final String fullName;
   final String email;
   final String createdAt;
+  final String? firebaseUid;
 
   Parent({
     this.id,
@@ -13,6 +14,7 @@ class Parent {
     required this.fullName,
     required this.email,
     required this.createdAt,
+    this.firebaseUid,
   });
 
   Map<String, dynamic> toMap() {
@@ -23,6 +25,7 @@ class Parent {
       'full_name': fullName,
       'email': email,
       'created_at': createdAt,
+      'firebase_uid': firebaseUid,
     };
   }
 
@@ -34,6 +37,7 @@ class Parent {
       fullName: map['full_name'] as String,
       email: map['email'] as String,
       createdAt: map['created_at'] as String,
+      firebaseUid: map['firebase_uid'] as String?,
     );
   }
 }

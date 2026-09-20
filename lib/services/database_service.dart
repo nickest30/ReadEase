@@ -81,7 +81,8 @@ class DatabaseService {
         password_hash TEXT NOT NULL,
         full_name TEXT NOT NULL,
         email TEXT NOT NULL,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        firebase_uid TEXT
       )
     ''');
 

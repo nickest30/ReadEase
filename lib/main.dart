@@ -1,4 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+
+import 'firebase_options.dart';
+import 'utils/app_theme.dart';
+import 'utils/seed_data.dart';
+
+// Providers
+import 'providers/auth_provider.dart';
+import 'providers/student_provider.dart';
+import 'providers/parent_provider.dart';
+import 'providers/teacher_provider.dart';
+
+// Screens (keep all your existing imports)
 import 'screens/shared/splash_screen.dart';
 import 'screens/shared/role_selection_screen.dart';
 import 'screens/student/profile_list_screen.dart';
@@ -11,11 +25,11 @@ import 'screens/student/difficulty_selection_screen.dart';
 import 'screens/student/lesson_screen.dart';
 import 'screens/student/quiz_screen.dart';
 import 'screens/student/results_screen.dart';
-import 'utils/seed_data.dart';
 import 'screens/student/progress_dashboard_screen.dart';
 import 'screens/student/badge_collection_screen.dart';
 import 'screens/student/leaderboard_screen.dart';
 import 'screens/student/student_settings_screen.dart';
+import 'screens/student/student_signin_screen.dart';
 import 'screens/parent/parent_welcome_screen.dart';
 import 'screens/parent/parent_signup_screen.dart';
 import 'screens/parent/parent_login_screen.dart';
@@ -31,13 +45,16 @@ import 'screens/teacher/class_overview_screen.dart';
 import 'screens/teacher/teacher_student_progress_screen.dart';
 import 'screens/teacher/class_analytics_screen.dart';
 import 'screens/teacher/class_leaderboard_screen.dart';
-import 'screens/student/student_signin_screen.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  seedWordsIfEmpty();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  await seedWordsIfEmpty();
+
   runApp(const ReadEaseApp());
 }
 
@@ -46,51 +63,60 @@ class ReadEaseApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ReadEase',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2BAFA0),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => StudentProvider()),
+        ChangeNotifierProvider(create: (_) => ParentProvider()),
+        ChangeNotifierProvider(create: (_) => TeacherProvider()),
+      ],
+      child: MaterialApp(
+        title: 'ReadEase',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: AppColors.accentTeal,
+          ),
+          useMaterial3: true,
+          fontFamily: 'Nunito',
+          scaffoldBackgroundColor: AppColors.introBg,
         ),
-        useMaterial3: true,
-        fontFamily: 'Nunito',
+        initialRoute: '/',
+        routes: {
+          '/': (context) => const SplashScreen(),
+          '/role-selection': (context) => const RoleSelectionScreen(),
+          '/student-profile-list': (context) => const ProfileListScreen(),
+          '/solo-signup': (context) => const SoloSignupScreen(),
+          '/set-pin': (context) => const SetPinScreen(),
+          '/pin-entry': (context) => const PinEntryScreen(),
+          '/student-home': (context) => const StudentHomeScreen(),
+          '/grade-selection': (context) => const GradeSelectionScreen(),
+          '/difficulty-selection': (context) => const DifficultySelectionScreen(),
+          '/lesson': (context) => const LessonScreen(),
+          '/quiz': (context) => const QuizScreen(),
+          '/results': (context) => const ResultsScreen(),
+          '/progress': (context) => const ProgressDashboardScreen(),
+          '/badges': (context) => const BadgeCollectionScreen(),
+          '/leaderboard': (context) => const LeaderboardScreen(),
+          '/settings': (context) => const StudentSettingsScreen(),
+          '/parent-welcome': (context) => const ParentWelcomeScreen(),
+          '/parent-signup': (context) => const ParentSignupScreen(),
+          '/parent-login': (context) => const ParentLoginScreen(),
+          '/parent-dashboard': (context) => const ParentDashboardScreen(),
+          '/add-child': (context) => const AddChildScreen(),
+          '/child-progress': (context) => const ChildProgressScreen(),
+          '/teacher-welcome': (context) => const TeacherWelcomeScreen(),
+          '/teacher-signup': (context) => const TeacherSignupScreen(),
+          '/teacher-login': (context) => const TeacherLoginScreen(),
+          '/teacher-dashboard': (context) => const TeacherDashboardScreen(),
+          '/create-class': (context) => const CreateClassScreen(),
+          '/class-overview': (context) => const ClassOverviewScreen(),
+          '/teacher-student-progress': (context) => const TeacherStudentProgressScreen(),
+          '/class-analytics': (context) => const ClassAnalyticsScreen(),
+          '/class-leaderboard': (context) => const ClassLeaderboardScreen(),
+          '/student-signin': (context) => const StudentSignInScreen(),
+        },
       ),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const SplashScreen(),
-        '/role-selection': (context) => const RoleSelectionScreen(),
-        '/student-profile-list': (context) => const ProfileListScreen(),
-        '/solo-signup': (context) => const SoloSignupScreen(),
-        '/set-pin': (context) => const SetPinScreen(),
-        '/pin-entry': (context) => const PinEntryScreen(),
-        '/student-home': (context) => const StudentHomeScreen(),
-        '/grade-selection': (context) => const GradeSelectionScreen(),
-        '/difficulty-selection': (context) => const DifficultySelectionScreen(),
-        '/lesson': (context) => const LessonScreen(),
-        '/quiz': (context) => const QuizScreen(),
-        '/results': (context) => const ResultsScreen(),
-        '/progress': (context) => const ProgressDashboardScreen(),
-        '/badges': (context) => const BadgeCollectionScreen(),
-        '/leaderboard': (context) => const LeaderboardScreen(),
-        '/settings': (context) => const StudentSettingsScreen(),
-        '/parent-welcome': (context) => const ParentWelcomeScreen(),
-        '/parent-signup': (context) => const ParentSignupScreen(),
-        '/parent-login': (context) => const ParentLoginScreen(),
-        '/parent-dashboard': (context) => const ParentDashboardScreen(),
-        '/add-child': (context) => const AddChildScreen(),
-        '/child-progress': (context) => const ChildProgressScreen(),
-        '/teacher-welcome': (context) => const TeacherWelcomeScreen(),
-        '/teacher-signup': (context) => const TeacherSignupScreen(),
-        '/teacher-login': (context) => const TeacherLoginScreen(),
-        '/teacher-dashboard': (context) => const TeacherDashboardScreen(),
-        '/create-class': (context) => const CreateClassScreen(),
-        '/class-overview': (context) => const ClassOverviewScreen(),
-        '/teacher-student-progress': (context) => const TeacherStudentProgressScreen(),
-        '/class-analytics': (context) => const ClassAnalyticsScreen(),
-        '/class-leaderboard': (context) => const ClassLeaderboardScreen(),
-        '/student-signin': (context) => const StudentSignInScreen(),
-      },
     );
   }
 }
