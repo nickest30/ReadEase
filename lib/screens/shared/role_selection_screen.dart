@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/app_theme.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
@@ -6,99 +7,81 @@ class RoleSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.introBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xxl,
+            vertical: AppSpacing.xl,
+          ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Logo
-              Center(
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2BAFA0),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'RE',
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 30,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
+              const SizedBox(height: AppSpacing.xl),
+
+              // Yse mascot — standing with book
+              const Center(
+                child: _YseImage(
+                  assetPath: 'assets/images/mascot/yse_base.png',
+                  size: 160,
+                  fallbackIcon: Icons.auto_stories_rounded,
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.xl),
 
               // Welcome text
-              const Center(
-                child: Text(
-                  'Welcome to ReadEase!',
-                  style: TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF2E3A3A),
-                  ),
-                ),
+              const Text(
+                'Welcome to\nReadEase!',
+                textAlign: TextAlign.center,
+                style: AppText.h1,
+              ),
+              const SizedBox(height: AppSpacing.md),
+
+              const Text(
+                'A reading companion that helps kids\nlearn words, earn badges, and\nbuild confidence.',
+                textAlign: TextAlign.center,
+                style: AppText.body,
               ),
 
-              const SizedBox(height: 8),
-
-              const Center(
-                child: Text(
-                  'A reading companion that helps kids\nlearn words, earn badges, and\nbuild confidence.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF6B7878),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 48),
+              const SizedBox(height: AppSpacing.xxxl),
 
               // LEARNER button
               _RoleButton(
                 label: 'LEARNER',
-                color: const Color(0xFF2BAFA0),
+                icon: Icons.school_rounded,
+                color: AppColors.accentTeal,
                 onTap: () {
                   Navigator.of(context).pushNamed('/student-profile-list');
                 },
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacing.md),
 
               // PARENT button
               _RoleButton(
                 label: 'PARENT',
-                color: const Color(0xFF8B5FBF),
+                icon: Icons.family_restroom_rounded,
+                color: AppColors.accentPurple,
                 onTap: () {
                   Navigator.of(context).pushNamed('/parent-welcome');
                 },
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacing.md),
 
               // TEACHER button
               _RoleButton(
                 label: 'TEACHER',
-                color: const Color(0xFFE8A93B),
+                icon: Icons.co_present_rounded,
+                color: AppColors.accentYellow,
+                textColor: AppColors.textPrimary,
                 onTap: () {
                   Navigator.of(context).pushNamed('/teacher-welcome');
                 },
               ),
+
+              const SizedBox(height: AppSpacing.xl),
             ],
           ),
         ),
@@ -107,43 +90,100 @@ class RoleSelectionScreen extends StatelessWidget {
   }
 }
 
-// Reusable role button widget — private to this file
+// ─────────────────────────────────────────────────────────
+// Reusable widgets (private to this file)
+// ─────────────────────────────────────────────────────────
+
 class _RoleButton extends StatelessWidget {
   final String label;
+  final IconData icon;
   final Color color;
+  final Color? textColor;
   final VoidCallback onTap;
 
   const _RoleButton({
     required this.label,
+    required this.icon,
     required this.color,
+    this.textColor,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final fgColor = textColor ?? Colors.white;
+
     return SizedBox(
-      height: 56,
+      height: 64,
       child: ElevatedButton(
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
-          foregroundColor: Colors.white,
-          elevation: 3,
+          foregroundColor: fgColor,
+          elevation: 4,
           shadowColor: color.withValues(alpha: 0.4),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppRadius.large),
           ),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontFamily: 'Nunito',
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
-          ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: fgColor, size: 22),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+                color: fgColor,
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+class _YseImage extends StatelessWidget {
+  final String assetPath;
+  final double size;
+  final IconData fallbackIcon;
+
+  const _YseImage({
+    required this.assetPath,
+    required this.size,
+    required this.fallbackIcon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      assetPath,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(size * 0.25),
+            border: Border.all(color: AppColors.border, width: 2),
+          ),
+          child: Center(
+            child: Icon(
+              fallbackIcon,
+              size: size * 0.5,
+              color: AppColors.accentTeal,
+            ),
+          ),
+        );
+      },
     );
   }
 }

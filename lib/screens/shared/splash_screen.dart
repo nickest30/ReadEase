@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -16,7 +17,6 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // Controls the loading bar animation over 2.5 seconds
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2500),
@@ -26,10 +26,8 @@ class _SplashScreenState extends State<SplashScreen>
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
-    // Start the animation immediately
     _controller.forward();
 
-    // Navigate to Role Selection after 3 seconds
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/role-selection');
@@ -46,61 +44,31 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.introBg,
       body: SafeArea(
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo placeholder — we'll replace this with
-              // the real ReadEase logo image later
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2BAFA0),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: const Center(
-                  child: Text(
-                    'RE',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 38,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+              // Yse mascot — waving pose
+              const _YseImage(
+                assetPath: 'assets/images/mascot/yse_wave.png',
+                size: 180,
+                fallbackIcon: Icons.menu_book_rounded,
               ),
-
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.xl),
 
               // App name
-              const Text(
-                'ReadEase',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 36,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF2E3A3A),
-                ),
-              ),
-
-              const SizedBox(height: 8),
+              const Text('ReadEase', style: AppText.display),
+              const SizedBox(height: AppSpacing.sm),
 
               // Tagline
               const Text(
                 'Read at your own ease.',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF6B7878),
-                ),
+                style: AppText.body,
               ),
 
-              const SizedBox(height: 48),
+              const SizedBox(height: AppSpacing.xxxl),
 
               // Animated loading bar
               Padding(
@@ -108,20 +76,16 @@ class _SplashScreenState extends State<SplashScreen>
                 child: AnimatedBuilder(
                   animation: _progressAnimation,
                   builder: (context, child) {
-                    return Column(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: LinearProgressIndicator(
-                            value: _progressAnimation.value,
-                            minHeight: 8,
-                            backgroundColor: const Color(0xFFE9DCBE),
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                              Color(0xFF2BAFA0),
-                            ),
-                          ),
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadius.small),
+                      child: LinearProgressIndicator(
+                        value: _progressAnimation.value,
+                        minHeight: 8,
+                        backgroundColor: AppColors.border,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppColors.accentTeal,
                         ),
-                      ],
+                      ),
                     );
                   },
                 ),
@@ -130,6 +94,49 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Reusable Yse image with a graceful fallback if the asset is missing.
+/// Use this EVERYWHERE Yse appears.
+class _YseImage extends StatelessWidget {
+  final String assetPath;
+  final double size;
+  final IconData fallbackIcon;
+
+  const _YseImage({
+    required this.assetPath,
+    required this.size,
+    required this.fallbackIcon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      assetPath,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) {
+        // Fallback: rounded container with icon
+        return Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(size * 0.25),
+            border: Border.all(color: AppColors.border, width: 2),
+          ),
+          child: Center(
+            child: Icon(
+              fallbackIcon,
+              size: size * 0.5,
+              color: AppColors.accentTeal,
+            ),
+          ),
+        );
+      },
     );
   }
 }
