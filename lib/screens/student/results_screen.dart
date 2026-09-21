@@ -25,6 +25,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
   String _difficulty = 'easy';
   int _starsEarned = 0;
   String _encouragementComment = '';
+  List<int> _wrongWordIds = [];
 
   // ─────────────────────────────────────────────────────────
   // Star-tier comments (4 per tier, randomly picked)
@@ -77,6 +78,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
     _difficulty = args['difficulty'] as String;
     _score = args['score'] as int;
     _totalQuestions = args['totalQuestions'] as int;
+    _wrongWordIds = (args['wrongWordIds'] as List?)?.cast<int>() ?? [];
 
     final pointsEarned = _score * 5;
     final stars = _totalQuestions == 0
@@ -86,6 +88,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
     final student = context.read<StudentProvider>().currentStudent;
     if (student == null || student.id == null) return;
 
+    final wrongIdsJson = _wrongWordIds.isEmpty
+        ? null
+        : '[${_wrongWordIds.join(',')}]';
+
     final result = QuizResult(
       studentId: student.id!,
       gradeLevel: _gradeLevel,
@@ -94,6 +100,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
       totalQuestions: _totalQuestions,
       pointsEarned: pointsEarned,
       completedAt: DateTime.now().toIso8601String(),
+      wrongWordIds: wrongIdsJson,
     );
 
     // Save to local DB

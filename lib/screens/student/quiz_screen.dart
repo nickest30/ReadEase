@@ -11,6 +11,7 @@ class QuizScreen extends StatefulWidget {
 class _QuizScreenState extends State<QuizScreen> {
   int _currentIndex = 0;
   int _score = 0;
+  final List<int> _wrongWordIds = [];
   String? _selectedAnswer;
   bool _answered = false;
   bool _initialized = false;
@@ -30,11 +31,16 @@ class _QuizScreenState extends State<QuizScreen> {
   void _selectAnswer(String answer) {
     if (_answered) return;
 
+    final currentWord = _words[_currentIndex];
+    final isCorrect = answer == currentWord.correctAnswer;
+
     setState(() {
       _selectedAnswer = answer;
       _answered = true;
-      if (answer == _words[_currentIndex].correctAnswer) {
+      if (isCorrect) {
         _score++;
+      } else if (currentWord.id != null) {
+        _wrongWordIds.add(currentWord.id!);
       }
     });
   }
@@ -56,6 +62,7 @@ class _QuizScreenState extends State<QuizScreen> {
           ...args,
           'score': _score,
           'totalQuestions': _words.length,
+          'wrongWordIds': _wrongWordIds,
         },
       );
     }

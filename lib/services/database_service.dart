@@ -25,8 +25,9 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createTables,
+      onUpgrade: _upgradeTables,
     );
   }
 
@@ -123,6 +124,15 @@ class DatabaseService {
     ''');
   }
 
+  Future<void> _upgradeTables(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // v2: add wrong_word_ids to quiz_results
+      await db.execute(
+        'ALTER TABLE quiz_results ADD COLUMN wrong_word_ids TEXT',
+      );
+    }
+  }
+
   // ---------- Student methods ----------
 
   Future<int> insertStudent(Student student) async {
@@ -202,6 +212,45 @@ class DatabaseService {
       where: 'id = ?',
       whereArgs: [studentId],
     );
+  }
+
+  Future<List<Word>> getWeakWords(int studentId, {int limit = 20}) async {
+    final db = await database;
+
+    final rows = await db.query(
+      'quiz_results',
+      columns: ['wrong_word_ids'],
+      where: 'student_id = ? AND wrong_word_ids IS NOT NULL AND wrong_word_ids != ""',
+      whereArgs: [studentId],
+      orderBy: 'completed_at DESC',
+    );
+
+    if (rows.isEmpty) return [];
+
+    final Set<int> uniqueIds = {};
+    for (final row in rows) {
+      final raw = row['wrong_word_ids'] as String?;
+      if (raw == null || raw.isEmpty) continue;
+      final cleaned = raw.replaceAll('[', '').replaceAll(']', '');
+      if (cleaned.isEmpty) continue;
+      for (final part in cleaned.split(',')) {
+        final id = int.tryParse(part.trim());
+        if (id != null) uniqueIds.add(id);
+        if (uniqueIds.length >= limit) break;
+      }
+      if (uniqueIds.length >= limit) break;
+    }
+
+    if (uniqueIds.isEmpty) return [];
+
+    final placeholders = List.filled(uniqueIds.length, '?').join(',');
+    final wordRows = await db.query(
+      'words',
+      where: 'id IN ($placeholders)',
+      whereArgs: uniqueIds.toList(),
+    );
+
+    return wordRows.map((m) => Word.fromMap(m)).toList();
   }
 
   // ---------- Word methods ----------

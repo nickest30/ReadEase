@@ -7,6 +7,7 @@ class QuizResult {
   final int totalQuestions;
   final int pointsEarned;
   final String completedAt;
+  final String? wrongWordIds; // JSON array string like "[3,7,12]"
 
   QuizResult({
     this.id,
@@ -17,6 +18,7 @@ class QuizResult {
     required this.totalQuestions,
     required this.pointsEarned,
     required this.completedAt,
+    this.wrongWordIds,
   });
 
   double get accuracyRate => totalQuestions == 0 ? 0 : score / totalQuestions;
@@ -32,6 +34,7 @@ class QuizResult {
       'total_questions': totalQuestions,
       'points_earned': pointsEarned,
       'completed_at': completedAt,
+      'wrong_word_ids': wrongWordIds,
     };
   }
 
@@ -45,6 +48,7 @@ class QuizResult {
       totalQuestions: map['total_questions'] as int,
       pointsEarned: map['points_earned'] as int,
       completedAt: map['completed_at'] as String,
+      wrongWordIds: map['wrong_word_ids'] as String?,
     );
   }
 }
