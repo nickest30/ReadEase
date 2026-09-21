@@ -127,34 +127,68 @@ class FirestoreService {
   // ---------- Global Leaderboard ----------
 
   Future<void> updateLeaderboardEntry(
-      String studentUid, String displayName, int totalPoints,
-      int gradeLevel) async {
-    await _db.collection('leaderboard').doc(studentUid).set({
-      'displayName': displayName,
-      'totalPoints': totalPoints,
-      'gradeLevel': gradeLevel,
-      'lastUpdated': DateTime.now().toIso8601String(),
-    });
+    String studentUid,
+    String displayName,
+    int totalPoints,
+    int gradeLevel,
+    int badgeCount,
+  ) async {
+    try {
+      await _db.collection('leaderboard').doc(studentUid).set({
+        'displayName': displayName,
+        'totalPoints': totalPoints,
+        'gradeLevel': gradeLevel,
+        'badgeCount': badgeCount,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Firestore updateLeaderboardEntry error: $e');
+    }
   }
 
-  Future<List<Map<String, dynamic>>> getGlobalLeaderboard() async {
+  /// Fetch top global rankings sorted by total points.
+  /// Uses Firestore's native orderBy + limit — no client-side sort.
+  Future<List<Map<String, dynamic>>> getGlobalLeaderboard({
+    int limit = 100,
+  }) async {
     try {
-      debugPrint('Firestore: attempting global leaderboard query...');
       final snapshot = await _db
           .collection('leaderboard')
-          .limit(50)
+          .orderBy('totalPoints', descending: true)
+          .limit(limit)
           .get()
           .timeout(const Duration(seconds: 10));
-      debugPrint('Firestore: got ${snapshot.docs.length} entries');
-      final entries = snapshot.docs
+
+      return snapshot.docs
           .map((doc) => {'uid': doc.id, ...doc.data()})
           .toList();
-      // Sort in Dart instead of Firestore to avoid index requirement
-      entries.sort((a, b) =>
-          (b['totalPoints'] as int).compareTo(a['totalPoints'] as int));
-      return entries;
     } catch (e) {
-      debugPrint('Firestore leaderboard error: $e');
+      debugPrint('Firestore getGlobalLeaderboard error: $e');
+      return [];
+    }
+  }
+
+  /// Fetch class leaderboard for a specific class.
+  /// Requires composite index on (classFirestoreId, totalPoints).
+  /// Will be used once class enrollment is implemented in M4.
+  Future<List<Map<String, dynamic>>> getClassLeaderboard(
+    String classFirestoreId, {
+    int limit = 100,
+  }) async {
+    try {
+      final snapshot = await _db
+          .collection('leaderboard')
+          .where('classFirestoreId', isEqualTo: classFirestoreId)
+          .orderBy('totalPoints', descending: true)
+          .limit(limit)
+          .get()
+          .timeout(const Duration(seconds: 10));
+
+      return snapshot.docs
+          .map((doc) => {'uid': doc.id, ...doc.data()})
+          .toList();
+    } catch (e) {
+      debugPrint('Firestore getClassLeaderboard error: $e');
       return [];
     }
   }

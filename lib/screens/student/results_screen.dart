@@ -127,11 +127,19 @@ class _ResultsScreenState extends State<ResultsScreen> {
           allResults,
         );
 
+        final Set<String> passedKeys = {};
+        for (final r in allResults) {
+          if (r.isPassing) {
+            passedKeys.add('${r.gradeLevel}-${r.difficulty}');
+          }
+        }
+
         await FirestoreService.instance.updateLeaderboardEntry(
           student.firebaseUid!,
           student.displayName,
           updated.totalPoints,
           student.gradeLevel,
+          passedKeys.length,
         );
       } catch (_) {
         // Offline — will sync on next successful quiz
