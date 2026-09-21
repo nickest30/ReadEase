@@ -1,184 +1,167 @@
 import 'package:flutter/material.dart';
-import '../../models/student.dart';
-import '../../models/quiz_result.dart';
-import '../../services/database_service.dart';
+import 'package:provider/provider.dart';
 
-class BadgeCollectionScreen extends StatefulWidget {
+import '../../providers/student_provider.dart';
+import '../../utils/app_theme.dart';
+
+class BadgeCollectionScreen extends StatelessWidget {
   const BadgeCollectionScreen({super.key});
 
   @override
-  State<BadgeCollectionScreen> createState() =>
-      _BadgeCollectionScreenState();
-}
-
-class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
-  List<QuizResult> _passing = [];
-  bool _loading = true;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _loadBadges();
-  }
-
-  Future<void> _loadBadges() async {
-    final student =
-        ModalRoute.of(context)!.settings.arguments as Student;
-    final results =
-        await DatabaseService.instance.getResultsForStudent(student.id!);
-    if (!mounted) return;
-    setState(() {
-      _passing = results.where((r) => r.isPassing).toList();
-      _loading = false;
-    });
-  }
-
-  String _badgeName(String difficulty) {
-    switch (difficulty) {
-      case 'easy':
-        return 'Easy Reader';
-      case 'medium':
-        return 'Word Pro';
-      case 'hard':
-        return 'Hard Master';
-      default:
-        return difficulty;
-    }
-  }
-
-  Color _badgeColor(String difficulty) {
-    switch (difficulty) {
-      case 'easy':
-        return const Color(0xFF2BAFA0);
-      case 'medium':
-        return const Color(0xFF8B5FBF);
-      case 'hard':
-        return const Color(0xFFFF6F61);
-      default:
-        return const Color(0xFF6B7878);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final student = context.watch<StudentProvider>().currentStudent;
+
+    if (student == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/student-profile-list',
+            (route) => false,
+          );
+        }
+      });
+      return const Scaffold(
+        backgroundColor: AppColors.studentBg,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // For now, show empty state — ready to populate in M5.
+    final List<Map<String, dynamic>> earnedBadges = [];
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 12),
-              Row(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl,
+                vertical: AppSpacing.md,
+              ),
+              child: Row(
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.arrow_back,
-                        color: Color(0xFF2E3A3A)),
+                        color: AppColors.textPrimary),
                     padding: EdgeInsets.zero,
                   ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'My Badges',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF2E3A3A),
-                    ),
+                  const SizedBox(width: AppSpacing.sm),
+                  const Expanded(
+                    child: Text('My Badges', style: AppText.h2),
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              const Text(
-                'Look at your brilliant collection!',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 13,
-                  color: Color(0xFF6B7878),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: _loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _passing.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No badges yet!\nComplete a quiz with 70% or higher\nto earn your first badge.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'Nunito',
-                                fontSize: 14,
-                                color: Color(0xFF6B7878),
-                              ),
-                            ),
-                          )
-                        : GridView.builder(
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 14,
-                              crossAxisSpacing: 14,
-                              childAspectRatio: 1,
-                            ),
-                            itemCount: _passing.length,
-                            itemBuilder: (context, index) {
-                              final result = _passing[index];
-                              final color =
-                                  _badgeColor(result.difficulty);
-                              return Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                      color: const Color(0xFFE9DCBE)),
-                                ),
-                                child: Column(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      width: 52,
-                                      height: 52,
-                                      decoration: BoxDecoration(
-                                        color: color.withValues(alpha: 0.15),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.emoji_events_rounded,
-                                        color: color,
-                                        size: 28,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      _badgeName(result.difficulty),
-                                      style: const TextStyle(
-                                        fontFamily: 'Nunito',
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 13,
-                                        color: Color(0xFF2E3A3A),
-                                      ),
-                                    ),
-                                    Text(
-                                      'Grade ${result.gradeLevel}',
-                                      style: const TextStyle(
-                                        fontFamily: 'Nunito',
-                                        fontSize: 11,
-                                        color: Color(0xFF6B7878),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-              ),
-            ],
-          ),
+            ),
+
+            Expanded(
+              child: earnedBadges.isEmpty
+                  ? _buildEmptyState()
+                  : _buildBadgeGrid(earnedBadges),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Yse with trophy
+          Image.asset(
+            'assets/images/mascot/yse_trophy.png',
+            width: 160,
+            height: 160,
+            errorBuilder: (_, _, _) => Container(
+              width: 160,
+              height: 160,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+                border: Border.all(color: AppColors.border, width: 2),
+              ),
+              child: const Icon(
+                Icons.emoji_events_rounded,
+                size: 72,
+                color: AppColors.accentYellow,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          const Text(
+            'No badges yet',
+            style: AppText.h2,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          const Text(
+            'Complete a lesson and pass the quiz\nto earn your first badge!',
+            style: AppText.caption,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBadgeGrid(List<Map<String, dynamic>> badges) {
+    return GridView.builder(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: AppSpacing.md,
+        crossAxisSpacing: AppSpacing.md,
+        childAspectRatio: 0.95,
+      ),
+      itemCount: badges.length,
+      itemBuilder: (context, index) {
+        final badge = badges[index];
+        return _BadgeCard(badge: badge);
+      },
+    );
+  }
+}
+
+// Placeholder for future — populated in M5
+class _BadgeCard extends StatelessWidget {
+  final Map<String, dynamic> badge;
+
+  const _BadgeCard({required this.badge});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.large),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.emoji_events_rounded,
+            size: 56,
+            color: AppColors.accentYellow,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            badge['name'] ?? 'Badge',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: 'Nunito',
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
       ),
     );
   }

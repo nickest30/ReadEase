@@ -1,17 +1,23 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+// Basic smoke test for ReadEase.
+// Full widget tests will be added in a later milestone.
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:readease/main.dart';
+import 'package:readease/providers/settings_provider.dart';
 
 void main() {
-  testWidgets('ReadEase app launches successfully', (WidgetTester tester) async {
-    await tester.pumpWidget(const ReadEaseApp());
+  testWidgets('ReadEase app boots without crashing',
+      (WidgetTester tester) async {
+    // Mock SharedPreferences so SettingsProvider.load() works in test env
+    SharedPreferences.setMockInitialValues({});
 
-    expect(find.text('ReadEase'), findsOneWidget);
+    final settingsProvider = SettingsProvider();
+    await settingsProvider.load();
+
+    await tester.pumpWidget(ReadEaseApp(settingsProvider: settingsProvider));
+    await tester.pump();
+
+    expect(find.byType(ReadEaseApp), findsOneWidget);
   });
 }

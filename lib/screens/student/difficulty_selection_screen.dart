@@ -1,30 +1,42 @@
 import 'package:flutter/material.dart';
-import '../../models/student.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
+import '../../utils/app_theme.dart';
 
 class DifficultySelectionScreen extends StatefulWidget {
   const DifficultySelectionScreen({super.key});
 
   @override
-  State<DifficultySelectionScreen> createState() => _DifficultySelectionScreenState();
+  State<DifficultySelectionScreen> createState() =>
+      _DifficultySelectionScreenState();
 }
 
 class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
   bool _loading = true;
   bool _mediumUnlocked = false;
   bool _hardUnlocked = false;
+  bool _initialized = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _checkUnlocks();
+    if (!_initialized) {
+      _initialized = true;
+      _checkUnlocks();
+    }
   }
 
   Future<void> _checkUnlocks() async {
-    final args = ModalRoute.of(context)!.settings.arguments
-        as Map<String, dynamic>;
-    final student = args['student'] as Student;
+    final args = ModalRoute.of(context)!.settings.arguments as Map;
     final gradeLevel = args['gradeLevel'] as int;
+    final student = context.read<StudentProvider>().currentStudent;
+
+    if (student == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
 
     final passedEasy = await DatabaseService.instance
         .hasPassedDifficulty(student.id!, gradeLevel, 'easy');
@@ -41,45 +53,69 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments
-        as Map<String, dynamic>;
-    final student = args['student'] as Student;
+    final args = ModalRoute.of(context)!.settings.arguments as Map;
     final gradeLevel = args['gradeLevel'] as int;
+    final student = context.watch<StudentProvider>().currentStudent;
+
+    if (student == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/student-profile-list',
+            (route) => false,
+          );
+        }
+      });
+      return const Scaffold(
+        backgroundColor: AppColors.studentBg,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.studentBg,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
+
               IconButton(
                 onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.arrow_back, color: Color(0xFF2E3A3A)),
+                icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
                 alignment: Alignment.centerLeft,
                 padding: EdgeInsets.zero,
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Difficulty Selection',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF2E3A3A),
-                ),
+
+              const SizedBox(height: AppSpacing.sm),
+
+              // Header
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Choose Difficulty', style: AppText.h1),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          'Grade $gradeLevel lessons',
+                          style: AppText.caption,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const _YseImage(
+                    assetPath: 'assets/images/mascot/yse_proud.png',
+                    size: 90,
+                    fallbackIcon: Icons.emoji_events_rounded,
+                  ),
+                ],
               ),
-              const Text(
-                'Choose difficulty',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 13,
-                  color: Color(0xFF6B7878),
-                ),
-              ),
-              const SizedBox(height: 24),
+
+              const SizedBox(height: AppSpacing.xl),
 
               if (_loading)
                 const Expanded(
@@ -91,28 +127,35 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
                   label: 'Easy',
                   sublabel: 'Unlocked',
                   unlocked: true,
-                  onTap: () => _goToLesson(context, student, gradeLevel, 'easy'),
+                  color: AppColors.accentGreen,
+                  onTap: () =>
+                      _goToLesson(context, student, gradeLevel, 'easy'),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.md),
                 _DifficultyCard(
                   emoji: '😐',
                   label: 'Medium',
-                  sublabel: _mediumUnlocked ? 'Unlocked' : 'Complete Easy first',
+                  sublabel:
+                      _mediumUnlocked ? 'Unlocked' : 'Complete Easy first',
                   unlocked: _mediumUnlocked,
+                  color: AppColors.accentOrange,
                   onTap: _mediumUnlocked
                       ? () => _goToLesson(context, student, gradeLevel, 'medium')
                       : null,
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.md),
                 _DifficultyCard(
                   emoji: '😈',
                   label: 'Hard',
-                  sublabel: _hardUnlocked ? 'Unlocked' : 'Complete Medium first',
+                  sublabel:
+                      _hardUnlocked ? 'Unlocked' : 'Complete Medium first',
                   unlocked: _hardUnlocked,
+                  color: AppColors.accentCoral,
                   onTap: _hardUnlocked
                       ? () => _goToLesson(context, student, gradeLevel, 'hard')
                       : null,
                 ),
+                const Spacer(),
               ],
             ],
           ),
@@ -121,7 +164,12 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
     );
   }
 
-  void _goToLesson(BuildContext context, Student student, int gradeLevel, String difficulty) {
+  void _goToLesson(
+    BuildContext context,
+    student,
+    int gradeLevel,
+    String difficulty,
+  ) {
     Navigator.of(context).pushNamed(
       '/lesson',
       arguments: {
@@ -133,11 +181,16 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
   }
 }
 
+// ─────────────────────────────────────────────────────────
+// Private widgets
+// ─────────────────────────────────────────────────────────
+
 class _DifficultyCard extends StatelessWidget {
   final String emoji;
   final String label;
   final String sublabel;
   final bool unlocked;
+  final Color color;
   final VoidCallback? onTap;
 
   const _DifficultyCard({
@@ -145,6 +198,7 @@ class _DifficultyCard extends StatelessWidget {
     required this.label,
     required this.sublabel,
     required this.unlocked,
+    required this.color,
     required this.onTap,
   });
 
@@ -154,18 +208,33 @@ class _DifficultyCard extends StatelessWidget {
       opacity: unlocked ? 1.0 : 0.5,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.large),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE9DCBE)),
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.large),
+            border: Border.all(
+              color: unlocked ? color : AppColors.border,
+              width: unlocked ? 2 : 1,
+            ),
           ),
           child: Row(
             children: [
-              Text(emoji, style: const TextStyle(fontSize: 32)),
-              const SizedBox(width: 14),
+              // Emoji in colored container
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppRadius.medium),
+                ),
+                child: Center(
+                  child: Text(emoji, style: const TextStyle(fontSize: 28)),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,27 +243,71 @@ class _DifficultyCard extends StatelessWidget {
                       label,
                       style: const TextStyle(
                         fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                        color: Color(0xFF2E3A3A),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 17,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     Text(
                       sublabel,
-                      style: const TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 12,
-                        color: Color(0xFF6B7878),
-                      ),
+                      style: AppText.caption,
                     ),
                   ],
                 ),
               ),
-              if (!unlocked) const Icon(Icons.lock, color: Color(0xFF6B7878)),
+
+              if (unlocked)
+                Icon(Icons.chevron_right_rounded, color: color, size: 28)
+              else
+                const Icon(
+                  Icons.lock_rounded,
+                  color: AppColors.textMuted,
+                  size: 22,
+                ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _YseImage extends StatelessWidget {
+  final String assetPath;
+  final double size;
+  final IconData fallbackIcon;
+
+  const _YseImage({
+    required this.assetPath,
+    required this.size,
+    required this.fallbackIcon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      assetPath,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(size * 0.25),
+            border: Border.all(color: AppColors.border, width: 2),
+          ),
+          child: Center(
+            child: Icon(
+              fallbackIcon,
+              size: size * 0.5,
+              color: AppColors.accentTeal,
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../models/student.dart';
+import 'package:provider/provider.dart';
+
 import '../../models/quiz_result.dart';
+import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
+import '../../utils/app_theme.dart';
 
 class ProgressDashboardScreen extends StatefulWidget {
   const ProgressDashboardScreen({super.key});
@@ -16,14 +19,17 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
   bool _loading = true;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _loadResults();
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadResults());
   }
 
   Future<void> _loadResults() async {
-    final student =
-        ModalRoute.of(context)!.settings.arguments as Student;
+    final student = context.read<StudentProvider>().currentStudent;
+    if (student == null || student.id == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
     final results =
         await DatabaseService.instance.getResultsForStudent(student.id!);
     if (!mounted) return;
@@ -40,191 +46,84 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
     return total == 0 ? 0 : correct / total;
   }
 
-  int get _completedLevels =>
-      _results.where((r) => r.isPassing).length;
+  /// Counts UNIQUE (grade, difficulty) pairs that have been passed.
+  /// Fix for earlier bug — attempts don't count multiple times.
+  int get _completedLevels {
+    final passed = _results.where((r) => r.isPassing);
+    final Set<String> unique = {};
+    for (final r in passed) {
+      unique.add('${r.gradeLevel}-${r.difficulty}');
+    }
+    return unique.length;
+  }
 
-  int get _totalPoints =>
-      _results.fold(0, (sum, r) => sum + r.pointsEarned);
+  /// Best score per (grade, difficulty) pair.
+  /// Fix for earlier bug — retakes don't show up twice.
+  Map<String, QuizResult> get _bestPerLevel {
+    final Map<String, QuizResult> best = {};
+    for (final r in _results) {
+      final key = '${r.gradeLevel}-${r.difficulty}';
+      final current = best[key];
+      if (current == null ||
+          (r.score / r.totalQuestions) > (current.score / current.totalQuestions)) {
+        best[key] = r;
+      }
+    }
+    return best;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final student = context.watch<StudentProvider>().currentStudent;
+
+    if (student == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/student-profile-list',
+            (route) => false,
+          );
+        }
+      });
+      return const Scaffold(
+        backgroundColor: AppColors.studentBg,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.studentBg,
       body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Header
             Padding(
               padding: const EdgeInsets.symmetric(
-                  horizontal: 28, vertical: 12),
+                horizontal: AppSpacing.xl,
+                vertical: AppSpacing.md,
+              ),
               child: Row(
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.arrow_back,
-                        color: Color(0xFF2E3A3A)),
+                        color: AppColors.textPrimary),
                     padding: EdgeInsets.zero,
                   ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'My Progress',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF2E3A3A),
-                    ),
+                  const SizedBox(width: AppSpacing.sm),
+                  const Expanded(
+                    child: Text('My Progress', style: AppText.h2),
                   ),
                 ],
               ),
             ),
+
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
                   : _results.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'No progress yet.\nComplete a quiz to see your stats!',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Nunito',
-                              fontSize: 14,
-                              color: Color(0xFF6B7878),
-                            ),
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 28),
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.stretch,
-                            children: [
-                              // Summary row
-                              Row(
-                                children: [
-                                  _StatCard(
-                                    label: 'Levels Done',
-                                    value: '$_completedLevels',
-                                    color: const Color(0xFF2BAFA0),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  _StatCard(
-                                    label: 'Total Points',
-                                    value: '$_totalPoints',
-                                    color: const Color(0xFFE8A93B),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  _StatCard(
-                                    label: 'Accuracy',
-                                    value:
-                                        '${(_overallAccuracy * 100).toStringAsFixed(0)}%',
-                                    color: const Color(0xFF8B5FBF),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 20),
-
-                              // Overall completion bar
-                              const Text(
-                                'OVERALL COMPLETION',
-                                style: TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: .05,
-                                  color: Color(0xFF6B7878),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: LinearProgressIndicator(
-                                  value: _completedLevels / 18,
-                                  minHeight: 12,
-                                  backgroundColor: const Color(0xFFE9DCBE),
-                                  valueColor: const AlwaysStoppedAnimation<Color>(
-                                    Color(0xFF2BAFA0),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '$_completedLevels / 18 levels passed',
-                                style: const TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontSize: 11,
-                                  color: Color(0xFF6B7878),
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-
-                              // Quiz scores list
-                              const Text(
-                                'QUIZ SCORES',
-                                style: TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: .05,
-                                  color: Color(0xFF6B7878),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              ..._results.map((result) {
-                                return Container(
-                                  margin:
-                                      const EdgeInsets.only(bottom: 8),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius:
-                                        BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: const Color(0xFFE9DCBE)),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          'Grade ${result.gradeLevel} — ${_capitalize(result.difficulty)}',
-                                          style: const TextStyle(
-                                            fontFamily: 'Nunito',
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13,
-                                            color: Color(0xFF2E3A3A),
-                                          ),
-                                        ),
-                                      ),
-                                      Text(
-                                        '${result.score}/${result.totalQuestions}',
-                                        style: TextStyle(
-                                          fontFamily: 'Nunito',
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                          color: result.isPassing
-                                              ? const Color(0xFF2BAFA0)
-                                              : const Color(0xFFFF6F61),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Icon(
-                                        result.isPassing
-                                            ? Icons.check_circle
-                                            : Icons.cancel,
-                                        size: 16,
-                                        color: result.isPassing
-                                            ? const Color(0xFF2BAFA0)
-                                            : const Color(0xFFFF6F61),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }),
-                            ],
-                          ),
-                        ),
+                      ? _buildEmptyState()
+                      : _buildContent(),
             ),
           ],
         ),
@@ -232,8 +131,155 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
     );
   }
 
-  String _capitalize(String s) =>
-      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+  Widget _buildEmptyState() {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Image.asset(
+            'assets/images/mascot/yse_thinking.png',
+            width: 140,
+            height: 140,
+            errorBuilder: (_, _, _) => const Icon(
+              Icons.insights_rounded,
+              size: 80,
+              color: AppColors.textMuted,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          const Text(
+            'No progress yet',
+            style: AppText.h2,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          const Text(
+            'Complete a quiz to see your stats!',
+            style: AppText.caption,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    final best = _bestPerLevel;
+    final entries = best.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Summary cards
+          Row(
+            children: [
+              _StatCard(
+                label: 'Levels Done',
+                value: '$_completedLevels',
+                color: AppColors.accentTeal,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _StatCard(
+                label: 'Accuracy',
+                value: '${(_overallAccuracy * 100).toStringAsFixed(0)}%',
+                color: AppColors.accentPurple,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Overall completion
+          const Text('OVERALL COMPLETION', style: AppText.caption),
+          const SizedBox(height: AppSpacing.xs),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.small),
+            child: LinearProgressIndicator(
+              value: _completedLevels / 18,
+              minHeight: 12,
+              backgroundColor: AppColors.border,
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.accentTeal,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            '$_completedLevels / 18 levels passed',
+            style: AppText.caption,
+          ),
+          const SizedBox(height: AppSpacing.xl),
+
+          // Per-level scores
+          const Text('BEST SCORES', style: AppText.caption),
+          const SizedBox(height: AppSpacing.sm),
+          ...entries.map((entry) {
+            final r = entry.value;
+            final parts = entry.key.split('-');
+            final grade = parts[0];
+            final difficulty = parts[1];
+            final capitalized = difficulty.isEmpty
+                ? ''
+                : difficulty[0].toUpperCase() + difficulty.substring(1);
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Grade $grade — $capitalized',
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${r.score}/${r.totalQuestions}',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: r.isPassing
+                          ? AppColors.textTeal
+                          : AppColors.textCoral,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Icon(
+                    r.isPassing
+                        ? Icons.check_circle_rounded
+                        : Icons.cancel_rounded,
+                    size: 18,
+                    color: r.isPassing
+                        ? AppColors.accentTeal
+                        : AppColors.accentCoral,
+                  ),
+                ],
+              ),
+            );
+          }),
+
+          const SizedBox(height: AppSpacing.xl),
+        ],
+      ),
+    );
+  }
 }
 
 class _StatCard extends StatelessWidget {
@@ -251,11 +297,11 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE9DCBE)),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.large),
+          border: Border.all(color: AppColors.border),
         ),
         child: Column(
           children: [
@@ -263,19 +309,13 @@ class _StatCard extends StatelessWidget {
               value,
               style: TextStyle(
                 fontFamily: 'Nunito',
-                fontSize: 20,
+                fontSize: 24,
                 fontWeight: FontWeight.w800,
                 color: color,
               ),
             ),
-            Text(
-              label,
-              style: const TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 10,
-                color: Color(0xFF6B7878),
-              ),
-            ),
+            const SizedBox(height: 2),
+            Text(label, style: AppText.caption),
           ],
         ),
       ),

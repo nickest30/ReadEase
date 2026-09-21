@@ -105,3 +105,17 @@ class AppSpacing {
   static const xxl = 32.0;
   static const xxxl = 48.0;
 }
+
+class AppColorsCB {
+  AppColorsCB._();
+  static const safeGreen = Color(0xFF2B6CB0);   
+  static const safeCoral = Color(0xFFE07B39);  
+  static const safeTeal = Color(0xFF2BAFA0);   
+  static const safeYellow = Color(0xFFE8A93B); 
+  static const safePurple = Color(0xFF6B3F8C);  
+  static const safeOrange = Color(0xFFB85F1F);  
+
+  static const triTeal = Color(0xFF9B6B9E);     
+  static const triGreen = Color(0xFF6BCB77);    
+  static const triYellow = Color(0xFFE8A93B);  
+}

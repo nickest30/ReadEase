@@ -5,12 +5,14 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'utils/app_theme.dart';
 import 'utils/seed_data.dart';
+import 'utils/color_blind_filter.dart';
 
 // Providers
 import 'providers/auth_provider.dart';
 import 'providers/student_provider.dart';
 import 'providers/parent_provider.dart';
 import 'providers/teacher_provider.dart';
+import 'providers/settings_provider.dart';
 
 // Screens (keep all your existing imports)
 import 'screens/shared/splash_screen.dart';
@@ -55,11 +57,16 @@ void main() async {
 
   await seedWordsIfEmpty();
 
-  runApp(const ReadEaseApp());
+  final settingsProvider = SettingsProvider();
+  await settingsProvider.load();
+
+  runApp(ReadEaseApp(settingsProvider: settingsProvider));
 }
 
 class ReadEaseApp extends StatelessWidget {
-  const ReadEaseApp({super.key});
+  final SettingsProvider settingsProvider;
+
+  const ReadEaseApp({super.key, required this.settingsProvider});
 
   @override
   Widget build(BuildContext context) {
@@ -69,19 +76,33 @@ class ReadEaseApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => StudentProvider()),
         ChangeNotifierProvider(create: (_) => ParentProvider()),
         ChangeNotifierProvider(create: (_) => TeacherProvider()),
+        ChangeNotifierProvider.value(value: settingsProvider),
       ],
-      child: MaterialApp(
-        title: 'ReadEase',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: AppColors.accentTeal,
-          ),
-          useMaterial3: true,
-          fontFamily: 'Nunito',
-          scaffoldBackgroundColor: AppColors.introBg,
-        ),
-        initialRoute: '/',
+      child: Consumer<SettingsProvider>(
+        builder: (context, settings, _) {
+          return MaterialApp(
+            title: 'ReadEase',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: AppColors.accentTeal,
+              ),
+              useMaterial3: true,
+              fontFamily: 'Nunito',
+              scaffoldBackgroundColor: AppColors.introBg,
+            ),
+            builder: (context, child) {
+              return MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  textScaler: TextScaler.linear(settings.textScale),
+                ),
+                child: ColorBlindFilter(
+                  mode: settings.colorBlindMode,
+                  child: child!,
+                ),
+              );
+            },
+            initialRoute: '/',
         routes: {
           '/': (context) => const SplashScreen(),
           '/role-selection': (context) => const RoleSelectionScreen(),
@@ -115,6 +136,8 @@ class ReadEaseApp extends StatelessWidget {
           '/class-analytics': (context) => const ClassAnalyticsScreen(),
           '/class-leaderboard': (context) => const ClassLeaderboardScreen(),
           '/student-signin': (context) => const StudentSignInScreen(),
+            },
+          );
         },
       ),
     );
