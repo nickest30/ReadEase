@@ -159,6 +159,28 @@ class DatabaseService {
     );
   }
 
+  Future<bool> updateStudentDisplayName(int studentId, String displayName) async {
+    final db = await database;
+    final rows = await db.update(
+      'students',
+      {'display_name': displayName},
+      where: 'id = ?',
+      whereArgs: [studentId],
+    );
+    return rows > 0;
+  }
+
+  Future<bool> updateStudentUsername(int studentId, String username) async {
+    final db = await database;
+    final rows = await db.update(
+      'students',
+      {'username': username},
+      where: 'id = ?',
+      whereArgs: [studentId],
+    );
+    return rows > 0;
+  }
+
   Future<bool> updateStudentFirebaseUid(int studentId, String firebaseUid) async {
     final db = await database;
     final rows = await db.update(
@@ -279,16 +301,6 @@ class DatabaseService {
   Future<int> insertLinkedStudent(Student student) async {
     final db = await database;
     return await db.insert('students', student.toMap());
-  }
-
-  Future<int> updateStudentDisplayName(int studentId, String displayName) async {
-    final db = await database;
-    return await db.update(
-      'students',
-      {'display_name': displayName},
-      where: 'id = ?',
-      whereArgs: [studentId],
-    );
   }
 
   Future<int> deleteStudent(int studentId) async {

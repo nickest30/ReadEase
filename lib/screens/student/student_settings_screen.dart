@@ -161,6 +161,81 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     return 'Medium';
   }
 
+  Future<bool> _checkLinkedStudent() async {
+    final student = context.read<StudentProvider>().currentStudent;
+    if (student == null) return false;
+
+    // Solo student — no warning needed
+    if (!student.isLinked) return true;
+
+    // Linked student — show warning dialog
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
+        backgroundColor: AppColors.surface,
+        title: const Row(
+          children: [
+            Icon(
+              Icons.family_restroom_rounded,
+              color: AppColors.accentPurple,
+              size: 24,
+            ),
+            SizedBox(width: AppSpacing.sm),
+            Text(
+              'Managed by Parent',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w800,
+                fontSize: 17,
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Your profile was created by your parent or guardian. '
+          'They can see any changes you make here.\n\n'
+          'Do you want to continue?',
+          style: TextStyle(fontFamily: 'Nunito', fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentPurple,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'I Understand',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final student = context.watch<StudentProvider>().currentStudent;
@@ -276,10 +351,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                       ),
                     ),
                     IconButton(
-                      onPressed: () => _showComingSoonSnack(
-                        context,
-                        'Edit Profile is coming in the next update!',
-                      ),
+                      onPressed: () async {
+                        final canProceed = await _checkLinkedStudent();
+                        if (!canProceed || !context.mounted) return;
+                        Navigator.of(context).pushNamed('/edit-profile');
+                      },
                       icon: const Icon(
                         Icons.edit_rounded,
                         color: AppColors.accentTeal,
@@ -360,17 +436,17 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
 
               const SizedBox(height: AppSpacing.md),
 
-              // CHANGE PIN (placeholder until next drop)
               _SettingCard(
                 icon: Icons.lock_rounded,
                 iconColor: AppColors.accentPurple,
                 label: 'Change PIN',
                 subtitle: 'Update your 4-digit PIN',
                 trailing: IconButton(
-                  onPressed: () => _showComingSoonSnack(
-                    context,
-                    'Change PIN is coming in the next update!',
-                  ),
+                  onPressed: () async {
+                    final canProceed = await _checkLinkedStudent();
+                    if (!canProceed || !context.mounted) return;
+                    Navigator.of(context).pushNamed('/change-pin');
+                  },
                   icon: const Icon(
                     Icons.chevron_right_rounded,
                     color: AppColors.textMuted,
@@ -407,16 +483,6 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  void _showComingSoonSnack(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: const TextStyle(fontFamily: 'Nunito')),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }

@@ -47,6 +47,8 @@ import 'screens/teacher/class_overview_screen.dart';
 import 'screens/teacher/teacher_student_progress_screen.dart';
 import 'screens/teacher/class_analytics_screen.dart';
 import 'screens/teacher/class_leaderboard_screen.dart';
+import 'screens/student/edit_profile_screen.dart';
+import 'screens/student/change_pin_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -136,6 +138,8 @@ class ReadEaseApp extends StatelessWidget {
           '/class-analytics': (context) => const ClassAnalyticsScreen(),
           '/class-leaderboard': (context) => const ClassLeaderboardScreen(),
           '/student-signin': (context) => const StudentSignInScreen(),
+          '/edit-profile': (context) => const EditProfileScreen(),
+          '/change-pin': (context) => const ChangePinScreen(),
             },
           );
         },
