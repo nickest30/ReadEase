@@ -118,9 +118,9 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
                         children: [
                           const SizedBox(height: AppSpacing.sm),
 
-                          // Yse centered
+                          // Motter presenting the shell — centered, 200px
                           Image.asset(
-                            'assets/images/mascot/yse_reading.png',
+                            'assets/images/mascot/motter_presenting.png',
                             width: 200,
                             height: 200,
                             fit: BoxFit.contain,
@@ -137,7 +137,7 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
                                 ),
                               ),
                               child: const Icon(
-                                Icons.menu_book_rounded,
+                                Icons.family_restroom_rounded,
                                 size: 80,
                                 color: AppColors.accentPurple,
                               ),

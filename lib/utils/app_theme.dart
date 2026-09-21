@@ -119,3 +119,31 @@ class AppColorsCB {
   static const triGreen = Color(0xFF6BCB77);    
   static const triYellow = Color(0xFFE8A93B);  
 }
+
+class AppShadows {
+  AppShadows._();
+
+  static List<BoxShadow> get soft => [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.04),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ];
+
+  static List<BoxShadow> get medium => [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.08),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ];
+
+  static List<BoxShadow> get strong => [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.12),
+          blurRadius: 20,
+          offset: const Offset(0, 8),
+        ),
+      ];
+}

@@ -180,12 +180,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     : _children.isEmpty
                         ? _buildEmptyState()
                         : GridView.builder(
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2,
                               mainAxisSpacing: AppSpacing.md,
                               crossAxisSpacing: AppSpacing.md,
-                              childAspectRatio: 1.1,
+                              childAspectRatio: 0.95,
                             ),
                             itemCount: _children.length,
                             itemBuilder: (context, index) {
@@ -326,6 +325,13 @@ class _ChildCard extends StatelessWidget {
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.large),
           border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
