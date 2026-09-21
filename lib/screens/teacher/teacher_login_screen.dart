@@ -70,7 +70,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
         return;
       }
 
-      // Firebase sign-in (required for teacher portal)
       final firebaseOk = await authProvider.signIn(
         teacher.email,
         _passwordController.text,
@@ -119,11 +118,13 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
     return Scaffold(
       backgroundColor: AppColors.teacherBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const SizedBox(height: AppSpacing.md),
+
               IconButton(
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.arrow_back,
@@ -131,29 +132,41 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
                 alignment: Alignment.centerLeft,
                 padding: EdgeInsets.zero,
               ),
-              const SizedBox(height: 16),
-              const Text('Teacher Login', style: AppText.h1),
-              const SizedBox(height: 28),
 
-              const Text('Username',
-                  style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textMuted)),
+              const SizedBox(height: AppSpacing.sm),
+
+              const Text('Teacher Login', style: AppText.h1),
+              const SizedBox(height: 2),
+              const Text('Sign in to continue', style: AppText.caption),
+
+              const SizedBox(height: AppSpacing.xl),
+
+              const Text(
+                'Username',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textMuted,
+                ),
+              ),
               const SizedBox(height: 5),
               TextField(
                 controller: _usernameController,
                 decoration: _inputDecoration('Enter your username'),
               ),
-              const SizedBox(height: 16),
 
-              const Text('Password',
-                  style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textMuted)),
+              const SizedBox(height: AppSpacing.lg),
+
+              const Text(
+                'Password',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textMuted,
+                ),
+              ),
               const SizedBox(height: 5),
               TextField(
                 controller: _passwordController,
@@ -162,7 +175,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
               ),
 
               if (_errorMessage != null) ...[
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   _errorMessage!,
                   style: const TextStyle(
@@ -173,7 +186,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
                 ),
               ],
 
-              const SizedBox(height: 28),
+              const SizedBox(height: AppSpacing.xl),
 
               SizedBox(
                 height: 56,
@@ -183,7 +196,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
                     backgroundColor: AppColors.accentYellow,
                     foregroundColor: AppColors.textPrimary,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppRadius.large),
                     ),
                   ),
                   child: _isSubmitting
@@ -195,12 +208,46 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
                             strokeWidth: 2.5,
                           ),
                         )
-                      : const Text('LOGIN',
+                      : const Text(
+                          'LOGIN',
                           style: TextStyle(
-                              fontFamily: 'Nunito',
-                              fontWeight: FontWeight.w700)),
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                 ),
               ),
+
+              const SizedBox(height: AppSpacing.xl),
+
+              // Groo below the button — waving
+              Center(
+                child: Image.asset(
+                  'assets/images/mascot/groo_waving.png',
+                  width: 320,
+                  height: 320,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => Container(
+                    width: 320,
+                    height: 320,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentYellow.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.accentYellow,
+                        width: 2,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.school_rounded,
+                      size: 64,
+                      color: AppColors.accentYellow,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.xl),
             ],
           ),
         ),
@@ -216,15 +263,15 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadius.medium),
+        borderSide: const BorderSide(color: AppColors.border),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadius.medium),
+        borderSide: const BorderSide(color: AppColors.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.medium),
         borderSide: const BorderSide(color: AppColors.accentYellow, width: 2),
       ),
     );
