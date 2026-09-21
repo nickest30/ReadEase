@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/app_theme.dart';
 
 class ParentWelcomeScreen extends StatelessWidget {
   const ParentWelcomeScreen({super.key});
@@ -6,118 +7,130 @@ class ParentWelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.parentBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xxl,
+            vertical: AppSpacing.xl,
+          ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const SizedBox(height: AppSpacing.xl),
+
+              // Yse — reading pose (parent watches kids learn)
               Center(
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8B5FBF),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'RE',
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 30,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
+                child: Image.asset(
+                  'assets/images/mascot/yse_reading.png',
+                  width: 180,
+                  height: 180,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => Container(
+                    width: 180,
+                    height: 180,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.xxl),
+                      border: Border.all(color: AppColors.border, width: 2),
+                    ),
+                    child: const Icon(
+                      Icons.family_restroom_rounded,
+                      size: 72,
+                      color: AppColors.accentPurple,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              const Center(
-                child: Text(
-                  'Parent Portal',
-                  style: TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF2E3A3A),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Center(
-                child: Text(
-                  'Monitor your child\'s reading journey',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 13,
-                    color: Color(0xFF6B7878),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 48),
 
+              const SizedBox(height: AppSpacing.xl),
+
+              const Text(
+                'Parent Portal',
+                textAlign: TextAlign.center,
+                style: AppText.h1,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              const Text(
+                'Monitor your child\'s reading journey',
+                textAlign: TextAlign.center,
+                style: AppText.body,
+              ),
+
+              const SizedBox(height: AppSpacing.xxxl),
+
+              // Login
               SizedBox(
-                height: 52,
-                child: ElevatedButton(
+                height: 64,
+                child: ElevatedButton.icon(
                   onPressed: () {
                     Navigator.of(context).pushNamed('/parent-login');
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8B5FBF),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Text(
+                  icon: const Icon(Icons.login_rounded, size: 22),
+                  label: const Text(
                     'LOGIN',
                     style: TextStyle(
                       fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
                       letterSpacing: 1.2,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentPurple,
+                    foregroundColor: Colors.white,
+                    elevation: 4,
+                    shadowColor: AppColors.accentPurple.withValues(alpha: 0.4),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.large),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+
+              const SizedBox(height: AppSpacing.md),
+
+              // Register
               SizedBox(
-                height: 52,
-                child: ElevatedButton(
+                height: 64,
+                child: ElevatedButton.icon(
                   onPressed: () {
                     Navigator.of(context).pushNamed('/parent-signup');
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE8A93B),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Text(
+                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 22),
+                  label: const Text(
                     'REGISTER',
                     style: TextStyle(
                       fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
                       letterSpacing: 1.2,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentTeal,
+                    foregroundColor: Colors.white,
+                    elevation: 4,
+                    shadowColor: AppColors.accentTeal.withValues(alpha: 0.4),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.large),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+
+              const SizedBox(height: AppSpacing.md),
+
+              // Back
               SizedBox(
                 height: 52,
                 child: OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF6B7878),
-                    side: const BorderSide(color: Color(0xFFE9DCBE)),
+                    foregroundColor: AppColors.textMuted,
+                    side: BorderSide(color: AppColors.border),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppRadius.large),
                     ),
                   ),
                   child: const Text(
@@ -129,6 +142,8 @@ class ParentWelcomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
+
+              const SizedBox(height: AppSpacing.xl),
             ],
           ),
         ),
