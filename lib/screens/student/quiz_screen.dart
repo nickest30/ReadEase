@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/word.dart';
+import '../../utils/app_theme.dart';
 
 class QuizScreen extends StatefulWidget {
   const QuizScreen({super.key});
@@ -79,7 +80,7 @@ class _QuizScreenState extends State<QuizScreen> {
   Color _choiceBorderColor(String choice) {
     if (!_answered) return const Color(0xFFE9DCBE);
     final correct = _words[_currentIndex].correctAnswer;
-    if (choice == correct) return const Color(0xFF2BAFA0);
+    if (choice == correct) return AppColors.accentTeal;
     if (choice == _selectedAnswer) return const Color(0xFFFF6F61);
     return const Color(0xFFE9DCBE);
   }
@@ -89,7 +90,7 @@ class _QuizScreenState extends State<QuizScreen> {
     final word = _words[_currentIndex];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.studentBg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -121,7 +122,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   minHeight: 6,
                   backgroundColor: const Color(0xFFE9DCBE),
                   valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF2BAFA0),
+                    AppColors.accentTeal,
                   ),
                 ),
               ),
@@ -208,7 +209,7 @@ class _QuizScreenState extends State<QuizScreen> {
                               ),
                               if (isCorrectChoice)
                                 const Icon(Icons.check_circle,
-                                    color: Color(0xFF2BAFA0)),
+                                    color: AppColors.accentTeal),
                               if (isWrongSelected)
                                 const Icon(Icons.cancel,
                                     color: Color(0xFFFF6F61)),

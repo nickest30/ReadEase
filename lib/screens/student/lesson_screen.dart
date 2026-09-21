@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/word.dart';
 import '../../services/database_service.dart';
 import 'package:audioplayers/audioplayers.dart';
+import '../../utils/app_theme.dart';
 
 class LessonScreen extends StatefulWidget {
   const LessonScreen({super.key});
@@ -101,14 +102,14 @@ class _LessonScreenState extends State<LessonScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        backgroundColor: Color(0xFFFCF0D9),
+        backgroundColor: AppColors.studentBg,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_words.isEmpty) {
       return Scaffold(
-        backgroundColor: const Color(0xFFFCF0D9),
+        backgroundColor: AppColors.studentBg,
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -137,7 +138,7 @@ class _LessonScreenState extends State<LessonScreen> {
     final allWordsViewed = _currentIndex == _words.length - 1;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.studentBg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -181,7 +182,7 @@ class _LessonScreenState extends State<LessonScreen> {
                   minHeight: 6,
                   backgroundColor: const Color(0xFFE9DCBE),
                   valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF2BAFA0),
+                    AppColors.accentTeal,
                   ),
                 ),
               ),
@@ -228,7 +229,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       onPressed: _playAudio,
                       icon: const Icon(Icons.volume_up_rounded),
                       iconSize: 30,
-                      color: const Color(0xFF2BAFA0),
+                      color: AppColors.accentTeal,
                       style: IconButton.styleFrom(
                         backgroundColor: const Color(0xFFDCF1ED),
                         shape: const CircleBorder(),
@@ -266,7 +267,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       onPressed: isLastWord ? null : _next,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        backgroundColor: const Color(0xFF2BAFA0),
+                        backgroundColor: AppColors.accentTeal,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
