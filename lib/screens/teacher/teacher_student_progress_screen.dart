@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../models/student.dart';
+
 import '../../models/quiz_result.dart';
+import '../../models/student.dart';
 import '../../services/database_service.dart';
+import '../../utils/app_theme.dart';
 
 class TeacherStudentProgressScreen extends StatefulWidget {
   const TeacherStudentProgressScreen({super.key});
@@ -15,20 +17,15 @@ class _TeacherStudentProgressScreenState
     extends State<TeacherStudentProgressScreen> {
   List<QuizResult> _results = [];
   bool _loading = true;
-  bool _initialized = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_initialized) {
-      _initialized = true;
-      _loadResults();
-    }
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadResults());
   }
 
   Future<void> _loadResults() async {
-    final args = ModalRoute.of(context)!.settings.arguments
-        as Map<String, dynamic>;
+    final args = ModalRoute.of(context)!.settings.arguments as Map;
     final student = args['student'] as Student;
     final results =
         await DatabaseService.instance.getResultsForStudent(student.id!);
@@ -46,45 +43,47 @@ class _TeacherStudentProgressScreenState
     return total == 0 ? 0 : correct / total;
   }
 
-  int get _completedLevels =>
-      _results.where((r) => r.isPassing).length;
-
-  String _capitalize(String s) =>
-      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+  int get _completedLevels {
+    final passed = _results.where((r) => r.isPassing);
+    final Set<String> unique = {};
+    for (final r in passed) {
+      unique.add('${r.gradeLevel}-${r.difficulty}');
+    }
+    return unique.length;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments
-        as Map<String, dynamic>;
+    final args = ModalRoute.of(context)!.settings.arguments as Map;
     final student = args['student'] as Student;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.teacherBg,
       body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(
-                  horizontal: 28, vertical: 12),
+                horizontal: AppSpacing.xl,
+                vertical: AppSpacing.md,
+              ),
               child: Row(
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.arrow_back,
-                        color: Color(0xFF2E3A3A)),
+                        color: AppColors.textPrimary),
                     padding: EdgeInsets.zero,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
-                    child: Text(
-                      student.displayName,
-                      style: const TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF2E3A3A),
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(student.displayName, style: AppText.h2),
+                        Text('Grade ${student.gradeLevel}',
+                            style: AppText.caption),
+                      ],
                     ),
                   ),
                 ],
@@ -95,124 +94,164 @@ class _TeacherStudentProgressScreenState
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
                   : SingleChildScrollView(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 28),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Row(
-                            children: [
-                              _StatCard(
-                                label: 'Levels Done',
-                                value: '$_completedLevels',
-                                color: const Color(0xFFE8A93B),
-                              ),
-                              const SizedBox(width: 10),
-                              _StatCard(
-                                label: 'Points',
-                                value: '${student.totalPoints}',
-                                color: const Color(0xFF2BAFA0),
-                              ),
-                              const SizedBox(width: 10),
-                              _StatCard(
-                                label: 'Accuracy',
-                                value:
-                                    '${(_overallAccuracy * 100).toStringAsFixed(0)}%',
-                                color: const Color(0xFF8B5FBF),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: AppSpacing.sm),
 
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: LinearProgressIndicator(
-                              value: _completedLevels / 18,
-                              minHeight: 12,
-                              backgroundColor:
-                                  const Color(0xFFE9DCBE),
-                              valueColor:
-                                  const AlwaysStoppedAnimation<Color>(
-                                Color(0xFFE8A93B),
+                          Image.asset(
+                            'assets/images/mascot/groo_reading.png',
+                            width: 180,
+                            height: 180,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, _, _) => Container(
+                              width: 180,
+                              height: 180,
+                              decoration: BoxDecoration(
+                                color: AppColors.accentYellow
+                                    .withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.accentYellow,
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.menu_book_rounded,
+                                size: 72,
+                                color: AppColors.accentYellow,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '$_completedLevels / 18 levels passed',
-                            style: const TextStyle(
-                              fontFamily: 'Nunito',
-                              fontSize: 11,
-                              color: Color(0xFF6B7878),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
 
-                          if (_results.isEmpty)
-                            const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(20),
-                                child: Text(
-                                  'No quiz results yet.',
-                                  style: TextStyle(
-                                    fontFamily: 'Nunito',
-                                    color: Color(0xFF6B7878),
-                                  ),
-                                ),
-                              ),
-                            )
-                          else
-                            ..._results.map((result) {
-                              return Container(
-                                margin:
-                                    const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius:
-                                      BorderRadius.circular(12),
-                                  border: Border.all(
-                                      color:
-                                          const Color(0xFFE9DCBE)),
-                                ),
-                                child: Row(
+                          const SizedBox(height: AppSpacing.md),
+
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.xl),
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
                                   children: [
-                                    Expanded(
-                                      child: Text(
-                                        'Grade ${result.gradeLevel} — ${_capitalize(result.difficulty)}',
-                                        style: const TextStyle(
-                                          fontFamily: 'Nunito',
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13,
-                                        ),
-                                      ),
+                                    _StatCard(
+                                      icon: Icons.verified_rounded,
+                                      label: 'Levels',
+                                      value: '$_completedLevels',
+                                      color: AppColors.accentYellow,
                                     ),
-                                    Text(
-                                      '${result.score}/${result.totalQuestions}',
-                                      style: TextStyle(
-                                        fontFamily: 'Nunito',
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 13,
-                                        color: result.isPassing
-                                            ? const Color(0xFF2BAFA0)
-                                            : const Color(0xFFFF6F61),
-                                      ),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    _StatCard(
+                                      icon: Icons.star_rounded,
+                                      label: 'Points',
+                                      value: '${student.totalPoints}',
+                                      color: AppColors.accentTeal,
                                     ),
-                                    const SizedBox(width: 8),
-                                    Icon(
-                                      result.isPassing
-                                          ? Icons.check_circle
-                                          : Icons.cancel,
-                                      size: 16,
-                                      color: result.isPassing
-                                          ? const Color(0xFF2BAFA0)
-                                          : const Color(0xFFFF6F61),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    _StatCard(
+                                      icon: Icons.insights_rounded,
+                                      label: 'Accuracy',
+                                      value:
+                                          '${(_overallAccuracy * 100).toStringAsFixed(0)}%',
+                                      color: AppColors.accentPurple,
                                     ),
                                   ],
                                 ),
-                              );
-                            }),
+                                const SizedBox(height: AppSpacing.lg),
+
+                                if (_results.isEmpty)
+                                  Container(
+                                    padding:
+                                        const EdgeInsets.all(AppSpacing.xl),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surface,
+                                      borderRadius: BorderRadius.circular(
+                                          AppRadius.large),
+                                      border: Border.all(
+                                          color: AppColors.border),
+                                    ),
+                                    child: const Text(
+                                      'This student hasn\'t taken any quizzes yet.',
+                                      textAlign: TextAlign.center,
+                                      style: AppText.caption,
+                                    ),
+                                  )
+                                else ...[
+                                  const Text(
+                                    'QUIZ HISTORY',
+                                    style: TextStyle(
+                                      fontFamily: 'Nunito',
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.5,
+                                      color: AppColors.textMuted,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  ..._results.map((r) {
+                                    final diff = r.difficulty.isEmpty
+                                        ? ''
+                                        : r.difficulty[0].toUpperCase() +
+                                            r.difficulty.substring(1);
+                                    return Container(
+                                      margin: const EdgeInsets.only(
+                                          bottom: AppSpacing.sm),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: AppSpacing.md,
+                                        vertical: AppSpacing.md,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surface,
+                                        borderRadius: BorderRadius.circular(
+                                            AppRadius.medium),
+                                        border: Border.all(
+                                            color: AppColors.border),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              'Grade ${r.gradeLevel} — $diff',
+                                              style: const TextStyle(
+                                                fontFamily: 'Nunito',
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 13,
+                                                color:
+                                                    AppColors.textPrimary,
+                                              ),
+                                            ),
+                                          ),
+                                          Text(
+                                            '${r.score}/${r.totalQuestions}',
+                                            style: TextStyle(
+                                              fontFamily: 'Nunito',
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 13,
+                                              color: r.isPassing
+                                                  ? AppColors.textTeal
+                                                  : AppColors.textCoral,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Icon(
+                                            r.isPassing
+                                                ? Icons.check_circle_rounded
+                                                : Icons.cancel_rounded,
+                                            size: 16,
+                                            color: r.isPassing
+                                                ? AppColors.accentTeal
+                                                : AppColors.accentCoral,
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: AppSpacing.xl),
                         ],
                       ),
                     ),
@@ -225,11 +264,13 @@ class _TeacherStudentProgressScreenState
 }
 
 class _StatCard extends StatelessWidget {
+  final IconData icon;
   final String label;
   final String value;
   final Color color;
 
   const _StatCard({
+    required this.icon,
     required this.label,
     required this.value,
     required this.color,
@@ -239,31 +280,26 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE9DCBE)),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.large),
+          border: Border.all(color: AppColors.border),
         ),
         child: Column(
           children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 4),
             Text(
               value,
               style: TextStyle(
                 fontFamily: 'Nunito',
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.w800,
                 color: color,
               ),
             ),
-            Text(
-              label,
-              style: const TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 10,
-                color: Color(0xFF6B7878),
-              ),
-            ),
+            Text(label, style: AppText.caption),
           ],
         ),
       ),
