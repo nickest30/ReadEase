@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/class_group.dart';
-import '../../services/database_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/teacher_provider.dart';
+import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({super.key});
 
   @override
-  State<TeacherDashboardScreen> createState() => _TeacherDashboardScreenState();
+  State<TeacherDashboardScreen> createState() =>
+      _TeacherDashboardScreenState();
 }
 
 class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
@@ -60,9 +61,13 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel',
-                style: TextStyle(
-                    fontFamily: 'Nunito', color: AppColors.textMuted)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                color: AppColors.textMuted,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -70,11 +75,16 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               backgroundColor: AppColors.accentCoral,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: const Text('Log Out',
-                style: TextStyle(
-                    fontFamily: 'Nunito', fontWeight: FontWeight.w700)),
+            child: const Text(
+              'Log Out',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -114,17 +124,57 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       backgroundColor: AppColors.teacherBg,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 16),
-              Text(
-                'Hello, ${teacher.fullName.split(' ').first}!',
-                style: AppText.h2,
+              const SizedBox(height: AppSpacing.md),
+
+              // Header with Groo
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Hello, ${teacher.fullName.split(' ').first}!',
+                          style: AppText.h2,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(teacher.schoolName, style: AppText.caption),
+                      ],
+                    ),
+                  ),
+                  Image.asset(
+                    'assets/images/mascot/groo_checking.png',
+                    width: 70,
+                    height: 70,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        color:
+                            AppColors.accentYellow.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.accentYellow,
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.school_rounded,
+                        color: AppColors.accentYellow,
+                        size: 32,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              Text(teacher.schoolName, style: AppText.caption),
-              const SizedBox(height: 20),
+
+              const SizedBox(height: AppSpacing.lg),
 
               const Text(
                 'My Classes',
@@ -135,30 +185,20 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                   color: AppColors.textPrimary,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppSpacing.sm),
 
               Expanded(
                 child: _loading
                     ? const Center(child: CircularProgressIndicator())
                     : _classes.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No classes yet.\nTap "Create Class" to get started.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'Nunito',
-                                fontSize: 14,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          )
+                        ? _buildEmptyState()
                         : GridView.builder(
                             gridDelegate:
                                 const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2,
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
-                              childAspectRatio: 1.2,
+                              mainAxisSpacing: AppSpacing.md,
+                              crossAxisSpacing: AppSpacing.md,
+                              childAspectRatio: 1.05,
                             ),
                             itemCount: _classes.length,
                             itemBuilder: (context, index) {
@@ -188,18 +228,21 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                   label: const Text(
                     'Create Class',
                     style: TextStyle(
-                        fontFamily: 'Nunito', fontWeight: FontWeight.w700),
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accentYellow,
                     foregroundColor: AppColors.textPrimary,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppRadius.large),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+
+              const SizedBox(height: AppSpacing.sm),
 
               SizedBox(
                 height: 50,
@@ -209,23 +252,73 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                     foregroundColor: AppColors.textCoral,
                     side: const BorderSide(color: AppColors.accentCoral),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppRadius.large),
                     ),
                   ),
-                  child: const Text('Log Out',
-                      style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w700)),
+                  child: const Text(
+                    'Log Out',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
             ],
           ),
         ),
       ),
     );
   }
+
+  Widget _buildEmptyState() {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Image.asset(
+            'assets/images/mascot/groo_gentle.png',
+            width: 140,
+            height: 140,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+                border: Border.all(color: AppColors.border, width: 2),
+              ),
+              child: const Icon(
+                Icons.class_rounded,
+                size: 64,
+                color: AppColors.accentYellow,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          const Text(
+            'No classes yet',
+            style: AppText.h2,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          const Text(
+            'Tap "Create Class" below\nto set up your first class.',
+            style: AppText.caption,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
 }
+
+// ─────────────────────────────────────────────────────────
+// Private widgets
+// ─────────────────────────────────────────────────────────
 
 class _ClassCard extends StatelessWidget {
   final ClassGroup group;
@@ -239,22 +332,35 @@ class _ClassCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.large),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.large),
           border: Border.all(color: AppColors.border),
+          boxShadow: AppShadows.soft,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.class_rounded,
-                color: AppColors.accentYellow, size: 32),
-            const SizedBox(height: 8),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.accentYellow.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+              ),
+              child: const Icon(
+                Icons.class_rounded,
+                color: AppColors.accentYellow,
+                size: 24,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               group.className,
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
+              maxLines: 1,
               style: const TextStyle(
                 fontFamily: 'Nunito',
                 fontWeight: FontWeight.w700,
@@ -264,16 +370,12 @@ class _ClassCard extends StatelessWidget {
             ),
             Text(
               'Grade ${group.gradeLevel}',
-              style: const TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 11,
-                color: AppColors.textMuted,
-              ),
+              style: AppText.caption,
             ),
             const SizedBox(height: 4),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                 color: AppColors.introBg,
                 borderRadius: BorderRadius.circular(8),
@@ -283,7 +385,7 @@ class _ClassCard extends StatelessWidget {
                 style: const TextStyle(
                   fontFamily: 'Nunito',
                   fontSize: 11,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                   color: AppColors.textYellow,
                   letterSpacing: 1.5,
                 ),

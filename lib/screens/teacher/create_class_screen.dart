@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../models/class_group.dart';
-import '../../services/database_service.dart';
 import 'package:provider/provider.dart';
+
+import '../../models/class_group.dart';
 import '../../providers/teacher_provider.dart';
+import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
 
 class CreateClassScreen extends StatefulWidget {
@@ -30,21 +31,20 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
       return;
     }
 
+    final teacher = context.read<TeacherProvider>().currentTeacher;
+    if (teacher == null) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      return;
+    }
+
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
     });
 
     try {
-      final teacher = context.read<TeacherProvider>().currentTeacher;
-      if (teacher == null) {
-        if (!mounted) return;
-        Navigator.of(context).pop();
-        return;
-      }
-
-      final joinCode =
-          DatabaseService.instance.generateJoinCode();
+      final joinCode = DatabaseService.instance.generateJoinCode();
 
       final newGroup = ClassGroup(
         teacherId: teacher.id!,
@@ -58,18 +58,19 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
 
       if (!mounted) return;
 
-      // Show the join code before going back
       await showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(AppRadius.xl),
           ),
+          backgroundColor: AppColors.surface,
           title: const Text(
             'Class Created!',
             style: TextStyle(
               fontFamily: 'Nunito',
               fontWeight: FontWeight.w800,
+              fontSize: 18,
             ),
           ),
           content: Column(
@@ -80,25 +81,30 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                 style: TextStyle(
                   fontFamily: 'Nunito',
                   fontSize: 13,
-                  color: Color(0xFF6B7878),
+                  color: AppColors.textMuted,
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacing.md),
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 14),
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.md,
+                ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFBF0D9),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE8A93B)),
+                  color: AppColors.introBg,
+                  borderRadius: BorderRadius.circular(AppRadius.large),
+                  border: Border.all(
+                    color: AppColors.accentYellow,
+                    width: 2,
+                  ),
                 ),
                 child: Text(
                   joinCode,
                   style: const TextStyle(
                     fontFamily: 'Nunito',
-                    fontSize: 28,
+                    fontSize: 30,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFFE8A93B),
+                    color: AppColors.textYellow,
                     letterSpacing: 6,
                   ),
                 ),
@@ -109,8 +115,8 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
             ElevatedButton(
               onPressed: () => Navigator.of(ctx).pop(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.teacherBg,
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.accentYellow,
+                foregroundColor: AppColors.textPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -141,32 +147,70 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF0D9),
+      backgroundColor: AppColors.teacherBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 28, vertical: 20),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const SizedBox(height: AppSpacing.md),
+
               IconButton(
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.arrow_back,
-                    color: Color(0xFF2E3A3A)),
+                    color: AppColors.textPrimary),
                 alignment: Alignment.centerLeft,
                 padding: EdgeInsets.zero,
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Create Class',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF2E3A3A),
-                ),
+
+              const SizedBox(height: AppSpacing.sm),
+
+              // Header row with Groo
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Create Class', style: AppText.h1),
+                        SizedBox(height: 2),
+                        Text(
+                          'Set up a class group',
+                          style: AppText.caption,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Image.asset(
+                    'assets/images/mascot/groo_creating.png',
+                    width: 90,
+                    height: 90,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        color:
+                            AppColors.accentYellow.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.accentYellow,
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.edit_note_rounded,
+                        color: AppColors.accentYellow,
+                        size: 42,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
+
+              const SizedBox(height: AppSpacing.xl),
 
               const Text(
                 'Class Name',
@@ -174,36 +218,16 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                   fontFamily: 'Nunito',
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF6B7878),
+                  color: AppColors.textMuted,
                 ),
               ),
               const SizedBox(height: 5),
               TextField(
                 controller: _classNameController,
-                decoration: InputDecoration(
-                  hintText: 'e.g. Grade 3 - Section A',
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 14),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: Color(0xFFE9DCBE)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: Color(0xFFE9DCBE)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                        color: Color(0xFFE8A93B), width: 2),
-                  ),
-                ),
+                decoration: _inputDecoration('e.g. Grade 3 - Section A'),
               ),
-              const SizedBox(height: 20),
+
+              const SizedBox(height: AppSpacing.lg),
 
               const Text(
                 'Grade Level',
@@ -211,17 +235,18 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                   fontFamily: 'Nunito',
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF6B7878),
+                  color: AppColors.textMuted,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
+
               GridView.count(
                 crossAxisCount: 3,
                 shrinkWrap: true,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 2,
                 physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 2.4,
                 children: List.generate(6, (index) {
                   final grade = index + 1;
                   final isSelected = _selectedGrade == grade;
@@ -231,13 +256,15 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                     child: Container(
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? const Color(0xFFE8A93B)
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(10),
+                            ? AppColors.accentYellow
+                            : AppColors.surface,
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.medium),
                         border: Border.all(
                           color: isSelected
-                              ? const Color(0xFFE8A93B)
-                              : const Color(0xFFE9DCBE),
+                              ? AppColors.accentYellow
+                              : AppColors.border,
+                          width: isSelected ? 2 : 1,
                         ),
                       ),
                       child: Center(
@@ -246,10 +273,10 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                           style: TextStyle(
                             fontFamily: 'Nunito',
                             fontWeight: FontWeight.w700,
-                            fontSize: 12,
+                            fontSize: 13,
                             color: isSelected
-                                ? Colors.white
-                                : const Color(0xFF2E3A3A),
+                                ? AppColors.textPrimary
+                                : AppColors.textMuted,
                           ),
                         ),
                       ),
@@ -259,28 +286,28 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
               ),
 
               if (_errorMessage != null) ...[
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   _errorMessage!,
                   style: const TextStyle(
-                    color: Color(0xFFFF6F61),
+                    color: AppColors.textCoral,
                     fontFamily: 'Nunito',
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
 
-              const Spacer(),
+              const SizedBox(height: AppSpacing.xl),
 
               SizedBox(
-                height: 52,
+                height: 56,
                 child: ElevatedButton(
                   onPressed: _isSubmitting ? null : _handleCreateClass,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE8A93B),
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.accentYellow,
+                    foregroundColor: AppColors.textPrimary,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppRadius.large),
                     ),
                   ),
                   child: _isSubmitting
@@ -288,7 +315,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             strokeWidth: 2.5,
                           ),
                         )
@@ -301,10 +328,33 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                         ),
                 ),
               ),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: AppSpacing.xl),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      filled: true,
+      fillColor: AppColors.surface,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.medium),
+        borderSide: const BorderSide(color: AppColors.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.medium),
+        borderSide: const BorderSide(color: AppColors.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.medium),
+        borderSide: const BorderSide(color: AppColors.accentYellow, width: 2),
       ),
     );
   }

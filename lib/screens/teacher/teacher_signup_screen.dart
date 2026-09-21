@@ -163,12 +163,12 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
                     ),
                     Image.asset(
                       'assets/images/mascot/groo_welcoming.png',
-                      width: 90,
-                      height: 90,
+                      width: 120,
+                      height: 120,
                       fit: BoxFit.contain,
                       errorBuilder: (_, _, _) => Container(
-                        width: 90,
-                        height: 90,
+                        width: 120,
+                        height: 120,
                         decoration: BoxDecoration(
                           color:
                               AppColors.accentYellow.withValues(alpha: 0.15),
