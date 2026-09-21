@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/student.dart';
-import '../../services/database_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/parent_provider.dart';
+import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
 
 class ParentDashboardScreen extends StatefulWidget {
@@ -60,9 +60,13 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel',
-                style: TextStyle(
-                    fontFamily: 'Nunito', color: AppColors.textMuted)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                color: AppColors.textMuted,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -70,11 +74,16 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
               backgroundColor: AppColors.accentCoral,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: const Text('Log Out',
-                style: TextStyle(
-                    fontFamily: 'Nunito', fontWeight: FontWeight.w700)),
+            child: const Text(
+              'Log Out',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -114,39 +123,68 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
       backgroundColor: AppColors.parentBg,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 16),
-              Text(
-                'Hello, ${parent.fullName.split(' ').first}!',
-                style: AppText.h2,
+              const SizedBox(height: AppSpacing.md),
+
+              // Header with Motter
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Hello, ${parent.fullName.split(' ').first}!',
+                          style: AppText.h2,
+                        ),
+                        const SizedBox(height: 2),
+                        const Text('My Children', style: AppText.caption),
+                      ],
+                    ),
+                  ),
+                  Image.asset(
+                    'assets/images/mascot/motter_base.png',
+                    width: 70,
+                    height: 70,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        color: AppColors.accentPurple.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.accentPurple,
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.family_restroom_rounded,
+                        color: AppColors.accentPurple,
+                        size: 34,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const Text('My Children', style: AppText.caption),
-              const SizedBox(height: 20),
+
+              const SizedBox(height: AppSpacing.lg),
 
               Expanded(
                 child: _loading
                     ? const Center(child: CircularProgressIndicator())
                     : _children.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No children added yet.\nTap "Add Child" to get started.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'Nunito',
-                                fontSize: 14,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          )
+                        ? _buildEmptyState()
                         : GridView.builder(
                             gridDelegate:
                                 const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2,
-                              mainAxisSpacing: 14,
-                              crossAxisSpacing: 14,
+                              mainAxisSpacing: AppSpacing.md,
+                              crossAxisSpacing: AppSpacing.md,
                               childAspectRatio: 1.1,
                             ),
                             itemCount: _children.length,
@@ -175,18 +213,20 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     label: const Text(
                       'Add Child',
                       style: TextStyle(
-                          fontFamily: 'Nunito', fontWeight: FontWeight.w700),
+                        fontFamily: 'Nunito',
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accentPurple,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(AppRadius.large),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.sm),
               ],
 
               SizedBox(
@@ -197,23 +237,73 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     foregroundColor: AppColors.textCoral,
                     side: const BorderSide(color: AppColors.accentCoral),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppRadius.large),
                     ),
                   ),
-                  child: const Text('Log Out',
-                      style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w700)),
+                  child: const Text(
+                    'Log Out',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
             ],
           ),
         ),
       ),
     );
   }
+
+  Widget _buildEmptyState() {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Image.asset(
+            'assets/images/mascot/motter_gentle.png',
+            width: 140,
+            height: 140,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+                border: Border.all(color: AppColors.border, width: 2),
+              ),
+              child: const Icon(
+                Icons.person_add_alt_rounded,
+                size: 64,
+                color: AppColors.accentPurple,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          const Text(
+            'No children added yet',
+            style: AppText.h2,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          const Text(
+            'Tap "Add Child" below to create\nyour first child profile.',
+            style: AppText.caption,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
 }
+
+// ─────────────────────────────────────────────────────────
+// Private widgets
+// ─────────────────────────────────────────────────────────
 
 class _ChildCard extends StatelessWidget {
   final Student child;
@@ -231,7 +321,7 @@ class _ChildCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.large),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.large),
@@ -240,20 +330,26 @@ class _ChildCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: 26,
-              backgroundColor: AppColors.accentPurple,
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  fontFamily: 'Nunito',
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 20,
+            Container(
+              width: 56,
+              height: 56,
+              decoration: const BoxDecoration(
+                color: AppColors.accentPurple,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    fontFamily: 'Nunito',
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 22,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               child.displayName,
               textAlign: TextAlign.center,
@@ -267,11 +363,7 @@ class _ChildCard extends StatelessWidget {
             ),
             Text(
               'Grade ${child.gradeLevel}',
-              style: const TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 11,
-                color: AppColors.textMuted,
-              ),
+              style: AppText.caption,
             ),
             const SizedBox(height: 4),
             Text(

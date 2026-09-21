@@ -70,7 +70,6 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
         return;
       }
 
-      // Firebase sign-in
       final firebaseOk = await authProvider.signIn(
         parent.email,
         _passwordController.text,
@@ -101,8 +100,10 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
           const SnackBar(
             content: Text(
               'Signed in offline. Cloud features will sync later.',
+              style: TextStyle(fontFamily: 'Nunito'),
             ),
             duration: Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -122,11 +123,13 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
     return Scaffold(
       backgroundColor: AppColors.parentBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const SizedBox(height: AppSpacing.md),
+
               IconButton(
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.arrow_back,
@@ -134,30 +137,42 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
                 alignment: Alignment.centerLeft,
                 padding: EdgeInsets.zero,
               ),
-              const SizedBox(height: 16),
-              const Text('Welcome Back!', style: AppText.h1),
-              const Text('Sign in to continue', style: AppText.caption),
-              const SizedBox(height: 28),
 
-              const Text('Username',
-                  style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textMuted)),
+              const SizedBox(height: AppSpacing.sm),
+
+              // Header — text only (no Motter)
+              const Text('Welcome Back!', style: AppText.h1),
+              const SizedBox(height: 2),
+              const Text('Sign in to continue', style: AppText.caption),
+
+              const SizedBox(height: AppSpacing.xl),
+
+              const Text(
+                'Username',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textMuted,
+                ),
+              ),
               const SizedBox(height: 5),
               TextField(
                 controller: _usernameController,
                 decoration: _inputDecoration('Enter your username'),
               ),
-              const SizedBox(height: 16),
 
-              const Text('Password',
-                  style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textMuted)),
+              const SizedBox(height: AppSpacing.lg),
+
+              const Text(
+                'Password',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textMuted,
+                ),
+              ),
               const SizedBox(height: 5),
               TextField(
                 controller: _passwordController,
@@ -166,7 +181,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
               ),
 
               if (_errorMessage != null) ...[
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   _errorMessage!,
                   style: const TextStyle(
@@ -177,8 +192,9 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
                 ),
               ],
 
-              const SizedBox(height: 28),
+              const SizedBox(height: AppSpacing.xl),
 
+              // LOGIN button
               SizedBox(
                 height: 56,
                 child: ElevatedButton(
@@ -187,7 +203,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
                     backgroundColor: AppColors.accentPurple,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppRadius.large),
                     ),
                   ),
                   child: _isSubmitting
@@ -199,12 +215,46 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
                             strokeWidth: 2.5,
                           ),
                         )
-                      : const Text('LOGIN',
+                      : const Text(
+                          'LOGIN',
                           style: TextStyle(
-                              fontFamily: 'Nunito',
-                              fontWeight: FontWeight.w700)),
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                 ),
               ),
+
+              const SizedBox(height: AppSpacing.xl),
+
+              Center(
+                child: Image.asset(
+                  'assets/images/mascot/motter_waving.png',
+                  width: 320,
+                  height: 320,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => Container(
+                    width: 320,
+                    height: 320,
+                    decoration: BoxDecoration(
+                      color:
+                          AppColors.accentPurple.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.accentPurple,
+                        width: 2,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.waving_hand_rounded,
+                      color: AppColors.accentPurple,
+                      size: 64,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.xl),
             ],
           ),
         ),
@@ -220,15 +270,15 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadius.medium),
+        borderSide: const BorderSide(color: AppColors.border),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadius.medium),
+        borderSide: const BorderSide(color: AppColors.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.medium),
         borderSide: const BorderSide(color: AppColors.accentPurple, width: 2),
       ),
     );

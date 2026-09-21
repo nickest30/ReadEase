@@ -19,24 +19,27 @@ class ParentWelcomeScreen extends StatelessWidget {
             children: [
               const SizedBox(height: AppSpacing.xl),
 
-              // Yse — reading pose (parent watches kids learn)
+              // Motter — centered, 200px (matches Yse pattern)
               Center(
                 child: Image.asset(
-                  'assets/images/mascot/yse_reading.png',
-                  width: 180,
-                  height: 180,
+                  'assets/images/mascot/motter_base.png',
+                  width: 200,
+                  height: 200,
                   fit: BoxFit.contain,
                   errorBuilder: (_, _, _) => Container(
-                    width: 180,
-                    height: 180,
+                    width: 200,
+                    height: 200,
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(AppRadius.xxl),
-                      border: Border.all(color: AppColors.border, width: 2),
+                      color: AppColors.accentPurple.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.accentPurple,
+                        width: 2,
+                      ),
                     ),
                     child: const Icon(
                       Icons.family_restroom_rounded,
-                      size: 72,
+                      size: 80,
                       color: AppColors.accentPurple,
                     ),
                   ),
@@ -59,7 +62,7 @@ class ParentWelcomeScreen extends StatelessWidget {
 
               const SizedBox(height: AppSpacing.xxxl),
 
-              // Login
+              // LOGIN button
               SizedBox(
                 height: 64,
                 child: ElevatedButton.icon(
@@ -80,7 +83,8 @@ class ParentWelcomeScreen extends StatelessWidget {
                     backgroundColor: AppColors.accentPurple,
                     foregroundColor: Colors.white,
                     elevation: 4,
-                    shadowColor: AppColors.accentPurple.withValues(alpha: 0.4),
+                    shadowColor:
+                        AppColors.accentPurple.withValues(alpha: 0.4),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.large),
                     ),
@@ -90,7 +94,7 @@ class ParentWelcomeScreen extends StatelessWidget {
 
               const SizedBox(height: AppSpacing.md),
 
-              // Register
+              // REGISTER button
               SizedBox(
                 height: 64,
                 child: ElevatedButton.icon(
@@ -111,7 +115,8 @@ class ParentWelcomeScreen extends StatelessWidget {
                     backgroundColor: AppColors.accentTeal,
                     foregroundColor: Colors.white,
                     elevation: 4,
-                    shadowColor: AppColors.accentTeal.withValues(alpha: 0.4),
+                    shadowColor:
+                        AppColors.accentTeal.withValues(alpha: 0.4),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.large),
                     ),
@@ -121,7 +126,7 @@ class ParentWelcomeScreen extends StatelessWidget {
 
               const SizedBox(height: AppSpacing.md),
 
-              // Back
+              // BACK button
               SizedBox(
                 height: 52,
                 child: OutlinedButton(

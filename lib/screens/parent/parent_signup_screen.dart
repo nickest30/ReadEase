@@ -68,7 +68,6 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
         BCrypt.gensalt(),
       );
 
-      // Register with Firebase Auth (real email)
       final firebaseUid = await authProvider.register(
         email,
         _passwordController.text,
@@ -103,9 +102,7 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
 
       parentProvider.setParent(createdParent);
 
-      Navigator.of(context).pushReplacementNamed(
-        '/parent-dashboard',
-      );
+      Navigator.of(context).pushReplacementNamed('/parent-dashboard');
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -142,32 +139,41 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
                 style: TextStyle(fontFamily: 'Nunito', fontSize: 13),
               ),
               SizedBox(height: 12),
-              Text('What we collect:',
-                  style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13)),
+              Text(
+                'What we collect:',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
               Text(
                 '• Name and grade (to personalize lessons)\n'
                 '• Reading progress and badges',
                 style: TextStyle(fontFamily: 'Nunito', fontSize: 13),
               ),
               SizedBox(height: 10),
-              Text('Where it stays:',
-                  style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13)),
+              Text(
+                'Where it stays:',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
               Text(
                 '• On this device by default. Cloud sync activates when you register.',
                 style: TextStyle(fontFamily: 'Nunito', fontSize: 13),
               ),
               SizedBox(height: 10),
-              Text('Your consent:',
-                  style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13)),
+              Text(
+                'Your consent:',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
               Text(
                 'By tapping "I Agree", you confirm that you are the '
                 'parent or guardian and agree to storage of this data. '
@@ -181,9 +187,13 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel',
-                style: TextStyle(
-                    fontFamily: 'Nunito', color: AppColors.textMuted)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                color: AppColors.textMuted,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -191,11 +201,16 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
               backgroundColor: AppColors.accentPurple,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: const Text('I Agree',
-                style: TextStyle(
-                    fontFamily: 'Nunito', fontWeight: FontWeight.w700)),
+            child: const Text(
+              'I Agree',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -209,12 +224,14 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
       backgroundColor: AppColors.parentBg,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const SizedBox(height: AppSpacing.md),
+
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.arrow_back,
@@ -222,36 +239,83 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
                   alignment: Alignment.centerLeft,
                   padding: EdgeInsets.zero,
                 ),
-                const SizedBox(height: 8),
-                const Text('Create Parent Account', style: AppText.h1),
-                const SizedBox(height: 4),
-                const Text(
-                  'Set up your account to monitor your child\'s progress',
-                  style: AppText.caption,
+
+                const SizedBox(height: AppSpacing.sm),
+
+                // Header row with Motter
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Create Account', style: AppText.h1),
+                          SizedBox(height: 2),
+                          Text(
+                            'Set up your parent profile',
+                            style: AppText.caption,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Image.asset(
+                      'assets/images/mascot/motter_welcoming.png',
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, _, _) => Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          color: AppColors.accentPurple.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.accentPurple,
+                            width: 2,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.family_restroom_rounded,
+                          color: AppColors.accentPurple,
+                          size: 42,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 24),
+
+                const SizedBox(height: AppSpacing.xl),
 
                 _buildField('Full Name', _fullNameController,
                     validator: (v) =>
                         v == null || v.trim().isEmpty ? 'Required' : null),
-                const SizedBox(height: 14),
+
+                const SizedBox(height: AppSpacing.md),
+
                 _buildField('Username', _usernameController,
                     validator: (v) => v == null || v.trim().length < 3
                         ? 'At least 3 characters'
                         : null),
-                const SizedBox(height: 14),
+
+                const SizedBox(height: AppSpacing.md),
+
                 _buildField('Email', _emailController,
                     keyboardType: TextInputType.emailAddress,
                     validator: (v) => v == null || !v.contains('@')
                         ? 'Enter a valid email'
                         : null),
-                const SizedBox(height: 14),
+
+                const SizedBox(height: AppSpacing.md),
+
                 _buildField('Password', _passwordController,
                     obscure: true,
                     validator: (v) => v == null || v.length < 6
                         ? 'At least 6 characters'
                         : null),
-                const SizedBox(height: 14),
+
+                const SizedBox(height: AppSpacing.md),
+
                 _buildField('Confirm Password', _confirmController,
                     obscure: true,
                     validator: (v) => v != _passwordController.text
@@ -259,7 +323,7 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
                         : null),
 
                 if (_errorMessage != null) ...[
-                  const SizedBox(height: 14),
+                  const SizedBox(height: AppSpacing.md),
                   Text(
                     _errorMessage!,
                     style: const TextStyle(
@@ -270,7 +334,7 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
                   ),
                 ],
 
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
 
                 SizedBox(
                   height: 56,
@@ -280,7 +344,7 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
                       backgroundColor: AppColors.accentPurple,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(AppRadius.large),
                       ),
                     ),
                     child: _isSubmitting
@@ -292,30 +356,17 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
                               strokeWidth: 2.5,
                             ),
                           )
-                        : const Text('CREATE ACCOUNT',
+                        : const Text(
+                            'CREATE ACCOUNT',
                             style: TextStyle(
-                                fontFamily: 'Nunito',
-                                fontWeight: FontWeight.w700)),
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 52,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textMuted,
-                      side: BorderSide(color: AppColors.border),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text('BACK',
-                        style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w700)),
-                  ),
-                ),
+
+                const SizedBox(height: AppSpacing.xl),
               ],
             ),
           ),
@@ -355,15 +406,15 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.border),
+              borderRadius: BorderRadius.circular(AppRadius.medium),
+              borderSide: const BorderSide(color: AppColors.border),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.border),
+              borderRadius: BorderRadius.circular(AppRadius.medium),
+              borderSide: const BorderSide(color: AppColors.border),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.medium),
               borderSide:
                   const BorderSide(color: AppColors.accentPurple, width: 2),
             ),
