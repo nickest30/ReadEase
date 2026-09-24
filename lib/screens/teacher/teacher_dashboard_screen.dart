@@ -97,7 +97,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
 
     Navigator.of(context).pushNamedAndRemoveUntil(
       '/teacher-welcome',
-      (route) => false,
+      ModalRoute.withName('/role-selection'),
     );
   }
 
@@ -110,7 +110,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         if (context.mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil(
             '/teacher-welcome',
-            (route) => false,
+            ModalRoute.withName('/role-selection'),
           );
         }
       });

@@ -77,7 +77,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     if (!mounted) return;
     Navigator.of(context).pushNamedAndRemoveUntil(
       '/student-profile-list',
-      (route) => false,
+      ModalRoute.withName('/role-selection'),
     );
   }
 
@@ -246,7 +246,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
         if (context.mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil(
             '/student-profile-list',
-            (route) => false,
+            ModalRoute.withName('/role-selection'),
           );
         }
       });

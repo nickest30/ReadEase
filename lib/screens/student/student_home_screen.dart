@@ -76,7 +76,7 @@ class StudentHomeScreen extends StatelessWidget {
     // Return to profile list, clearing stack
     Navigator.of(context).pushNamedAndRemoveUntil(
       '/student-profile-list',
-      (route) => false,
+      ModalRoute.withName('/role-selection'),
     );
   }
 
@@ -90,7 +90,7 @@ class StudentHomeScreen extends StatelessWidget {
         if (context.mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil(
             '/student-profile-list',
-            (route) => false,
+            ModalRoute.withName('/role-selection'),
           );
         }
       });

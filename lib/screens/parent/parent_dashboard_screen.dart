@@ -96,7 +96,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
 
     Navigator.of(context).pushNamedAndRemoveUntil(
       '/parent-welcome',
-      (route) => false,
+      ModalRoute.withName('/role-selection'),
     );
   }
 
@@ -109,7 +109,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         if (context.mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil(
             '/parent-welcome',
-            (route) => false,
+            ModalRoute.withName('/role-selection'),
           );
         }
       });
