@@ -8,6 +8,7 @@ import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
+import '../../models/badge.dart';
 
 class ResultsScreen extends StatefulWidget {
   const ResultsScreen({super.key});
@@ -131,9 +132,43 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
         // Compute badge count from results
         final Set<String> passedKeys = {};
+
         for (final r in allResults) {
           if (r.isPassing) {
             passedKeys.add('${r.gradeLevel}-${r.difficulty}');
+          }
+        }
+
+        if (result.isPassing) {
+          final badgeName = AchievementBadge.nameFor(_gradeLevel, _difficulty);
+          final badge = AchievementBadge(
+            studentId: student.id!,
+            gradeLevel: _gradeLevel,
+            difficulty: _difficulty,
+            badgeName: badgeName,
+            pointsEarned: pointsEarned,
+            earnedAt: DateTime.now().toIso8601String(),
+          );
+
+          final isNewBadge =
+              await DatabaseService.instance.awardBadge(badge);
+
+          if (isNewBadge) {
+            debugPrint('🏆 New badge awarded: $badgeName');
+
+            if (student.firebaseUid != null) {
+              await FirestoreService.instance.syncBadge(
+                studentUid: student.firebaseUid!,
+                badgeKey: badge.key,
+                gradeLevel: _gradeLevel,
+                difficulty: _difficulty,
+                badgeName: badgeName,
+                pointsEarned: pointsEarned,
+                earnedAt: badge.earnedAt,
+              );
+            }
+          } else {
+            debugPrint('🏆 Badge already earned: $badgeName');
           }
         }
 

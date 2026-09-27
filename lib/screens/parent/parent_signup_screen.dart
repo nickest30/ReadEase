@@ -103,6 +103,14 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
 
       parentProvider.setParent(createdParent);
 
+      // Save credentials to secure storage for silent Firebase re-auth
+      await authProvider.saveCredentials(
+        uid: firebaseUid,
+        email: email,
+        password: _passwordController.text,
+      );
+
+      // Sync parent profile to Firestore for cross-device login
       await FirestoreService.instance.saveParent(
         parentUid: firebaseUid,
         username: createdParent.username,

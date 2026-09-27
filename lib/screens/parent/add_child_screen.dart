@@ -39,22 +39,48 @@ class _AddChildScreenState extends State<AddChildScreen> {
 
   Future<void> _handleAddChild() async {
     if (!_formKey.currentState!.validate()) return;
-
     if (_pinController.text.length != 4) {
       setState(() => _errorMessage = 'PIN must be exactly 4 digits.');
       return;
     }
 
-    // Capture providers before await
+    // ── Capture providers BEFORE any await ──
     final authProvider = context.read<AuthProvider>();
     final parentProvider = context.read<ParentProvider>();
     final connectivity = context.read<ConnectivityProvider>();
-
     final parent = parentProvider.currentParent;
-    if (parent == null) {
-      if (!mounted) return;
-      Navigator.of(context).pop();
+    final parentUid = authProvider.uid;
+
+    if (parent == null || parentUid == null) {
+      setState(() => _errorMessage = 'Not signed in as parent.');
       return;
+    }
+
+    // Parent credentials should be in secure storage from signup/login
+    Map<String, String>? parentCreds =
+        await CredentialStorage.instance.read(parentUid);
+
+    if (parentCreds == null) {
+      if (!mounted) return;
+
+      final password = await _promptForPassword(parent.fullName, parent.email);
+      if (password == null || !mounted) return;
+
+      // Save credentials and retry
+      await authProvider.saveCredentials(
+        uid: parentUid,
+        email: parent.email,
+        password: password,
+      );
+
+      parentCreds = await CredentialStorage.instance.read(parentUid);
+      if (parentCreds == null) {
+        if (!mounted) return;
+        setState(() {
+          _errorMessage = 'Could not verify. Please try again.';
+        });
+        return;
+      }
     }
 
     setState(() {
@@ -62,17 +88,18 @@ class _AddChildScreenState extends State<AddChildScreen> {
       _errorMessage = null;
     });
 
-    try {
-      final username = _usernameController.text.trim().toLowerCase();
-      final password = _passwordController.text;
+    final childUsername = _usernameController.text.trim().toLowerCase();
+    final childPassword = _passwordController.text;
+    final childEmail = '$childUsername@readease.app';
 
+    String? childFirebaseUid;
+
+    try {
       // 1. Check local uniqueness
       final existing = await DatabaseService.instance
-          .getStudentByUsername(username);
-
-      if (!mounted) return;
-
+          .getStudentByUsername(childUsername);
       if (existing != null) {
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'That username is already taken on this device.';
           _isSubmitting = false;
@@ -80,38 +107,52 @@ class _AddChildScreenState extends State<AddChildScreen> {
         return;
       }
 
-      // 2. Hash credentials locally
-      final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
-      final hashedPin = BCrypt.hashpw(_pinController.text, BCrypt.gensalt());
-
-      // 3. Try to create Firebase Auth account for the child (cloud sync)
-      String? childFirebaseUid;
-      final syntheticEmail = '$username@readease.app';
-
+      // 2. Try to create Firebase account for child (only when online)
       if (connectivity.isOnline) {
         try {
           childFirebaseUid = await authProvider.register(
-            syntheticEmail,
-            password,
+            childEmail,
+            childPassword,
           );
 
-          if (childFirebaseUid == null) {
-            debugPrint('⚠️ Child Firebase account failed (continuing local)');
-          } else {
-            debugPrint('✅ Child Firebase account: $childFirebaseUid');
+          // ⚠️ At this point, Firebase has signed OUT the parent
+          //    and signed IN the child. We must re-sign the parent.
+
+          if (childFirebaseUid != null) {
+            // Save child's credentials
+            await authProvider.saveCredentials(
+              uid: childFirebaseUid,
+              email: childEmail,
+              password: childPassword,
+            );
           }
+
+          // 3. Restore parent session (regardless of success)
+          await authProvider.signIn(
+            parentCreds['email']!,
+            parentCreds['password']!,
+          );
+
+          debugPrint('🔑 Parent session restored');
         } catch (e) {
-          debugPrint('⚠️ Child Firebase exception: $e');
+          debugPrint('⚠️ Child Firebase creation failed: $e');
+          // Restore parent session even on failure
+          await authProvider.signIn(
+            parentCreds['email']!,
+            parentCreds['password']!,
+          );
+          childFirebaseUid = null;
         }
-      } else {
-        debugPrint('📴 Offline — skipping Firebase for child');
       }
 
       if (!mounted) return;
 
-      // 4. Create local Student record
+      // 4. Save child locally (always)
+      final hashedPassword = BCrypt.hashpw(childPassword, BCrypt.gensalt());
+      final hashedPin = BCrypt.hashpw(_pinController.text, BCrypt.gensalt());
+
       final newChild = Student(
-        username: username,
+        username: childUsername,
         passwordHash: hashedPassword,
         displayName: _displayNameController.text.trim(),
         gradeLevel: _selectedGrade,
@@ -122,42 +163,136 @@ class _AddChildScreenState extends State<AddChildScreen> {
         createdAt: DateTime.now().toIso8601String(),
       );
 
-      final newId =
-          await DatabaseService.instance.insertLinkedStudent(newChild);
+      await DatabaseService.instance.insertLinkedStudent(newChild);
 
       if (!mounted) return;
 
-      final createdChild =
-          await DatabaseService.instance.getStudentById(newId);
-
-      if (!mounted || createdChild == null) return;
-
-      // 5. Save child credentials to secure storage
-      //    (so child's PIN can restore Firebase session on their own device)
+      // 5. Save child to Firestore with parentId (if we have a UID)
       if (childFirebaseUid != null) {
-        await CredentialStorage.instance.save(syntheticEmail, password);
-
-        // 6. Sync child profile to Firestore with parentId
-        final parentUid = authProvider.uid;
-        if (parentUid != null) {
-          await FirestoreService.instance.saveLinkedChild(
-            childUid: childFirebaseUid,
-            displayName: createdChild.displayName,
-            gradeLevel: createdChild.gradeLevel,
-            parentUid: parentUid,
-          );
-        }
+        await FirestoreService.instance.saveLinkedChild(
+          childUid: childFirebaseUid,
+          displayName: newChild.displayName,
+          gradeLevel: newChild.gradeLevel,
+          parentUid: parentUid,
+          isLinked: true,
+        );
       }
 
       if (!mounted) return;
       Navigator.of(context).pop();
     } catch (e) {
+      // On any error, ensure parent is signed back in
+      try {
+        await authProvider.signIn(
+          parentCreds['email']!,
+          parentCreds['password']!,
+        );
+      } catch (_) {}
       if (!mounted) return;
       setState(() {
         _errorMessage = 'Something went wrong. Please try again.';
         _isSubmitting = false;
       });
     }
+  }
+
+
+  Future<String?> _promptForPassword(String parentName, String email) async {
+    final controller = TextEditingController();
+
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Confirm Password',
+          style: TextStyle(
+            fontFamily: 'Nunito',
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Hi $parentName, please enter your password to '
+              'confirm adding a child.',
+              style: const TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 13,
+                color: AppColors.textMuted,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: controller,
+              obscureText: true,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Your password',
+                filled: true,
+                fillColor: AppColors.parentBg,
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.medium),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.medium),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.medium),
+                  borderSide:
+                      const BorderSide(color: AppColors.accentPurple, width: 2),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.isEmpty) return;
+              Navigator.of(ctx).pop(controller.text);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentPurple,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Confirm',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return result;
   }
 
   @override
@@ -184,7 +319,6 @@ class _AddChildScreenState extends State<AddChildScreen> {
 
                 const SizedBox(height: AppSpacing.sm),
 
-                // Header with Motter
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -328,7 +462,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
                   obscureText: true,
                   maxLength: 4,
                   keyboardType: TextInputType.number,
-                  decoration: _inputDecoration('4-digit PIN for daily login'),
+                  decoration: _inputDecoration('4-digit PIN'),
                   validator: (v) {
                     if (v == null || v.length != 4) {
                       return 'PIN must be exactly 4 digits';

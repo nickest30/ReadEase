@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 
 import '../../models/student.dart';
 import '../../services/database_service.dart';
-import '../../services/credential_storage.dart';
 import '../../services/firestore_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/student_provider.dart';
@@ -87,9 +86,12 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
         return;
       }
 
-      // 5. Save credentials to secure storage
-      //    Enables silent Firebase session restore on future PIN logins.
-      await CredentialStorage.instance.save(syntheticEmail, password);
+      // Save credentials to secure storage
+      await authProvider.saveCredentials(
+        uid: firebaseUid,
+        email: syntheticEmail,
+        password: password,
+      );
 
       if (!mounted) return;
 

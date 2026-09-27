@@ -100,6 +100,7 @@ class FirestoreService {
         'totalPoints': totalPoints,
         'badgeCount': badgeCount,
         'firebaseUid': studentUid,
+        'isLinked': parentId != null,
         'lastUpdated': FieldValue.serverTimestamp(),
       };
 
@@ -126,6 +127,7 @@ class FirestoreService {
     required String parentUid,
     int totalPoints = 0,
     int badgeCount = 0,
+    bool isLinked = true,
   }) async {
     try {
       await _db.collection('students').doc(childUid).set({
@@ -134,6 +136,7 @@ class FirestoreService {
         'totalPoints': totalPoints,
         'badgeCount': badgeCount,
         'parentId': parentUid,
+        'isLinked': isLinked,
         'firebaseUid': childUid,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
@@ -606,4 +609,34 @@ class FirestoreService {
       debugPrint('🔥 Firestore syncStudentProgress ERROR: $e');
     }
   }
+
+  /// Sync a badge to Firestore under students/{uid}/badges/.
+  Future<void> syncBadge({
+    required String studentUid,
+    required String badgeKey,  // "grade-difficulty", e.g. "1-easy"
+    required int gradeLevel,
+    required String difficulty,
+    required String badgeName,
+    required int pointsEarned,
+    required String earnedAt,
+  }) async {
+    try {
+      await _db
+          .collection('students')
+          .doc(studentUid)
+          .collection('badges')
+          .doc(badgeKey)
+          .set({
+        'gradeLevel': gradeLevel,
+        'difficulty': difficulty,
+        'badgeName': badgeName,
+        'pointsEarned': pointsEarned,
+        'earnedAt': earnedAt,
+      }, SetOptions(merge: true));
+      debugPrint('🔥 Firestore: syncBadge($badgeKey) OK');
+    } catch (e) {
+      debugPrint('🔥 Firestore syncBadge ERROR: $e');
+    }
+  }
+
 }

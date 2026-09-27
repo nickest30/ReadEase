@@ -45,60 +45,80 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> signIn(String email, String password) async {
     final ok = await AuthService.instance.signIn(email, password);
     if (ok) {
-      // Save credentials for future PIN-based silent re-auth
-      await CredentialStorage.instance.save(email, password);
+      // Save credentials keyed by the newly signed-in user's UID
+      final uid = AuthService.instance.currentUid;
+      if (uid != null) {
+        await CredentialStorage.instance.save(
+          uid: uid,
+          email: email,
+          password: password,
+        );
+      }
     }
     return ok;
   }
 
-  /// Attempt to restore the Firebase Auth session from saved credentials.
-  /// Called during PIN entry when a session might be missing.
-  /// Returns true if the session was restored successfully.
-  Future<bool> tryRestoreSession() async {
+   /// Attempt to restore a Firebase Auth session for a specific UID.
+  /// Called during PIN entry when we know which user should be restored.
+  Future<bool> tryRestoreSessionFor({required String uid}) async {
     if (isSignedIn) {
-      debugPrint('🔑 tryRestoreSession: already signed in');
+      debugPrint('🔑 tryRestoreSessionFor: already signed in as $uid');
       return true;
     }
 
-    final creds = await CredentialStorage.instance.read();
+    final creds = await CredentialStorage.instance.read(uid);
     if (creds == null) {
-      debugPrint('🔑 tryRestoreSession: NO credentials found in secure storage');
+      debugPrint('🔑 tryRestoreSessionFor: no credentials for $uid');
       return false;
     }
 
-    debugPrint('🔑 tryRestoreSession: found credentials for ${creds['email']}');
+    debugPrint('🔑 tryRestoreSessionFor: restoring $uid (${creds['email']})');
 
     try {
       final ok = await AuthService.instance.signIn(
         creds['email']!,
         creds['password']!,
       );
-      debugPrint('🔑 tryRestoreSession: signIn result = $ok');
+      debugPrint('🔑 tryRestoreSessionFor: signIn result = $ok');
       return ok;
     } catch (e) {
-      debugPrint('🔑 tryRestoreSession: ERROR = $e');
+      debugPrint('🔑 tryRestoreSessionFor: ERROR = $e');
       return false;
     }
   }
 
+  /// Sign in with saved credentials for a specific UID (used after
+  /// creating a child account when we need to restore the parent session).
+  Future<bool> signInWithSavedCredentials(String uid) async {
+    final creds = await CredentialStorage.instance.read(uid);
+    if (creds == null) return false;
+    return AuthService.instance.signIn(creds['email']!, creds['password']!);
+  }
+
+  /// Save credentials after a successful signup/login.
+  Future<void> saveCredentials({
+    required String uid,
+    required String email,
+    required String password,
+  }) async {
+    await CredentialStorage.instance.save(
+      uid: uid,
+      email: email,
+      password: password,
+    );
+  }
+
   Future<void> signOut() async {
     await AuthService.instance.signOut();
-    // Note: We do NOT clear CredentialStorage here.
-    // Credentials persist so PIN entry can restore the session.
+    // Note: We do NOT clear credentials here — the current user
+    // may still need them. Individual clears happen via clear(uid).
     _sessionState = SessionState.offline;
     notifyListeners();
   }
 
   /// Full sign out — clears everything including saved credentials.
   /// Use only when the user explicitly wants to forget this device.
-  Future<void> signOutAndForget() async {
-    await AuthService.instance.signOut();
-    await CredentialStorage.instance.clear();
-    _sessionState = SessionState.offline;
-    notifyListeners();
-  }
-
-  @override
+@override
   void dispose() {
     _subscription?.cancel();
     super.dispose();

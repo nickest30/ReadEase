@@ -60,14 +60,16 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
     if (!mounted) return;
     context.read<StudentProvider>().setStudent(student);
 
-    // Silently try to restore Firebase Auth session (best-effort)
+    // Silently try to restore Firebase Auth session for THIS student
     final connectivity = context.read<ConnectivityProvider>();
     final authProvider = context.read<AuthProvider>();
-    if (connectivity.isOnline && !authProvider.isSignedIn) {
+    if (connectivity.isOnline &&
+        !authProvider.isSignedIn &&
+        student.firebaseUid != null) {
       try {
-        await authProvider.tryRestoreSession();
+        await authProvider.tryRestoreSessionFor(uid: student.firebaseUid!);
       } catch (_) {
-        // Session restore failed — proceed offline
+        // Offline or no saved credentials — proceed offline
       }
     }
 

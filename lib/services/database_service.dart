@@ -6,6 +6,8 @@ import '../models/quiz_result.dart';
 import '../models/parent.dart';
 import '../models/teacher.dart';
 import '../models/class_group.dart';
+import '../models/badge.dart';
+
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._internal();
@@ -25,7 +27,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: _createTables,
       onUpgrade: _upgradeTables,
     );
@@ -120,6 +122,21 @@ class DatabaseService {
     ''');
 
     await db.execute('''
+      CREATE TABLE badges (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        grade_level INTEGER NOT NULL,
+        difficulty TEXT NOT NULL,
+        badge_name TEXT NOT NULL,
+        points_earned INTEGER NOT NULL,
+        earned_at TEXT NOT NULL,
+        synced_to_cloud INTEGER NOT NULL DEFAULT 0,
+        UNIQUE(student_id, grade_level, difficulty),
+        FOREIGN KEY (student_id) REFERENCES students (id)
+      )
+    ''');
+
+    await db.execute('''
       CREATE TABLE class_enrollments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         class_group_id INTEGER NOT NULL,
@@ -178,6 +195,24 @@ class DatabaseService {
       } catch (_) {
         // Column may already exist on fresh installs
       }
+    }
+    if (oldVersion < 8) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS badges (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            grade_level INTEGER NOT NULL,
+            difficulty TEXT NOT NULL,
+            badge_name TEXT NOT NULL,
+            points_earned INTEGER NOT NULL,
+            earned_at TEXT NOT NULL,
+            synced_to_cloud INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(student_id, grade_level, difficulty),
+            FOREIGN KEY (student_id) REFERENCES students (id)
+          )
+        ''');
+      } catch (_) {}
     }
   }
 
@@ -653,4 +688,62 @@ class DatabaseService {
     }
     return code;
   }
+
+
+  // ─────────────────────────────────────────────────────────
+  // BADGE METHODS
+  // ─────────────────────────────────────────────────────────
+
+  /// Award a badge. Returns true if a new badge was created.
+  Future<bool> awardBadge(AchievementBadge badge) async {
+    final db = await database;
+    try {
+      final id = await db.insert(
+        'badges',
+        badge.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+      return id > 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Get all badges earned by a student.
+  Future<List<AchievementBadge>> getBadgesForStudent(int studentId) async {
+    final db = await database;
+    final maps = await db.query(
+      'badges',
+      where: 'student_id = ?',
+      whereArgs: [studentId],
+      orderBy: 'earned_at DESC',
+    );
+    return maps.map((m) => AchievementBadge.fromMap(m)).toList();
+  }
+
+  /// Get unsynced badges.
+  Future<List<AchievementBadge>> getPendingSyncBadges(int studentId) async {
+    final db = await database;
+    final maps = await db.query(
+      'badges',
+      where: 'student_id = ? AND synced_to_cloud = 0',
+      whereArgs: [studentId],
+    );
+    return maps.map((m) => AchievementBadge.fromMap(m)).toList();
+  }
+
+  /// Mark a badge as synced.
+  Future<bool> markBadgeSynced(int badgeId) async {
+    final db = await database;
+    final rows = await db.update(
+      'badges',
+      {'synced_to_cloud': 1},
+      where: 'id = ?',
+      whereArgs: [badgeId],
+    );
+    return rows > 0;
+  }
+
+
+
 }
