@@ -67,13 +67,6 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
   }
 
   Future<void> _confirmJoin() async {
-    if (!context.read<ConnectivityProvider>().isOnline) {
-      setState(() {
-        _errorMessage = 'You\'re offline. Connect to the internet to join.';
-      });
-      return;
-    }
-
     if (_foundClass == null) return;
 
     final student = context.read<StudentProvider>().currentStudent;
@@ -85,6 +78,68 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
             'Please connect to the internet and log in with your full credentials to join a class.';
       });
       return;
+    }
+
+    // ── Warn if switching classes ──
+    final alreadyInClass = student.classFirestoreId != null &&
+        student.classFirestoreId!.isNotEmpty;
+
+    if (alreadyInClass) {
+      final newClassName = _foundClass!['className'] as String;
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+          ),
+          backgroundColor: AppColors.surface,
+          title: const Text(
+            'Switch Class?',
+            style: TextStyle(
+              fontFamily: 'Nunito',
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
+          ),
+          content: Text(
+            'You\'re currently in "${student.className}".\n\n'
+            'Join "$newClassName" and leave the old one?',
+            style: const TextStyle(fontFamily: 'Nunito', fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  color: AppColors.textMuted,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentPurple,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'Switch',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true || !mounted) return;
     }
 
     setState(() {
@@ -99,8 +154,9 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
     debugPrint('🔑 DEBUG current auth uid    = ${FirebaseAuth.instance.currentUser?.uid}');
 
     // 1. Enroll in Firestore
-    final enrolled = await FirestoreService.instance.enrollStudent(
-      classId: classFirestoreId,
+    final enrolled = await FirestoreService.instance.transferStudent(
+      oldClassId: student.classFirestoreId ?? '',
+      newClassId: classFirestoreId,
       studentUid: student.firebaseUid!,
       studentName: student.displayName,
       gradeLevel: student.gradeLevel,

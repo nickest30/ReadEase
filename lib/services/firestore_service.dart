@@ -300,6 +300,87 @@ class FirestoreService {
     }
   }
 
+  Future<bool> transferStudent({
+    required String oldClassId,
+    required String newClassId,
+    required String studentUid,
+    required String studentName,
+    required int gradeLevel,
+    required int totalPoints,
+  }) async {
+    try {
+      debugPrint('🔥 transferStudent: START');
+      debugPrint('🔥   oldClassId: "$oldClassId"');
+      debugPrint('🔥   newClassId: "$newClassId"');
+      debugPrint('🔥   studentUid: $studentUid');
+
+      // 1. Remove old enrollment
+      if (oldClassId.isNotEmpty && oldClassId != newClassId) {
+        debugPrint('🔥 [1/3] Deleting old enrollment...');
+        try {
+          await _db
+              .collection('classes')
+              .doc(oldClassId)
+              .collection('enrollments')
+              .doc(studentUid)
+              .delete();
+          debugPrint('🔥 [1/3] Old enrollment deleted ✓');
+        } catch (e) {
+          // Log but continue — the important thing is joining the new class
+          debugPrint('🔥 [1/3] Could not delete old enrollment (continuing): $e');
+        }
+
+        // Try to decrement old class count (best-effort, teacher-only)
+        try {
+          await _db.collection('classes').doc(oldClassId).update({
+            'studentCount': FieldValue.increment(-1),
+          });
+        } catch (_) {
+          debugPrint('🔥 [1/3] Could not decrement old class count (OK)');
+        }
+      }
+
+      // 2. Add new enrollment
+      debugPrint('🔥 [2/3] Creating new enrollment...');
+      await _db
+          .collection('classes')
+          .doc(newClassId)
+          .collection('enrollments')
+          .doc(studentUid)
+          .set({
+        'studentName': studentName,
+        'gradeLevel': gradeLevel,
+        'totalPoints': totalPoints,
+        'enrolledAt': FieldValue.serverTimestamp(),
+      });
+      debugPrint('🔥 [2/3] New enrollment created ✓');
+
+      // 3. Update student's current class
+      debugPrint('🔥 [3/3] Updating student record...');
+      await _db.collection('students').doc(studentUid).set({
+        'classId': newClassId,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      debugPrint('🔥 [3/3] Student record updated ✓');
+
+      // Best-effort: increment new class count
+      try {
+        await _db.collection('classes').doc(newClassId).update({
+          'studentCount': FieldValue.increment(1),
+        });
+      } catch (_) {
+        debugPrint('🔥 [3/3] Could not increment new class count (OK)');
+      }
+
+      debugPrint('🔥 transferStudent: COMPLETE ✓');
+      return true;
+    } catch (e, stackTrace) {
+      debugPrint('🔥 transferStudent ERROR: $e');
+      debugPrint('🔥 STACKTRACE: $stackTrace');
+      return false;
+    }
+  }
+
   // ============================================================
   // LEADERBOARD
   // ============================================================
@@ -361,14 +442,21 @@ class FirestoreService {
       final snapshot = await _db
           .collection('leaderboard')
           .where('classId', isEqualTo: classId)
-          .orderBy('totalPoints', descending: true)
           .limit(limit)
           .get()
           .timeout(const Duration(seconds: 10));
 
-      return snapshot.docs
+      final entries = snapshot.docs
           .map((doc) => {'uid': doc.id, ...doc.data()})
           .toList();
+
+      // Client-side sort (avoids composite index requirement)
+      entries.sort((a, b) =>
+          ((b['totalPoints'] ?? 0) as int)
+              .compareTo((a['totalPoints'] ?? 0) as int));
+
+      debugPrint('🔥 Firestore: class leaderboard → ${entries.length} entries');
+      return entries;
     } catch (e) {
       debugPrint('🔥 Firestore getClassLeaderboard ERROR: $e');
       return [];

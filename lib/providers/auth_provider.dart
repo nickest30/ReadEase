@@ -83,6 +83,16 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> signOut() async {
     await AuthService.instance.signOut();
+    // Note: We do NOT clear CredentialStorage here.
+    // Credentials persist so PIN entry can restore the session.
+    _sessionState = SessionState.offline;
+    notifyListeners();
+  }
+
+  /// Full sign out — clears everything including saved credentials.
+  /// Use only when the user explicitly wants to forget this device.
+  Future<void> signOutAndForget() async {
+    await AuthService.instance.signOut();
     await CredentialStorage.instance.clear();
     _sessionState = SessionState.offline;
     notifyListeners();
