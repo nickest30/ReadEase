@@ -2,13 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/student.dart';
-import '../../providers/student_provider.dart';
-import '../../utils/app_theme.dart';
 import '../../providers/connectivity_provider.dart';
+import '../../providers/student_provider.dart';
+import '../../services/sync_service.dart';
+import '../../utils/app_theme.dart';
 
-
-class StudentHomeScreen extends StatelessWidget {
+class StudentHomeScreen extends StatefulWidget {
   const StudentHomeScreen({super.key});
+
+  @override
+  State<StudentHomeScreen> createState() => _StudentHomeScreenState();
+}
+
+class _StudentHomeScreenState extends State<StudentHomeScreen> {
+  bool _syncAttempted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Retry any pending cloud syncs on app open
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _retrySyncs();
+    });
+  }
+
+  Future<void> _retrySyncs() async {
+    if (_syncAttempted) return;
+    _syncAttempted = true;
+
+    final student = context.read<StudentProvider>().currentStudent;
+    final connectivity = context.read<ConnectivityProvider>();
+    if (student == null) return;
+
+    await SyncService.instance.retryPendingSyncs(
+      student: student,
+      connectivity: connectivity,
+    );
+  }
 
   Future<void> _confirmExit(BuildContext context) async {
     final studentProvider = context.read<StudentProvider>();
@@ -75,7 +105,7 @@ class StudentHomeScreen extends StatelessWidget {
     // Clear the session
     studentProvider.logout();
 
-    // Return to profile list, clearing stack
+    // Return to profile list, preserving role-selection in the stack
     Navigator.of(context).pushNamedAndRemoveUntil(
       '/student-profile-list',
       ModalRoute.withName('/role-selection'),
@@ -111,12 +141,16 @@ class StudentHomeScreen extends StatelessWidget {
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _Header(student: student),
                       const SizedBox(height: 24),
+
                       _HomeCard(
                         icon: Icons.menu_book_rounded,
                         label: 'Start Learning',
@@ -127,36 +161,44 @@ class StudentHomeScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
+
                       _HomeCard(
                         icon: Icons.emoji_events_rounded,
                         label: 'My Badges',
                         sublabel: 'See what you earned',
                         color: AppColors.accentYellow,
-                        onTap: () => Navigator.of(context).pushNamed('/badges'),
+                        onTap: () =>
+                            Navigator.of(context).pushNamed('/badges'),
                       ),
                       const SizedBox(height: 12),
+
                       _HomeCard(
                         icon: Icons.bar_chart_rounded,
                         label: 'Progress',
                         sublabel: 'Track your journey',
                         color: AppColors.accentTeal,
-                        onTap: () => Navigator.of(context).pushNamed('/progress'),
+                        onTap: () =>
+                            Navigator.of(context).pushNamed('/progress'),
                       ),
                       const SizedBox(height: 12),
+
                       _HomeCard(
                         icon: Icons.leaderboard_rounded,
                         label: 'Leaderboard',
                         sublabel: 'See your ranking',
                         color: AppColors.accentPurple,
-                        onTap: () => Navigator.of(context).pushNamed('/leaderboard'),
+                        onTap: () =>
+                            Navigator.of(context).pushNamed('/leaderboard'),
                       ),
                       const SizedBox(height: 12),
+
                       _HomeCard(
                         icon: Icons.settings_rounded,
                         label: 'Settings',
                         sublabel: 'Edit profile and audio',
                         color: AppColors.textMuted,
-                        onTap: () => Navigator.of(context).pushNamed('/settings'),
+                        onTap: () =>
+                            Navigator.of(context).pushNamed('/settings'),
                       ),
 
                       const SizedBox(height: 24),
@@ -193,6 +235,10 @@ class StudentHomeScreen extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────
+// Header with online/offline chip
+// ─────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
   final Student student;
@@ -290,6 +336,10 @@ class _Header extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────
+// Home card
+// ─────────────────────────────────────────────────────────
 
 class _HomeCard extends StatelessWidget {
   final IconData icon;

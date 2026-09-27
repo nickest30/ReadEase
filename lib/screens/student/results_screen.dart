@@ -589,7 +589,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                         onPressed: () {
                           Navigator.of(context).pushNamedAndRemoveUntil(
                             '/student-home',
-                            (route) => false,
+                            ModalRoute.withName('/role-selection'), 
                           );
                         },
                         style: ElevatedButton.styleFrom(

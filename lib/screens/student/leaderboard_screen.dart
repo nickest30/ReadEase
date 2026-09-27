@@ -143,7 +143,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         if (context.mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil(
             '/student-profile-list',
-            (route) => false,
+            ModalRoute.withName('/role-selection'),
           );
         }
       });

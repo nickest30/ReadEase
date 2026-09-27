@@ -74,7 +74,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
     if (!mounted) return;
     Navigator.of(context).pushNamedAndRemoveUntil(
       '/student-home',
-      (route) => false,
+      ModalRoute.withName('/role-selection'), 
     );
   }
 

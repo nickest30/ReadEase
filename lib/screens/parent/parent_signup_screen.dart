@@ -7,6 +7,7 @@ import '../../services/database_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/parent_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../services/firestore_service.dart';
 
 class ParentSignupScreen extends StatefulWidget {
   const ParentSignupScreen({super.key});
@@ -101,6 +102,15 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
       if (!mounted || createdParent == null) return;
 
       parentProvider.setParent(createdParent);
+
+      await FirestoreService.instance.saveParent(
+        parentUid: firebaseUid,
+        username: createdParent.username,
+        fullName: createdParent.fullName,
+        email: createdParent.email,
+      );
+
+      if (!mounted) return;
 
       Navigator.of(context).pushReplacementNamed('/parent-dashboard');
     } catch (e) {

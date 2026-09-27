@@ -7,6 +7,7 @@ import '../../services/database_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/parent_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../services/firestore_service.dart';
 
 class ParentLoginScreen extends StatefulWidget {
   const ParentLoginScreen({super.key});
@@ -91,8 +92,21 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
         }
       }
 
-      if (!mounted) return;
+      // Backfill Firestore if parent doc doesn't exist yet
+      if (firebaseOk && finalParent.firebaseUid != null) {
+        try {
+          await FirestoreService.instance.saveParent(
+            parentUid: finalParent.firebaseUid!,
+            username: finalParent.username,
+            fullName: finalParent.fullName,
+            email: finalParent.email,
+          );
+        } catch (_) {
+          // Silent — parent login should still work
+        }
+      }
 
+      if (!mounted) return;
       parentProvider.setParent(finalParent);
 
       if (!firebaseOk) {

@@ -44,6 +44,42 @@ class FirestoreService {
   }
 
   // ============================================================
+  // PARENTS
+  // ============================================================
+
+  Future<void> saveParent({
+    required String parentUid,
+    required String username,
+    required String fullName,
+    required String email,
+  }) async {
+    try {
+      await _db.collection('parents').doc(parentUid).set({
+        'username': username,
+        'fullName': fullName,
+        'email': email,
+        'firebaseUid': parentUid,
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      debugPrint('🔥 Firestore: saveParent($parentUid) OK');
+    } catch (e) {
+      debugPrint('🔥 Firestore saveParent ERROR: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>?> getParentByUid(String parentUid) async {
+    try {
+      final doc = await _db.collection('parents').doc(parentUid).get();
+      if (!doc.exists) return null;
+      return doc.data();
+    } catch (e) {
+      debugPrint('🔥 Firestore getParentByUid ERROR: $e');
+      return null;
+    }
+  }
+
+  // ============================================================
   // STUDENTS
   // ============================================================
 
@@ -80,6 +116,70 @@ class FirestoreService {
     } catch (e) {
       debugPrint('🔥 Firestore saveStudent ERROR: $e');
       return false;
+    }
+  }
+
+  Future<bool> saveLinkedChild({
+    required String childUid,
+    required String displayName,
+    required int gradeLevel,
+    required String parentUid,
+    int totalPoints = 0,
+    int badgeCount = 0,
+  }) async {
+    try {
+      await _db.collection('students').doc(childUid).set({
+        'displayName': displayName,
+        'gradeLevel': gradeLevel,
+        'totalPoints': totalPoints,
+        'badgeCount': badgeCount,
+        'parentId': parentUid,
+        'firebaseUid': childUid,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      debugPrint('🔥 Firestore: saveLinkedChild($childUid) OK');
+      return true;
+    } catch (e) {
+      debugPrint('🔥 Firestore saveLinkedChild ERROR: $e');
+      return false;
+    }
+  }
+
+  /// Fetch all children linked to a parent's UID.
+  Future<List<Map<String, dynamic>>> getChildrenOfParent(
+      String parentUid) async {
+    try {
+      final snapshot = await _db
+          .collection('students')
+          .where('parentId', isEqualTo: parentUid)
+          .get()
+          .timeout(const Duration(seconds: 10));
+
+      return snapshot.docs
+          .map((doc) => {'uid': doc.id, ...doc.data()})
+          .toList();
+    } catch (e) {
+      debugPrint('🔥 Firestore getChildrenOfParent ERROR: $e');
+      return [];
+    }
+  }
+
+  /// Fetch a student's quiz results from Firestore.
+  Future<List<Map<String, dynamic>>> getStudentResultsFromCloud(
+      String studentUid) async {
+    try {
+      final snapshot = await _db
+          .collection('students')
+          .doc(studentUid)
+          .collection('results')
+          .orderBy('completedAt', descending: true)
+          .get()
+          .timeout(const Duration(seconds: 10));
+
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    } catch (e) {
+      debugPrint('🔥 Firestore getStudentResultsFromCloud ERROR: $e');
+      return [];
     }
   }
 

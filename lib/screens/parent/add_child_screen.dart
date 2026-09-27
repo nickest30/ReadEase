@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:provider/provider.dart';
 
-import '../../providers/parent_provider.dart';
-import '../../services/database_service.dart';
-import '../../utils/app_theme.dart';
 import '../../models/student.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/connectivity_provider.dart';
+import '../../providers/parent_provider.dart';
+import '../../services/credential_storage.dart';
+import '../../services/database_service.dart';
+import '../../services/firestore_service.dart';
+import '../../utils/app_theme.dart';
 
 class AddChildScreen extends StatefulWidget {
   const AddChildScreen({super.key});
@@ -41,7 +45,12 @@ class _AddChildScreenState extends State<AddChildScreen> {
       return;
     }
 
-    final parent = context.read<ParentProvider>().currentParent;
+    // Capture providers before await
+    final authProvider = context.read<AuthProvider>();
+    final parentProvider = context.read<ParentProvider>();
+    final connectivity = context.read<ConnectivityProvider>();
+
+    final parent = parentProvider.currentParent;
     if (parent == null) {
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -54,39 +63,91 @@ class _AddChildScreenState extends State<AddChildScreen> {
     });
 
     try {
+      final username = _usernameController.text.trim().toLowerCase();
+      final password = _passwordController.text;
+
+      // 1. Check local uniqueness
       final existing = await DatabaseService.instance
-          .getStudentByUsername(_usernameController.text.trim());
+          .getStudentByUsername(username);
+
+      if (!mounted) return;
 
       if (existing != null) {
-        if (!mounted) return;
         setState(() {
-          _errorMessage = 'That username is already taken.';
+          _errorMessage = 'That username is already taken on this device.';
           _isSubmitting = false;
         });
         return;
       }
 
-      final hashedPassword = BCrypt.hashpw(
-        _passwordController.text,
-        BCrypt.gensalt(),
-      );
-      final hashedPin = BCrypt.hashpw(
-        _pinController.text,
-        BCrypt.gensalt(),
-      );
+      // 2. Hash credentials locally
+      final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+      final hashedPin = BCrypt.hashpw(_pinController.text, BCrypt.gensalt());
 
+      // 3. Try to create Firebase Auth account for the child (cloud sync)
+      String? childFirebaseUid;
+      final syntheticEmail = '$username@readease.app';
+
+      if (connectivity.isOnline) {
+        try {
+          childFirebaseUid = await authProvider.register(
+            syntheticEmail,
+            password,
+          );
+
+          if (childFirebaseUid == null) {
+            debugPrint('⚠️ Child Firebase account failed (continuing local)');
+          } else {
+            debugPrint('✅ Child Firebase account: $childFirebaseUid');
+          }
+        } catch (e) {
+          debugPrint('⚠️ Child Firebase exception: $e');
+        }
+      } else {
+        debugPrint('📴 Offline — skipping Firebase for child');
+      }
+
+      if (!mounted) return;
+
+      // 4. Create local Student record
       final newChild = Student(
-        username: _usernameController.text.trim(),
+        username: username,
         passwordHash: hashedPassword,
         displayName: _displayNameController.text.trim(),
         gradeLevel: _selectedGrade,
         pinHash: hashedPin,
         isLinked: true,
         parentId: parent.id,
+        firebaseUid: childFirebaseUid,
         createdAt: DateTime.now().toIso8601String(),
       );
 
-      await DatabaseService.instance.insertLinkedStudent(newChild);
+      final newId =
+          await DatabaseService.instance.insertLinkedStudent(newChild);
+
+      if (!mounted) return;
+
+      final createdChild =
+          await DatabaseService.instance.getStudentById(newId);
+
+      if (!mounted || createdChild == null) return;
+
+      // 5. Save child credentials to secure storage
+      //    (so child's PIN can restore Firebase session on their own device)
+      if (childFirebaseUid != null) {
+        await CredentialStorage.instance.save(syntheticEmail, password);
+
+        // 6. Sync child profile to Firestore with parentId
+        final parentUid = authProvider.uid;
+        if (parentUid != null) {
+          await FirestoreService.instance.saveLinkedChild(
+            childUid: childFirebaseUid,
+            displayName: createdChild.displayName,
+            gradeLevel: createdChild.gradeLevel,
+            parentUid: parentUid,
+          );
+        }
+      }
 
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -123,7 +184,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
 
                 const SizedBox(height: AppSpacing.sm),
 
-                // Header row with Motter
+                // Header with Motter
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -217,7 +278,8 @@ class _AddChildScreenState extends State<AddChildScreen> {
                           color: isSelected
                               ? AppColors.accentPurple
                               : AppColors.surface,
-                          borderRadius: BorderRadius.circular(AppRadius.medium),
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.medium),
                           border: Border.all(
                             color: isSelected
                                 ? AppColors.accentPurple

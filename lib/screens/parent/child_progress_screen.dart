@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/quiz_result.dart';
 import '../../models/student.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../services/database_service.dart';
+import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
 
 class ChildProgressScreen extends StatefulWidget {
@@ -14,7 +17,10 @@ class ChildProgressScreen extends StatefulWidget {
 
 class _ChildProgressScreenState extends State<ChildProgressScreen> {
   List<QuizResult> _results = [];
+  int _totalPoints = 0;
+  int _badgeCount = 0;
   bool _loading = true;
+  bool _fromCloud = false;
 
   @override
   void initState() {
@@ -25,13 +31,65 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
   Future<void> _loadResults() async {
     final args = ModalRoute.of(context)!.settings.arguments as Map;
     final child = args['child'] as Student;
-    final results =
-        await DatabaseService.instance.getResultsForStudent(child.id!);
+    final connectivity = context.read<ConnectivityProvider>();
+
+    // 1. Always load local data first
+    final localResults = await DatabaseService.instance
+        .getResultsForStudent(child.id!);
+
+    // Compute local stats
+    int localPoints = child.totalPoints;
+    final Set<String> localPassed = {};
+    for (final r in localResults) {
+      if (r.isPassing) localPassed.add('${r.gradeLevel}-${r.difficulty}');
+    }
+
     if (!mounted) return;
+
     setState(() {
-      _results = results;
+      _results = localResults;
+      _totalPoints = localPoints;
+      _badgeCount = localPassed.length;
       _loading = false;
     });
+
+    // 2. If online + child has Firebase, try cloud data
+    if (connectivity.isOnline && child.firebaseUid != null) {
+      try {
+        final cloudResults = await FirestoreService.instance
+            .getStudentResultsFromCloud(child.firebaseUid!);
+
+        if (cloudResults.isNotEmpty && mounted) {
+          // Convert to QuizResult objects for consistent UI
+          final parsed = cloudResults.map((r) {
+            return QuizResult(
+              id: null,
+              studentId: child.id!,
+              gradeLevel: (r['gradeLevel'] ?? 0) as int,
+              difficulty: (r['difficulty'] ?? 'easy') as String,
+              score: (r['score'] ?? 0) as int,
+              totalQuestions: (r['totalQuestions'] ?? 0) as int,
+              pointsEarned: (r['pointsEarned'] ?? 0) as int,
+              completedAt: (r['completedAt'] ?? '') as String,
+              syncedToCloud: true,
+            );
+          }).toList();
+
+          final Set<String> cloudPassed = {};
+          for (final r in parsed) {
+            if (r.isPassing) cloudPassed.add('${r.gradeLevel}-${r.difficulty}');
+          }
+
+          setState(() {
+            _results = parsed;
+            _badgeCount = cloudPassed.length;
+            _fromCloud = true;
+          });
+        }
+      } catch (e) {
+        debugPrint('🔥 Cloud load failed (using local): $e');
+      }
+    }
   }
 
   double get _overallAccuracy {
@@ -49,8 +107,6 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
     }
     return unique.length;
   }
-
-  int get _badgeCount => _completedLevels;
 
   Map<String, QuizResult> get _bestPerLevel {
     final Map<String, QuizResult> best = {};
@@ -98,10 +154,81 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
                         Text(
                           '${child.displayName}\'s Progress',
                           style: AppText.h2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        Text(
-                          'Grade ${child.gradeLevel}',
-                          style: AppText.caption,
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              'Grade ${child.gradeLevel}',
+                              style: AppText.caption,
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.accentYellow.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    size: 10,
+                                    color: AppColors.textYellow,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    '$_totalPoints pts',
+                                    style: const TextStyle(
+                                      fontFamily: 'Nunito',
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textYellow,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (_fromCloud) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accentTeal
+                                      .withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(
+                                      Icons.cloud_done_rounded,
+                                      size: 10,
+                                      color: AppColors.textTeal,
+                                    ),
+                                    SizedBox(width: 3),
+                                    Text(
+                                      'Cloud',
+                                      style: TextStyle(
+                                        fontFamily: 'Nunito',
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textTeal,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ),
@@ -113,47 +240,52 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
-                  : SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          const SizedBox(height: AppSpacing.sm),
+                  : RefreshIndicator(
+                      onRefresh: _loadResults,
+                      color: AppColors.accentPurple,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Column(
+                          children: [
+                            const SizedBox(height: AppSpacing.sm),
 
-                          // Motter presenting the shell — centered, 200px
-                          Image.asset(
-                            'assets/images/mascot/motter_presenting.png',
-                            width: 200,
-                            height: 200,
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, _, _) => Container(
+                            // Motter presenting
+                            Image.asset(
+                              'assets/images/mascot/motter_presenting.png',
                               width: 200,
                               height: 200,
-                              decoration: BoxDecoration(
-                                color: AppColors.accentPurple
-                                    .withValues(alpha: 0.15),
-                                shape: BoxShape.circle,
-                                border: Border.all(
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, _, _) => Container(
+                                width: 200,
+                                height: 200,
+                                decoration: BoxDecoration(
+                                  color: AppColors.accentPurple
+                                      .withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: AppColors.accentPurple,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.family_restroom_rounded,
+                                  size: 80,
                                   color: AppColors.accentPurple,
-                                  width: 2,
                                 ),
                               ),
-                              child: const Icon(
-                                Icons.family_restroom_rounded,
-                                size: 80,
-                                color: AppColors.accentPurple,
-                              ),
                             ),
-                          ),
 
-                          const SizedBox(height: AppSpacing.sm),
+                            const SizedBox(height: AppSpacing.sm),
 
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.xl),
-                            child: _results.isEmpty
-                                ? _buildEmptyMessage()
-                                : _buildContentBody(),
-                          ),
-                        ],
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.xl),
+                              child: _results.isEmpty
+                                  ? _buildEmptyMessage()
+                                  : _buildContentBody(),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
             ),
@@ -193,7 +325,6 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Stats row
         Row(
           children: [
             _StatCard(
@@ -220,7 +351,6 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
         ),
         const SizedBox(height: AppSpacing.lg),
 
-        // Overall completion
         const Text('OVERALL COMPLETION', style: AppText.caption),
         const SizedBox(height: AppSpacing.xs),
         ClipRRect(
@@ -239,7 +369,6 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
 
         const SizedBox(height: AppSpacing.xl),
 
-        // Best scores
         const Text('BEST SCORES', style: AppText.caption),
         const SizedBox(height: AppSpacing.sm),
         ...entries.map((entry) {
