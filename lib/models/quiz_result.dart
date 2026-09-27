@@ -7,7 +7,8 @@ class QuizResult {
   final int totalQuestions;
   final int pointsEarned;
   final String completedAt;
-  final String? wrongWordIds; // JSON array string like "[3,7,12]"
+  final String? wrongWordIds;
+  final bool syncedToCloud;    // NEW
 
   QuizResult({
     this.id,
@@ -19,6 +20,7 @@ class QuizResult {
     required this.pointsEarned,
     required this.completedAt,
     this.wrongWordIds,
+    this.syncedToCloud = false,   // default: not yet synced
   });
 
   double get accuracyRate => totalQuestions == 0 ? 0 : score / totalQuestions;
@@ -35,6 +37,7 @@ class QuizResult {
       'points_earned': pointsEarned,
       'completed_at': completedAt,
       'wrong_word_ids': wrongWordIds,
+      'synced_to_cloud': syncedToCloud ? 1 : 0,
     };
   }
 
@@ -49,6 +52,23 @@ class QuizResult {
       pointsEarned: map['points_earned'] as int,
       completedAt: map['completed_at'] as String,
       wrongWordIds: map['wrong_word_ids'] as String?,
+      syncedToCloud: ((map['synced_to_cloud'] as int?) ?? 0) == 1,
+    );
+  }
+
+  /// Copy with new id — used after DB insert
+  QuizResult copyWith({int? id, bool? syncedToCloud}) {
+    return QuizResult(
+      id: id ?? this.id,
+      studentId: studentId,
+      gradeLevel: gradeLevel,
+      difficulty: difficulty,
+      score: score,
+      totalQuestions: totalQuestions,
+      pointsEarned: pointsEarned,
+      completedAt: completedAt,
+      wrongWordIds: wrongWordIds,
+      syncedToCloud: syncedToCloud ?? this.syncedToCloud,
     );
   }
 }

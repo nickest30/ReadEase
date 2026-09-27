@@ -25,7 +25,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: _createTables,
       onUpgrade: _upgradeTables,
     );
@@ -75,6 +75,7 @@ class DatabaseService {
         total_questions INTEGER NOT NULL,
         points_earned INTEGER NOT NULL,
         wrong_word_ids TEXT,
+        synced_to_cloud INTEGER NOT NULL DEFAULT 0,
         completed_at TEXT NOT NULL,
         FOREIGN KEY (student_id) REFERENCES students (id)
       )
@@ -169,6 +170,15 @@ class DatabaseService {
         );
       } catch (_) {}
     }
+    if (oldVersion < 7) {
+      try {
+        await db.execute(
+          'ALTER TABLE quiz_results ADD COLUMN synced_to_cloud INTEGER NOT NULL DEFAULT 0',
+        );
+      } catch (_) {
+        // Column may already exist on fresh installs
+      }
+    }
   }
 
   // ---------- Student methods ----------
@@ -240,6 +250,40 @@ class DatabaseService {
     return rows > 0;
   }
 
+
+  Future<int> computePointsDelta({
+    required int studentId,
+    required int gradeLevel,
+    required String difficulty,
+    required int newScore,
+    int pointsPerCorrect = 5,
+  }) async {
+    final db = await database;
+
+    // Find best previous score for this exact grade + difficulty
+    final maps = await db.query(
+      'quiz_results',
+      columns: ['score'],
+      where: 'student_id = ? AND grade_level = ? AND difficulty = ?',
+      whereArgs: [studentId, gradeLevel, difficulty],
+      orderBy: 'score DESC',
+      limit: 1,
+    );
+
+    final int previousBest = maps.isEmpty
+        ? 0
+        : (maps.first['score'] as int);
+
+    final int newPoints = newScore * pointsPerCorrect;
+    final int previousBestPoints = previousBest * pointsPerCorrect;
+
+    final int delta = newPoints - previousBestPoints;
+
+    // Only positive improvements count
+    return delta > 0 ? delta : 0;
+  }
+
+
   Future<int> addPoints(int studentId, int points) async {
     final db = await database;
     final student = await getStudentById(studentId);
@@ -251,6 +295,8 @@ class DatabaseService {
       whereArgs: [studentId],
     );
   }
+
+  
 
   Future<bool> updateStudentClass(
     int studentId,
@@ -392,6 +438,30 @@ class DatabaseService {
       whereArgs: [studentId, gradeLevel, difficulty],
     );
     return maps.isNotEmpty;
+  }
+
+  /// Mark a quiz result as synced to cloud.
+  Future<bool> markResultSynced(int resultId) async {
+    final db = await database;
+    final rows = await db.update(
+      'quiz_results',
+      {'synced_to_cloud': 1},
+      where: 'id = ?',
+      whereArgs: [resultId],
+    );
+    return rows > 0;
+  }
+
+  /// Get all unsynced quiz results for a student.
+  Future<List<QuizResult>> getPendingSyncResults(int studentId) async {
+    final db = await database;
+    final maps = await db.query(
+      'quiz_results',
+      where: 'student_id = ? AND synced_to_cloud = 0',
+      whereArgs: [studentId],
+      orderBy: 'completed_at ASC',
+    );
+    return maps.map((m) => QuizResult.fromMap(m)).toList();
   }
 
   // ---------- Parent methods ----------

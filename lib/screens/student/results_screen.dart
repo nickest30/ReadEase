@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -27,25 +28,23 @@ class _ResultsScreenState extends State<ResultsScreen> {
   String _encouragementComment = '';
   List<int> _wrongWordIds = [];
 
-  // ─────────────────────────────────────────────────────────
   // Star-tier comments (4 per tier, randomly picked)
-  // ─────────────────────────────────────────────────────────
   static const Map<int, List<String>> _commentsByStars = {
     1: [
       'Every detective starts somewhere!',
-      "It's okay, let's try again together.",
+      "It's okay — let's try again together.",
       'Every missed word is a clue to learn.',
       'Not bad for a first attempt!',
     ],
     2: [
       'You\'re warming up! Keep going.',
-      'Getting there, one more try!',
+      'Getting there — one more try!',
       'Nice effort! Let\'s do it again.',
       'Progress is progress. Try again!',
     ],
     3: [
       'So close! You\'ve got this.',
-      'Almost there, one more shot!',
+      'Almost there — one more shot!',
       'Great effort! Just a few more words.',
       'You\'re nearly a Word Detective!',
     ],
@@ -80,13 +79,16 @@ class _ResultsScreenState extends State<ResultsScreen> {
     _totalQuestions = args['totalQuestions'] as int;
     _wrongWordIds = (args['wrongWordIds'] as List?)?.cast<int>() ?? [];
 
-    final pointsEarned = _score * 5;
-    final stars = _totalQuestions == 0
-        ? 0
-        : ((_score / _totalQuestions) * 5).round();
-
     final student = context.read<StudentProvider>().currentStudent;
     if (student == null || student.id == null) return;
+
+    // Compute points delta (best-score-per-level rule)
+    final pointsEarned = await DatabaseService.instance.computePointsDelta(
+      studentId: student.id!,
+      gradeLevel: _gradeLevel,
+      difficulty: _difficulty,
+      newScore: _score,
+    );
 
     final wrongIdsJson = _wrongWordIds.isEmpty
         ? null
@@ -103,9 +105,16 @@ class _ResultsScreenState extends State<ResultsScreen> {
       wrongWordIds: wrongIdsJson,
     );
 
-    // Save to local DB
+    // Save result locally (always, for history + weak words)
     await DatabaseService.instance.insertQuizResult(result);
-    await DatabaseService.instance.addPoints(student.id!, pointsEarned);
+
+    // Only add points if this is an improvement
+    if (pointsEarned > 0) {
+      await DatabaseService.instance.addPoints(student.id!, pointsEarned);
+      debugPrint('🔥 Points earned: $pointsEarned (improvement)');
+    } else {
+      debugPrint('🔥 Points earned: 0 (not an improvement)');
+    }
 
     // Refresh student + update provider
     final updated = await DatabaseService.instance.getStudentById(student.id!);
@@ -114,11 +123,19 @@ class _ResultsScreenState extends State<ResultsScreen> {
       context.read<StudentProvider>().updateStudent(updated);
     }
 
-    // Sync to Firestore if we have a Firebase account
+    // Sync to Firestore if student has Firebase account
     if (student.firebaseUid != null && updated != null) {
       try {
         final allResults =
             await DatabaseService.instance.getResultsForStudent(student.id!);
+
+        // Compute badge count from results
+        final Set<String> passedKeys = {};
+        for (final r in allResults) {
+          if (r.isPassing) {
+            passedKeys.add('${r.gradeLevel}-${r.difficulty}');
+          }
+        }
 
         await FirestoreService.instance.syncStudentProgress(
           student.firebaseUid!,
@@ -126,13 +143,6 @@ class _ResultsScreenState extends State<ResultsScreen> {
           updated.totalPoints,
           allResults,
         );
-
-        final Set<String> passedKeys = {};
-        for (final r in allResults) {
-          if (r.isPassing) {
-            passedKeys.add('${r.gradeLevel}-${r.difficulty}');
-          }
-        }
 
         await FirestoreService.instance.updateLeaderboardEntry(
           studentUid: student.firebaseUid!,
@@ -142,14 +152,25 @@ class _ResultsScreenState extends State<ResultsScreen> {
           badgeCount: passedKeys.length,
           classId: updated.classFirestoreId,
         );
-      } catch (_) {
-        // Offline — will sync on next successful quiz
+
+        // Mark all results as synced
+        for (final r in allResults) {
+          if (r.id != null && !r.syncedToCloud) {
+            await DatabaseService.instance.markResultSynced(r.id!);
+          }
+        }
+        debugPrint('🔥 Sync complete: ${allResults.length} results synced');
+      } catch (e) {
+        debugPrint('🔥 Sync failed (will retry): $e');
       }
     }
 
     if (!mounted) return;
 
     // Pick a random comment for this star tier
+    final stars = _totalQuestions == 0
+        ? 0
+        : ((_score / _totalQuestions) * 5).round();
     final comments = _commentsByStars[stars] ?? _commentsByStars[3]!;
     final pickedComment = comments[Random().nextInt(comments.length)];
 
@@ -164,6 +185,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
   // ─────────────────────────────────────────────────────────
   // Yse asset + fallback per star tier
   // ─────────────────────────────────────────────────────────
+
   String get _yseAsset {
     if (_starsEarned >= 5) return 'assets/images/mascot/yse_celebrate.png';
     if (_starsEarned >= 4) return 'assets/images/mascot/yse_salute.png';
@@ -191,24 +213,21 @@ class _ResultsScreenState extends State<ResultsScreen> {
   // ─────────────────────────────────────────────────────────
   // Badge popup
   // ─────────────────────────────────────────────────────────
+
   String get _badgeName {
-    final diff = _difficulty.isEmpty
-        ? ''
-        : _difficulty[0].toUpperCase() + _difficulty.substring(1);
-    if (_starsEarned >= 5) {
-      return 'Perfect Score';
-    }
+    if (_starsEarned >= 5) return 'Perfect Score';
     if (_difficulty == 'easy') return 'Easy Reader';
     if (_difficulty == 'medium') return 'Medium Master';
     if (_difficulty == 'hard') return 'Hard Hero';
-    return 'Grade $_gradeLevel $diff';
+    return 'Grade $_gradeLevel ${_capitalize(_difficulty)}';
   }
 
   String get _badgeDescription {
     if (_starsEarned >= 5) {
       return 'Perfect score in Grade $_gradeLevel ${_capitalize(_difficulty)}!';
     }
-    return 'You passed Grade $_gradeLevel ${_capitalize(_difficulty)} with $_score out of $_totalQuestions.';
+    return 'You passed Grade $_gradeLevel ${_capitalize(_difficulty)} with '
+        '$_score out of $_totalQuestions.';
   }
 
   String _capitalize(String s) =>
@@ -216,8 +235,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
   void _showBadgeDialog() {
     final earnedAt = DateTime.now();
-    final dateStr =
-        '${earnedAt.day}/${earnedAt.month}/${earnedAt.year}';
+    final dateStr = '${earnedAt.day}/${earnedAt.month}/${earnedAt.year}';
 
     showDialog(
       context: context,
@@ -242,7 +260,6 @@ class _ResultsScreenState extends State<ResultsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Close X
               Align(
                 alignment: Alignment.topRight,
                 child: InkWell(
@@ -263,8 +280,6 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   ),
                 ),
               ),
-
-              // Badge icon (replaced by real PNG in M5)
               Container(
                 width: 120,
                 height: 120,
@@ -282,38 +297,21 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   color: AppColors.accentYellow,
                 ),
               ),
-
               const SizedBox(height: AppSpacing.lg),
-
-              // Badge name
               Text(
                 _badgeName,
                 textAlign: TextAlign.center,
-                style: AppText.h1.copyWith(
-                  color: AppColors.textYellow,
-                ),
+                style: AppText.h1.copyWith(color: AppColors.textYellow),
               ),
-
               const SizedBox(height: AppSpacing.xs),
-
-              // Badge description
               Text(
                 _badgeDescription,
                 textAlign: TextAlign.center,
                 style: AppText.body,
               ),
-
               const SizedBox(height: AppSpacing.md),
-
-              // Divider
-              Container(
-                height: 1,
-                color: AppColors.border,
-              ),
-
+              Container(height: 1, color: AppColors.border),
               const SizedBox(height: AppSpacing.md),
-
-              // Date + points
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -336,15 +334,12 @@ class _ResultsScreenState extends State<ResultsScreen> {
                         color: AppColors.accentYellow,
                       ),
                       const SizedBox(height: 4),
-                      Text('$_pointsEarned pts', style: AppText.caption),
+                      Text('$_score/$_totalQuestions', style: AppText.caption),
                     ],
                   ),
                 ],
               ),
-
               const SizedBox(height: AppSpacing.xl),
-
-              // Confirm button
               SizedBox(
                 width: double.infinity,
                 height: 48,
@@ -376,6 +371,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
   // ─────────────────────────────────────────────────────────
   // Build
   // ─────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -444,6 +440,46 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
               const SizedBox(height: AppSpacing.xl),
 
+              // Best-score chip (only on non-improving retake)
+              if (_pointsEarned == 0 && _score > 0) ...[
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentTeal.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppRadius.medium),
+                      border: Border.all(
+                        color: AppColors.accentTeal.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(
+                          Icons.emoji_events_rounded,
+                          size: 16,
+                          color: AppColors.accentTeal,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'Best score already counted',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textTeal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
+
               // Badge chip (if passing)
               if (_isPassing)
                 Center(
@@ -493,22 +529,23 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   ),
                 ),
 
-              const SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: AppSpacing.lg),
 
-              // Points earned
-              Center(
-                child: Text(
-                  '+$_pointsEarned points',
-                  style: const TextStyle(
-                    fontFamily: 'Nunito',
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                    color: AppColors.textYellow,
+              // Points earned (only if > 0)
+              if (_pointsEarned > 0)
+                Center(
+                  child: Text(
+                    '+$_pointsEarned points',
+                    style: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: AppColors.textYellow,
+                    ),
                   ),
                 ),
-              ),
 
-              const SizedBox(height: AppSpacing.xxl),
+              const SizedBox(height: AppSpacing.xl),
 
               // Buttons
               Row(
@@ -552,7 +589,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                         onPressed: () {
                           Navigator.of(context).pushNamedAndRemoveUntil(
                             '/student-home',
-                            ModalRoute.withName('/role-selection'),
+                            (route) => false,
                           );
                         },
                         style: ElevatedButton.styleFrom(
