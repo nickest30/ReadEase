@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../models/student.dart';
 import '../../providers/student_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../providers/connectivity_provider.dart';
+
 
 class StudentHomeScreen extends StatelessWidget {
   const StudentHomeScreen({super.key});
@@ -203,36 +205,90 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final isOnline = context.watch<ConnectivityProvider>().isOnline;
+
+    return Column(
       children: [
-        const CircleAvatar(
-          radius: 22,
-          backgroundColor: AppColors.accentTeal,
-          child: Icon(Icons.person, color: Colors.white),
+        Row(
+          children: [
+            const CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.accentTeal,
+              child: Icon(Icons.person, color: Colors.white),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hello, ${student.displayName}!',
+                    style: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    '${student.totalPoints} points earned',
+                    style: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Hello, ${student.displayName}!',
-                style: const TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
+        const SizedBox(height: AppSpacing.sm),
+
+        // Session state chip
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: 6,
+            ),
+            decoration: BoxDecoration(
+              color: isOnline
+                  ? AppColors.accentTeal.withValues(alpha: 0.15)
+                  : AppColors.border.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              border: Border.all(
+                color: isOnline ? AppColors.accentTeal : AppColors.textMuted,
+                width: 1,
               ),
-              Text(
-                '${student.totalPoints} points earned',
-                style: const TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 12,
-                  color: AppColors.textMuted,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isOnline
+                      ? Icons.cloud_done_rounded
+                      : Icons.cloud_off_rounded,
+                  size: 14,
+                  color: isOnline
+                      ? AppColors.textTeal
+                      : AppColors.textMuted,
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Text(
+                  isOnline ? 'Online — all features' : 'Offline — practice only',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: isOnline
+                        ? AppColors.textTeal
+                        : AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],

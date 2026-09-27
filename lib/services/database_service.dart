@@ -25,7 +25,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 5,
       onCreate: _createTables,
       onUpgrade: _upgradeTables,
     );
@@ -44,6 +44,10 @@ class DatabaseService {
         parent_id INTEGER,
         total_points INTEGER NOT NULL DEFAULT 0,
         firebase_uid TEXT,
+        class_firestore_id TEXT,
+        class_name TEXT,
+        last_synced_at TEXT,
+        pending_sync INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL
       )
     ''');
@@ -70,6 +74,7 @@ class DatabaseService {
         score INTEGER NOT NULL,
         total_questions INTEGER NOT NULL,
         points_earned INTEGER NOT NULL,
+        wrong_word_ids TEXT,
         completed_at TEXT NOT NULL,
         FOREIGN KEY (student_id) REFERENCES students (id)
       )
@@ -126,10 +131,35 @@ class DatabaseService {
 
   Future<void> _upgradeTables(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // v2: add wrong_word_ids to quiz_results
       await db.execute(
         'ALTER TABLE quiz_results ADD COLUMN wrong_word_ids TEXT',
       );
+    }
+    if (oldVersion < 3) {
+      await db.execute(
+        'ALTER TABLE students ADD COLUMN class_firestore_id TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE students ADD COLUMN class_name TEXT',
+      );
+    }
+    if (oldVersion < 4) {
+      await db.execute(
+        'ALTER TABLE students ADD COLUMN last_synced_at TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE students ADD COLUMN pending_sync INTEGER NOT NULL DEFAULT 0',
+      );
+    }
+    if (oldVersion < 5) {
+      // Safety: ensure wrong_word_ids exists
+      try {
+        await db.execute(
+          'ALTER TABLE quiz_results ADD COLUMN wrong_word_ids TEXT',
+        );
+      } catch (_) {
+        // Column already exists — ignore
+      }
     }
   }
 
@@ -214,6 +244,24 @@ class DatabaseService {
     );
   }
 
+  Future<bool> updateStudentClass(
+    int studentId,
+    String classFirestoreId,
+    String className,
+  ) async {
+    final db = await database;
+    final rows = await db.update(
+      'students',
+      {
+        'class_firestore_id': classFirestoreId,
+        'class_name': className,
+      },
+      where: 'id = ?',
+      whereArgs: [studentId],
+    );
+    return rows > 0;
+  }
+
   Future<List<Word>> getWeakWords(int studentId, {int limit = 20}) async {
     final db = await database;
 
@@ -251,6 +299,43 @@ class DatabaseService {
     );
 
     return wordRows.map((m) => Word.fromMap(m)).toList();
+  }
+
+  /// Mark a student as needing cloud sync.
+  Future<bool> markStudentPendingSync(int studentId) async {
+    final db = await database;
+    final rows = await db.update(
+      'students',
+      {'pending_sync': 1},
+      where: 'id = ?',
+      whereArgs: [studentId],
+    );
+    return rows > 0;
+  }
+
+  /// Mark a student as synced (with current timestamp).
+  Future<bool> markStudentSynced(int studentId) async {
+    final db = await database;
+    final rows = await db.update(
+      'students',
+      {
+        'pending_sync': 0,
+        'last_synced_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [studentId],
+    );
+    return rows > 0;
+  }
+
+  /// Get all students that need to be synced.
+  Future<List<Student>> getPendingSyncStudents() async {
+    final db = await database;
+    final maps = await db.query(
+      'students',
+      where: 'pending_sync = 1',
+    );
+    return maps.map((m) => Student.fromMap(m)).toList();
   }
 
   // ---------- Word methods ----------

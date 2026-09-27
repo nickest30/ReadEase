@@ -7,6 +7,9 @@ import '../../services/database_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../services/firestore_service.dart';
+
+
 
 class SoloSignupScreen extends StatefulWidget {
   const SoloSignupScreen({super.key});
@@ -87,6 +90,18 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
           await DatabaseService.instance.getStudentById(newId);
 
       if (!mounted || createdStudent == null) return;
+
+      // ── Sync student profile to Firestore ──
+      if (firebaseUid != null) {
+        await FirestoreService.instance.saveStudent(
+          firebaseUid,
+          createdStudent.displayName,
+          createdStudent.gradeLevel,
+        );
+      }
+      // ── End sync ──
+
+      if (!mounted) return;   // ← ADD THIS LINE
 
       studentProvider.setStudent(createdStudent);
 

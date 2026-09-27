@@ -135,11 +135,12 @@ class _ResultsScreenState extends State<ResultsScreen> {
         }
 
         await FirestoreService.instance.updateLeaderboardEntry(
-          student.firebaseUid!,
-          student.displayName,
-          updated.totalPoints,
-          student.gradeLevel,
-          passedKeys.length,
+          studentUid: student.firebaseUid!,
+          displayName: student.displayName,
+          totalPoints: updated.totalPoints,
+          gradeLevel: student.gradeLevel,
+          badgeCount: passedKeys.length,
+          classId: updated.classFirestoreId,
         );
       } catch (_) {
         // Offline — will sync on next successful quiz
@@ -551,7 +552,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                         onPressed: () {
                           Navigator.of(context).pushNamedAndRemoveUntil(
                             '/student-home',
-                            (route) => false,
+                            ModalRoute.withName('/role-selection'),
                           );
                         },
                         style: ElevatedButton.styleFrom(

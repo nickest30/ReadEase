@@ -161,7 +161,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
         if (context.mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil(
             '/student-profile-list',
-            (route) => false,
+            ModalRoute.withName('/role-selection'),
           );
         }
       });

@@ -62,7 +62,7 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
         if (context.mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil(
             '/student-profile-list',
-            (route) => false,
+            ModalRoute.withName('/role-selection'),
           );
         }
       });

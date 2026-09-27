@@ -5,6 +5,9 @@ import 'package:provider/provider.dart';
 import '../../models/student.dart';
 import '../../providers/student_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/connectivity_provider.dart';
+
 
 class PinEntryScreen extends StatefulWidget {
   const PinEntryScreen({super.key});
@@ -39,16 +42,10 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
     });
   }
 
-  void _verifyPin(Student student) {
+  Future<void> _verifyPin(Student student) async {
     final isCorrect = BCrypt.checkpw(_enteredPin, student.pinHash ?? '');
 
-    if (isCorrect) {
-      context.read<StudentProvider>().setStudent(student);
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        '/student-home',
-        (route) => false,
-      );
-    } else {
+    if (!isCorrect) {
       setState(() {
         _attemptsRemaining--;
         _enteredPin = '';
@@ -56,7 +53,29 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
           _isLocked = true;
         }
       });
+      return;
     }
+
+    // PIN correct — set student in session
+    if (!mounted) return;
+    context.read<StudentProvider>().setStudent(student);
+
+    // Silently try to restore Firebase Auth session (best-effort)
+    final connectivity = context.read<ConnectivityProvider>();
+    final authProvider = context.read<AuthProvider>();
+    if (connectivity.isOnline && !authProvider.isSignedIn) {
+      try {
+        await authProvider.tryRestoreSession();
+      } catch (_) {
+        // Session restore failed — proceed offline
+      }
+    }
+
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/student-home',
+      (route) => false,
+    );
   }
 
   @override

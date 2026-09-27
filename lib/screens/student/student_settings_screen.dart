@@ -5,6 +5,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../services/firestore_service.dart';
+import '../../services/database_service.dart';
 
 class StudentSettingsScreen extends StatefulWidget {
   const StudentSettingsScreen({super.key});
@@ -236,6 +238,55 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     return result ?? false;
   }
 
+  Future<void> _syncStudentToFirestore() async {
+    final student = context.read<StudentProvider>().currentStudent;
+    final authUid = context.read<AuthProvider>().uid;
+
+    if (student == null) {
+      _showSnack('No student session');
+      return;
+    }
+
+    if (authUid == null) {
+      _showSnack(
+        'Not signed in to cloud. Log out and log back in with internet.',
+      );
+      return;
+    }
+
+    // If local student has no firebaseUid, save the auth UID locally
+    if (student.firebaseUid == null) {
+      await DatabaseService.instance.updateStudentFirebaseUid(
+        student.id!,
+        authUid,
+      );
+    }
+
+    final ok = await FirestoreService.instance.saveStudent(
+      authUid,
+      student.displayName,
+      student.gradeLevel,
+    );
+
+    if (!mounted) return;
+
+    if (ok) {
+      _showSnack('✅ Synced to cloud! Try Join Class again.');
+    } else {
+      _showSnack('❌ Sync failed. Check internet.');
+    }
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(fontFamily: 'Nunito')),
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final student = context.watch<StudentProvider>().currentStudent;
@@ -436,6 +487,25 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
 
               const SizedBox(height: AppSpacing.md),
 
+              // Join Class
+              _SettingCard(
+                icon: Icons.group_add_rounded,
+                iconColor: AppColors.accentTeal,
+                label: 'Join a Class',
+                subtitle: student.className != null
+                    ? 'Currently in: ${student.className}'
+                    : 'Enter your teacher\'s code',
+                trailing: IconButton(
+                  onPressed: () => Navigator.of(context).pushNamed('/join-class'),
+                  icon: const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
               _SettingCard(
                 icon: Icons.lock_rounded,
                 iconColor: AppColors.accentPurple,
@@ -455,6 +525,30 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
               ),
 
               const SizedBox(height: AppSpacing.xl),
+
+              // ⚠️ TEMPORARY — remove after backfill
+              SizedBox(
+                height: 50,
+                child: OutlinedButton.icon(
+                  onPressed: _syncStudentToFirestore,
+                  icon: const Icon(Icons.cloud_upload_rounded),
+                  label: const Text(
+                    'Sync to Cloud (debug)',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.accentTeal,
+                    side: const BorderSide(color: AppColors.accentTeal),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.large),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
 
               // LOG OUT
               SizedBox(

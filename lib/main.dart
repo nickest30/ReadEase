@@ -49,6 +49,9 @@ import 'screens/teacher/class_analytics_screen.dart';
 import 'screens/teacher/class_leaderboard_screen.dart';
 import 'screens/student/edit_profile_screen.dart';
 import 'screens/student/change_pin_screen.dart';
+import 'screens/student/join_class_screen.dart';
+import 'providers/connectivity_provider.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -79,6 +82,7 @@ class ReadEaseApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ParentProvider()),
         ChangeNotifierProvider(create: (_) => TeacherProvider()),
         ChangeNotifierProvider.value(value: settingsProvider),
+        ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settings, _) {
@@ -140,6 +144,7 @@ class ReadEaseApp extends StatelessWidget {
           '/student-signin': (context) => const StudentSignInScreen(),
           '/edit-profile': (context) => const EditProfileScreen(),
           '/change-pin': (context) => const ChangePinScreen(),
+          '/join-class': (context) => const JoinClassScreen(),
             },
           );
         },

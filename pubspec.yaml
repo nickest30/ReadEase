@@ -22,6 +22,7 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   flutter_animate: ^4.5.0
   shared_preferences: ^2.3.2 
+  connectivity_plus: ^6.0.5
 
 dev_dependencies:
   flutter_test:

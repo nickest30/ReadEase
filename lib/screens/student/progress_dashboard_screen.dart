@@ -88,7 +88,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
         if (context.mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil(
             '/student-profile-list',
-            (route) => false,
+            ModalRoute.withName('/role-selection'),
           );
         }
       });

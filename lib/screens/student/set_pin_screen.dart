@@ -74,7 +74,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
 
     Navigator.of(context).pushNamedAndRemoveUntil(
       '/student-home',
-      (route) => false,
+      ModalRoute.withName('/role-selection'),
     );
   }
 

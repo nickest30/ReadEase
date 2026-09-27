@@ -5,11 +5,15 @@ class Student {
   final String displayName;
   final int gradeLevel;
   final String? pinHash;
-  final bool isLinked; // true if registered by a parent, false if solo
-  final int? parentId; // null if solo student
+  final bool isLinked;
+  final int? parentId;
   final int totalPoints;
   final String createdAt;
   final String? firebaseUid;
+  final String? classFirestoreId;
+  final String? className;
+  final String? lastSyncedAt;    // NEW
+  final bool pendingSync;        // NEW
 
   Student({
     this.id,
@@ -23,10 +27,12 @@ class Student {
     this.totalPoints = 0,
     required this.createdAt,
     this.firebaseUid,
+    this.classFirestoreId,
+    this.className,
+    this.lastSyncedAt,
+    this.pendingSync = false,
   });
 
-  // Converts a Student object into a Map, which is what sqflite
-  // needs to actually write a row into the database
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -35,16 +41,18 @@ class Student {
       'display_name': displayName,
       'grade_level': gradeLevel,
       'pin_hash': pinHash,
-      'is_linked': isLinked ? 1 : 0, // SQLite has no true boolean type
+      'is_linked': isLinked ? 1 : 0,
       'parent_id': parentId,
       'total_points': totalPoints,
       'created_at': createdAt,
       'firebase_uid': firebaseUid,
+      'class_firestore_id': classFirestoreId,
+      'class_name': className,
+      'last_synced_at': lastSyncedAt,
+      'pending_sync': pendingSync ? 1 : 0,
     };
   }
 
-  // Converts a Map (a row read back from the database) into
-  // a proper Student object we can use in our app
   factory Student.fromMap(Map<String, dynamic> map) {
     return Student(
       id: map['id'] as int?,
@@ -57,6 +65,11 @@ class Student {
       parentId: map['parent_id'] as int?,
       totalPoints: map['total_points'] as int,
       createdAt: map['created_at'] as String,
+      firebaseUid: map['firebase_uid'] as String?,
+      classFirestoreId: map['class_firestore_id'] as String?,
+      className: map['class_name'] as String?,
+      lastSyncedAt: map['last_synced_at'] as String?,
+      pendingSync: ((map['pending_sync'] as int?) ?? 0) == 1,
     );
   }
 }

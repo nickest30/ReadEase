@@ -5,6 +5,9 @@ import '../../models/class_group.dart';
 import '../../providers/teacher_provider.dart';
 import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/firestore_service.dart';
+
 
 class CreateClassScreen extends StatefulWidget {
   const CreateClassScreen({super.key});
@@ -31,7 +34,11 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
       return;
     }
 
-    final teacher = context.read<TeacherProvider>().currentTeacher;
+    // ── Capture providers BEFORE any await ──
+    final teacherProvider = context.read<TeacherProvider>();
+    final authProvider = context.read<AuthProvider>();
+    final teacher = teacherProvider.currentTeacher;
+
     if (teacher == null) {
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -56,7 +63,42 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
 
       await DatabaseService.instance.insertClassGroup(newGroup);
 
+      // ── Sync to Firestore so students can find this class ──
+      final teacherUid = authProvider.uid;
+      if (teacherUid == null) {
+        if (!mounted) return;
+        setState(() {
+          _errorMessage =
+              'Not signed in to cloud. Log out and log back in with internet.';
+          _isSubmitting = false;
+        });
+        return;
+      }
+
+      debugPrint('🔍 DEBUG teacherUid from auth: $teacherUid');
+      debugPrint('🔍 DEBUG teacher.firebaseUid: ${teacher.firebaseUid}');
+
+      final firestoreId = await FirestoreService.instance
+          .saveClassGroup(
+        newGroup,
+        teacherUid,
+        teacherName: teacher.fullName,
+      );
+
       if (!mounted) return;
+
+      if (firestoreId.isEmpty) {
+        setState(() {
+          _errorMessage =
+              'Class saved on device, but cloud sync failed. Check the debug console for details.';
+          _isSubmitting = false;
+        });
+        return;
+      }
+
+      debugPrint('✅ Class synced to Firestore: $firestoreId with code $joinCode');
+
+      // ── End Firestore sync ──
 
       await showDialog(
         context: context,

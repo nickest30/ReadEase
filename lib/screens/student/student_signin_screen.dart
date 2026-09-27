@@ -117,10 +117,22 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
       }
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(
-        '/set-pin',
-        arguments: finalStudent,
-      );
+      if (finalStudent.pinHash != null && finalStudent.pinHash!.isNotEmpty) {
+        // PIN already set — go straight to dashboard
+        Navigator.of(context).pushReplacementNamed('/student-home');
+      } else {
+        // First-time login on this device — set PIN
+        if (finalStudent.pinHash != null && finalStudent.pinHash!.isNotEmpty) {
+          // PIN already set — go straight to dashboard
+          Navigator.of(context).pushReplacementNamed('/student-home');
+        } else {
+          // First-time login on this device — set PIN
+          Navigator.of(context).pushReplacementNamed(
+            '/set-pin',
+            arguments: finalStudent,
+          );
+        }
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {

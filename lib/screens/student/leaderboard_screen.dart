@@ -6,6 +6,7 @@ import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
+import '../../providers/connectivity_provider.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -86,6 +87,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   Future<void> _loadGlobal() async {
     if (_loadingGlobal) return;
+
+    // Fast-fail when offline
+    if (!context.read<ConnectivityProvider>().isOnline) {
+      setState(() {
+        _globalEntries = [];
+        _globalAttempted = true;
+      });
+      return;
+    }
+
     setState(() {
       _loadingGlobal = true;
       _globalAttempted = true;
@@ -113,7 +124,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         if (context.mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil(
             '/student-profile-list',
-            (route) => false,
+            ModalRoute.withName('/role-selection'),
           );
         }
       });
@@ -372,26 +383,30 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   Widget _buildGlobalEmpty() {
+    final isOnline = context.watch<ConnectivityProvider>().isOnline;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             Icon(
-              Icons.cloud_off_rounded,
+              isOnline ? Icons.emoji_events_outlined : Icons.cloud_off_rounded,
               size: 64,
               color: AppColors.textMuted,
             ),
-            SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.md),
             Text(
-              'No global rankings yet',
+              isOnline ? 'No global rankings yet' : 'You\'re offline',
               style: AppText.h2,
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: AppSpacing.xs),
+            const SizedBox(height: AppSpacing.xs),
             Text(
-              'Or no internet connection.',
+              isOnline
+                  ? 'Be the first to make it to the top!'
+                  : 'Connect to the internet to see the global leaderboard.',
               textAlign: TextAlign.center,
               style: AppText.caption,
             ),
