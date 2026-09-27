@@ -51,8 +51,10 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     });
 
     try {
+      // 1. Generate join code
       final joinCode = DatabaseService.instance.generateJoinCode();
 
+      // 2. Save class locally first (gets localId)
       final newGroup = ClassGroup(
         teacherId: teacher.id!,
         className: _classNameController.text.trim(),
@@ -61,12 +63,13 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
         createdAt: DateTime.now().toIso8601String(),
       );
 
-      await DatabaseService.instance.insertClassGroup(newGroup);
+      final localId = await DatabaseService.instance.insertClassGroup(newGroup);
 
-      // ── Sync to Firestore so students can find this class ──
+      if (!mounted) return;
+
+      // 3. Sync to Firestore (gets firestoreId)
       final teacherUid = authProvider.uid;
       if (teacherUid == null) {
-        if (!mounted) return;
         setState(() {
           _errorMessage =
               'Not signed in to cloud. Log out and log back in with internet.';
@@ -75,11 +78,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
         return;
       }
 
-      debugPrint('🔍 DEBUG teacherUid from auth: $teacherUid');
-      debugPrint('🔍 DEBUG teacher.firebaseUid: ${teacher.firebaseUid}');
-
-      final firestoreId = await FirestoreService.instance
-          .saveClassGroup(
+      final firestoreId = await FirestoreService.instance.saveClassGroup(
         newGroup,
         teacherUid,
         teacherName: teacher.fullName,
@@ -96,10 +95,17 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
         return;
       }
 
-      debugPrint('✅ Class synced to Firestore: $firestoreId with code $joinCode');
+      // 4. Save the Firestore ID back to local record
+      await DatabaseService.instance.updateClassGroupFirestoreId(
+        localId,
+        firestoreId,
+      );
 
-      // ── End Firestore sync ──
+      debugPrint('✅ Class synced: $firestoreId with code $joinCode');
 
+      if (!mounted) return;
+
+      // 5. Show the join code dialog
       await showDialog(
         context: context,
         builder: (ctx) => AlertDialog(

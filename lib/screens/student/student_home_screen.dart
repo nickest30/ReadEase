@@ -105,94 +105,89 @@ class StudentHomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _Header(student: student),
-              const SizedBox(height: 24),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _Header(student: student),
+                      const SizedBox(height: 24),
+                      _HomeCard(
+                        icon: Icons.menu_book_rounded,
+                        label: 'Start Learning',
+                        sublabel: 'Pick a grade and lesson',
+                        color: AppColors.accentCoral,
+                        onTap: () => Navigator.of(context).pushNamed(
+                          '/grade-selection',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _HomeCard(
+                        icon: Icons.emoji_events_rounded,
+                        label: 'My Badges',
+                        sublabel: 'See what you earned',
+                        color: AppColors.accentYellow,
+                        onTap: () => Navigator.of(context).pushNamed('/badges'),
+                      ),
+                      const SizedBox(height: 12),
+                      _HomeCard(
+                        icon: Icons.bar_chart_rounded,
+                        label: 'Progress',
+                        sublabel: 'Track your journey',
+                        color: AppColors.accentTeal,
+                        onTap: () => Navigator.of(context).pushNamed('/progress'),
+                      ),
+                      const SizedBox(height: 12),
+                      _HomeCard(
+                        icon: Icons.leaderboard_rounded,
+                        label: 'Leaderboard',
+                        sublabel: 'See your ranking',
+                        color: AppColors.accentPurple,
+                        onTap: () => Navigator.of(context).pushNamed('/leaderboard'),
+                      ),
+                      const SizedBox(height: 12),
+                      _HomeCard(
+                        icon: Icons.settings_rounded,
+                        label: 'Settings',
+                        sublabel: 'Edit profile and audio',
+                        color: AppColors.textMuted,
+                        onTap: () => Navigator.of(context).pushNamed('/settings'),
+                      ),
 
-              _HomeCard(
-                icon: Icons.menu_book_rounded,
-                label: 'Start Learning',
-                sublabel: 'Pick a grade and lesson',
-                color: AppColors.accentCoral,
-                onTap: () => Navigator.of(context).pushNamed(
-                  '/grade-selection',
-                  arguments: student,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _HomeCard(
-                icon: Icons.emoji_events_rounded,
-                label: 'My Badges',
-                sublabel: 'See what you earned',
-                color: AppColors.accentYellow,
-                onTap: () => Navigator.of(context).pushNamed(
-                  '/badges',
-                  arguments: student,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _HomeCard(
-                icon: Icons.bar_chart_rounded,
-                label: 'Progress',
-                sublabel: 'Track your journey',
-                color: AppColors.accentTeal,
-                onTap: () => Navigator.of(context).pushNamed(
-                  '/progress',
-                  arguments: student,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _HomeCard(
-                icon: Icons.leaderboard_rounded,
-                label: 'Leaderboard',
-                sublabel: 'See your ranking',
-                color: AppColors.accentPurple,
-                onTap: () => Navigator.of(context).pushNamed(
-                  '/leaderboard',
-                  arguments: student,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _HomeCard(
-                icon: Icons.settings_rounded,
-                label: 'Settings',
-                sublabel: 'Edit profile and audio',
-                color: AppColors.textMuted,
-                onTap: () => Navigator.of(context).pushNamed(
-                  '/settings',
-                  arguments: student,
-                ),
-              ),
+                      const SizedBox(height: 24),
 
-              const Spacer(),
-
-              SizedBox(
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: () => _confirmExit(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentCoral,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Text(
-                    'Save & Exit',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
+                      SizedBox(
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: () => _confirmExit(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accentCoral,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text(
+                            'Save & Exit',
+                            style: TextStyle(
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

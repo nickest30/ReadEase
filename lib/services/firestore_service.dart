@@ -244,6 +244,42 @@ class FirestoreService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getEnrolledStudentsDetailed(
+    String classId,
+  ) async {
+    try {
+      // 1. Get enrollment docs
+      final enrollments = await getEnrollmentsForClass(classId);
+
+      if (enrollments.isEmpty) return [];
+
+      // 2. Enrich each with student profile data
+      final List<Map<String, dynamic>> detailed = [];
+      for (final e in enrollments) {
+        final uid = e['uid'] as String;
+        final profile = await getStudentByUid(uid);
+
+        detailed.add({
+          'uid': uid,
+          'studentName': e['studentName'] ?? profile?['displayName'] ?? 'Unknown',
+          'gradeLevel': e['gradeLevel'] ?? profile?['gradeLevel'] ?? 0,
+          'totalPoints': profile?['totalPoints'] ?? e['totalPoints'] ?? 0,
+          'badgeCount': profile?['badgeCount'] ?? 0,
+          'enrolledAt': e['enrolledAt'],
+        });
+      }
+
+      // 3. Sort by points (highest first)
+      detailed.sort((a, b) =>
+          (b['totalPoints'] as int).compareTo(a['totalPoints'] as int));
+
+      return detailed;
+    } catch (e) {
+      debugPrint('🔥 Firestore getEnrolledStudentsDetailed ERROR: $e');
+      return [];
+    }
+  }
+
   /// Get all enrollments for a class (for teacher view).
   Future<List<Map<String, dynamic>>> getEnrollmentsForClass(
       String classId) async {

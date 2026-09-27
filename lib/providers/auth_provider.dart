@@ -55,18 +55,28 @@ class AuthProvider extends ChangeNotifier {
   /// Called during PIN entry when a session might be missing.
   /// Returns true if the session was restored successfully.
   Future<bool> tryRestoreSession() async {
-    if (isSignedIn) return true;
+    if (isSignedIn) {
+      debugPrint('🔑 tryRestoreSession: already signed in');
+      return true;
+    }
 
     final creds = await CredentialStorage.instance.read();
-    if (creds == null) return false;
+    if (creds == null) {
+      debugPrint('🔑 tryRestoreSession: NO credentials found in secure storage');
+      return false;
+    }
+
+    debugPrint('🔑 tryRestoreSession: found credentials for ${creds['email']}');
 
     try {
       final ok = await AuthService.instance.signIn(
         creds['email']!,
         creds['password']!,
       );
+      debugPrint('🔑 tryRestoreSession: signIn result = $ok');
       return ok;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('🔑 tryRestoreSession: ERROR = $e');
       return false;
     }
   }

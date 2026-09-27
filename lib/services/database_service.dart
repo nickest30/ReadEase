@@ -25,7 +25,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _createTables,
       onUpgrade: _upgradeTables,
     );
@@ -112,6 +112,7 @@ class DatabaseService {
         class_name TEXT NOT NULL,
         grade_level INTEGER NOT NULL,
         join_code TEXT UNIQUE NOT NULL,
+        firestore_id TEXT,
         created_at TEXT NOT NULL,
         FOREIGN KEY (teacher_id) REFERENCES teachers (id)
       )
@@ -160,6 +161,13 @@ class DatabaseService {
       } catch (_) {
         // Column already exists — ignore
       }
+    }
+    if (oldVersion < 6) {
+      try {
+        await db.execute(
+          'ALTER TABLE class_groups ADD COLUMN firestore_id TEXT',
+        );
+      } catch (_) {}
     }
   }
 
@@ -516,6 +524,20 @@ class DatabaseService {
     );
     if (maps.isEmpty) return null;
     return ClassGroup.fromMap(maps.first);
+  }
+
+  Future<bool> updateClassGroupFirestoreId(
+    int localId,
+    String firestoreId,
+  ) async {
+    final db = await database;
+    final rows = await db.update(
+      'class_groups',
+      {'firestore_id': firestoreId},
+      where: 'id = ?',
+      whereArgs: [localId],
+    );
+    return rows > 0;
   }
 
   // ---------- Enrollment methods ----------

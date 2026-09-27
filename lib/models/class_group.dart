@@ -5,6 +5,7 @@ class ClassGroup {
   final int gradeLevel;
   final String joinCode;
   final String createdAt;
+  final String? firestoreId;
 
   ClassGroup({
     this.id,
@@ -13,6 +14,7 @@ class ClassGroup {
     required this.gradeLevel,
     required this.joinCode,
     required this.createdAt,
+    this.firestoreId,
   });
 
   Map<String, dynamic> toMap() {
@@ -23,6 +25,7 @@ class ClassGroup {
       'grade_level': gradeLevel,
       'join_code': joinCode,
       'created_at': createdAt,
+      'firestore_id': firestoreId,
     };
   }
 
@@ -34,6 +37,7 @@ class ClassGroup {
       gradeLevel: map['grade_level'] as int,
       joinCode: map['join_code'] as String,
       createdAt: map['created_at'] as String,
+      firestoreId: map['firestore_id'] as String?,
     );
   }
 }
