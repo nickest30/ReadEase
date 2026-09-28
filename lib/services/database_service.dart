@@ -427,6 +427,24 @@ class DatabaseService {
     return maps.map((m) => Student.fromMap(m)).toList();
   }
 
+  Future<bool> updateStudentParent(
+    int studentId,
+    String parentFirebaseUid,
+    bool isLinked,
+  ) async {
+    final db = await database;
+    final rows = await db.update(
+      'students',
+      {
+        'parent_id': parentFirebaseUid.hashCode, // placeholder integer
+        'is_linked': isLinked ? 1 : 0,
+      },
+      where: 'id = ?',
+      whereArgs: [studentId],
+    );
+    return rows > 0;
+  }
+
   // ---------- Word methods ----------
 
   Future<int> insertWord(Word word) async {

@@ -506,6 +506,25 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
 
               const SizedBox(height: AppSpacing.md),
 
+              // Link to Parent (only if not linked)
+              if (!student.isLinked)
+                _SettingCard(
+                  icon: Icons.family_restroom_rounded,
+                  iconColor: AppColors.accentPurple,
+                  label: 'Link to Parent',
+                  subtitle: 'Enter a code from your parent',
+                  trailing: IconButton(
+                    onPressed: () =>
+                        Navigator.of(context).pushNamed('/link-parent'),
+                    icon: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ),
+
+              if (!student.isLinked) const SizedBox(height: AppSpacing.md),
+
               _SettingCard(
                 icon: Icons.lock_rounded,
                 iconColor: AppColors.accentPurple,

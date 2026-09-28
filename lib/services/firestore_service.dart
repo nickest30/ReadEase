@@ -167,6 +167,108 @@ class FirestoreService {
     }
   }
 
+
+  // ============================================================
+  // LINK CODES — Parent generates, child redeems
+  // ============================================================
+
+  /// Generate a 6-char link code valid for 24 hours.
+  Future<String?> generateLinkCode({
+    required String parentUid,
+    required String parentName,
+  }) async {
+    try {
+      final code = _generateCode();
+      final now = DateTime.now();
+      final expiresAt = now.add(const Duration(hours: 24));
+
+      debugPrint('🔥 generateLinkCode: START');
+      debugPrint('🔥   code: $code');
+      debugPrint('🔥   parentUid: $parentUid');
+      debugPrint('🔥   parentName: $parentName');
+      debugPrint('🔥   expiresAt: ${expiresAt.toIso8601String()}');
+
+      await _db.collection('link_codes').doc(code).set({
+        'parentUid': parentUid,
+        'parentName': parentName,
+        'createdAt': FieldValue.serverTimestamp(),
+        'expiresAt': Timestamp.fromDate(expiresAt),
+      });
+
+      debugPrint('🔥 generateLinkCode: SUCCESS → $code');
+      return code;
+    } catch (e, stackTrace) {
+      debugPrint('🔥 generateLinkCode ERROR: $e');
+      debugPrint('🔥 STACKTRACE: $stackTrace');
+      return null;
+    }
+  }
+
+  /// Validate a link code. Returns parent info if valid.
+  Future<Map<String, dynamic>?> validateLinkCode(String rawCode) async {
+    try {
+      final code = rawCode.trim().toUpperCase();
+      final doc = await _db.collection('link_codes').doc(code).get();
+
+      if (!doc.exists) {
+        debugPrint('🔥 validateLinkCode: code not found');
+        return null;
+      }
+
+      final data = doc.data()!;
+      final expiresAt = data['expiresAt'] as Timestamp?;
+      if (expiresAt == null) return null;
+
+      if (expiresAt.toDate().isBefore(DateTime.now())) {
+        debugPrint('🔥 validateLinkCode: code expired');
+        return null;
+      }
+
+      return {
+        'code': doc.id,
+        'parentUid': data['parentUid'],
+        'parentName': data['parentName'],
+        'expiresAt': expiresAt.toDate().toIso8601String(),
+      };
+    } catch (e) {
+      debugPrint('🔥 Firestore validateLinkCode ERROR: $e');
+      return null;
+    }
+  }
+
+  /// Link a student to a parent via a validated code.
+  Future<bool> linkStudentToParent({
+    required String studentUid,
+    required String parentUid,
+  }) async {
+    try {
+      await _db.collection('students').doc(studentUid).set({
+        'parentId': parentUid,
+        'isLinked': true,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      debugPrint('🔥 Firestore: linkStudentToParent OK');
+      return true;
+    } catch (e) {
+      debugPrint('🔥 Firestore linkStudentToParent ERROR: $e');
+      return false;
+    }
+  }
+
+  String _generateCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final seed = DateTime.now().millisecondsSinceEpoch;
+    String code = '';
+    int s = seed;
+    for (int i = 0; i < 6; i++) {
+      s = (s * 1103515245 + 12345) & 0x7fffffff;
+      code += chars[s % chars.length];
+    }
+    return code;
+  }
+
+
+
   /// Fetch a student's quiz results from Firestore.
   Future<List<Map<String, dynamic>>> getStudentResultsFromCloud(
       String studentUid) async {

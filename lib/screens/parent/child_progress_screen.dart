@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../models/quiz_result.dart';
 import '../../models/student.dart';
-import '../../providers/connectivity_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
@@ -31,65 +29,52 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
   Future<void> _loadResults() async {
     final args = ModalRoute.of(context)!.settings.arguments as Map;
     final child = args['child'] as Student;
-    final connectivity = context.read<ConnectivityProvider>();
 
-    // 1. Always load local data first
-    final localResults = await DatabaseService.instance
-        .getResultsForStudent(child.id!);
+    List<QuizResult> results = [];
 
-    // Compute local stats
-    int localPoints = child.totalPoints;
-    final Set<String> localPassed = {};
-    for (final r in localResults) {
-      if (r.isPassing) localPassed.add('${r.gradeLevel}-${r.difficulty}');
+    // If the child is local (has an ID), load from SQLite
+    if (child.id != null) {
+      results = await DatabaseService.instance
+          .getResultsForStudent(child.id!);
     }
-
-    if (!mounted) return;
-
-    setState(() {
-      _results = localResults;
-      _totalPoints = localPoints;
-      _badgeCount = localPassed.length;
-      _loading = false;
-    });
-
-    // 2. If online + child has Firebase, try cloud data
-    if (connectivity.isOnline && child.firebaseUid != null) {
+    // Otherwise, load from Firestore using firebaseUid
+    else if (child.firebaseUid != null && child.firebaseUid!.isNotEmpty) {
       try {
         final cloudResults = await FirestoreService.instance
             .getStudentResultsFromCloud(child.firebaseUid!);
 
-        if (cloudResults.isNotEmpty && mounted) {
-          // Convert to QuizResult objects for consistent UI
-          final parsed = cloudResults.map((r) {
-            return QuizResult(
-              id: null,
-              studentId: child.id!,
-              gradeLevel: (r['gradeLevel'] ?? 0) as int,
-              difficulty: (r['difficulty'] ?? 'easy') as String,
-              score: (r['score'] ?? 0) as int,
-              totalQuestions: (r['totalQuestions'] ?? 0) as int,
-              pointsEarned: (r['pointsEarned'] ?? 0) as int,
-              completedAt: (r['completedAt'] ?? '') as String,
-              syncedToCloud: true,
-            );
-          }).toList();
-
-          final Set<String> cloudPassed = {};
-          for (final r in parsed) {
-            if (r.isPassing) cloudPassed.add('${r.gradeLevel}-${r.difficulty}');
-          }
-
-          setState(() {
-            _results = parsed;
-            _badgeCount = cloudPassed.length;
-            _fromCloud = true;
-          });
-        }
+        results = cloudResults.map((r) {
+          return QuizResult(
+            id: null,
+            studentId: 0,
+            gradeLevel: (r['gradeLevel'] ?? 0) as int,
+            difficulty: (r['difficulty'] ?? 'easy') as String,
+            score: (r['score'] ?? 0) as int,
+            totalQuestions: (r['totalQuestions'] ?? 0) as int,
+            pointsEarned: (r['pointsEarned'] ?? 0) as int,
+            completedAt: (r['completedAt'] ?? '') as String,
+            syncedToCloud: true,
+          );
+        }).toList();
       } catch (e) {
-        debugPrint('🔥 Cloud load failed (using local): $e');
+        debugPrint('🔥 Cloud results load failed: $e');
       }
     }
+
+    if (!mounted) return;
+
+    final Set<String> passed = {};
+    for (final r in results) {
+      if (r.isPassing) passed.add('${r.gradeLevel}-${r.difficulty}');
+    }
+
+    setState(() {
+      _results = results;
+      _totalPoints = child.totalPoints;
+      _badgeCount = passed.length;
+      _loading = false;
+      _fromCloud = child.id == null;
+    });
   }
 
   double get _overallAccuracy {

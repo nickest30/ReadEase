@@ -51,6 +51,8 @@ import 'screens/student/edit_profile_screen.dart';
 import 'screens/student/change_pin_screen.dart';
 import 'screens/student/join_class_screen.dart';
 import 'providers/connectivity_provider.dart';
+import 'screens/parent/generate_link_code_screen.dart';
+import 'screens/student/link_parent_screen.dart';
 
 
 void main() async {
@@ -145,6 +147,8 @@ class ReadEaseApp extends StatelessWidget {
           '/edit-profile': (context) => const EditProfileScreen(),
           '/change-pin': (context) => const ChangePinScreen(),
           '/join-class': (context) => const JoinClassScreen(),
+          '/generate-link-code': (context) => const GenerateLinkCodeScreen(),
+          '/link-parent': (context) => const LinkParentScreen(),
             },
           );
         },

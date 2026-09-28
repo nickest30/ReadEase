@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/parent_provider.dart';
 import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
+import '../../services/firestore_service.dart';
 
 class ParentDashboardScreen extends StatefulWidget {
   const ParentDashboardScreen({super.key});
@@ -26,13 +27,57 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
 
   Future<void> _loadChildren() async {
     final parent = context.read<ParentProvider>().currentParent;
+    final authProvider = context.read<AuthProvider>();
+
     if (parent == null) return;
 
-    final children =
+    final localChildren =
         await DatabaseService.instance.getChildrenOfParent(parent.id!);
+
+    final parentFirebaseUid = authProvider.uid;
+
+    List<Student> cloudChildren = [];
+    if (parentFirebaseUid != null) {
+      try {
+        final cloudDocs = await FirestoreService.instance
+            .getChildrenOfParent(parentFirebaseUid);
+
+        cloudChildren = cloudDocs.map((doc) {
+          return Student(
+            id: null, // cloud-only, no local ID yet
+            username: (doc['username'] ?? '') as String,
+            passwordHash: '',
+            displayName: (doc['displayName'] ?? 'Unknown') as String,
+            gradeLevel: (doc['gradeLevel'] ?? 0) as int,
+            isLinked: true,
+            parentId: parent.id,
+            totalPoints: (doc['totalPoints'] ?? 0) as int,
+            createdAt: DateTime.now().toIso8601String(),
+            firebaseUid: (doc['uid'] ?? '') as String,
+          );
+        }).toList();
+      } catch (e) {
+        debugPrint('🔥 Cloud children load failed: $e');
+      }
+    }
+
     if (!mounted) return;
+
+    // 3. Merge — dedupe by firebaseUid
+    final Map<String, Student> merged = {};
+    for (final c in localChildren) {
+      final key = c.firebaseUid ?? 'local-${c.id}';
+      merged[key] = c;
+    }
+    for (final c in cloudChildren) {
+      final key = c.firebaseUid ?? 'cloud-${c.displayName}';
+      if (!merged.containsKey(key)) {
+        merged[key] = c;
+      }
+    }
+
     setState(() {
-      _children = children;
+      _children = merged.values.toList();
       _loading = false;
     });
   }
@@ -199,6 +244,33 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                             },
                           ),
               ),
+
+              // Generate Link Code (for kids with their own device)
+              if (_children.length < 4) ...[
+                SizedBox(
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).pushNamed('/generate-link-code'),
+                    icon: const Icon(Icons.qr_code_rounded),
+                    label: const Text(
+                      'Link Code for Your Kids',
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.accentPurple,
+                      side: const BorderSide(color: AppColors.accentPurple, width: 1.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.large),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+              ],
 
               if (_children.length < 4) ...[
                 SizedBox(
