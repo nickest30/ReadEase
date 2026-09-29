@@ -7,6 +7,7 @@ import '../models/parent.dart';
 import '../models/teacher.dart';
 import '../models/class_group.dart';
 import '../models/badge.dart';
+import '../models/content_models.dart';
 
 
 class DatabaseService {
@@ -27,7 +28,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: _createTables,
       onUpgrade: _upgradeTables,
     );
@@ -146,6 +147,228 @@ class DatabaseService {
         FOREIGN KEY (student_id) REFERENCES students (id)
       )
     ''');
+
+
+
+    // ============================================================
+    // Content Pipeline Tables
+    // ============================================================
+
+    // batches — small groups of 3-5 words
+    await db.execute('''
+      CREATE TABLE batches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        grade_level INTEGER NOT NULL,
+        difficulty TEXT NOT NULL,
+        batch_index INTEGER NOT NULL,
+        theme TEXT NOT NULL,
+        cultural_elements_json TEXT
+      )
+    ''');
+
+    // opening_frames — Grade 1
+    await db.execute('''
+      CREATE TABLE opening_frames (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        grade_level INTEGER NOT NULL,
+        difficulty TEXT NOT NULL,
+        visual_asset TEXT NOT NULL,
+        audio_asset TEXT NOT NULL,
+        display_text TEXT NOT NULL,
+        trigger_type TEXT NOT NULL DEFAULT 'first_visit_only'
+      )
+    ''');
+
+    // story_frames — Grade 2+
+    await db.execute('''
+      CREATE TABLE story_frames (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        grade_level INTEGER NOT NULL,
+        difficulty TEXT NOT NULL,
+        frame_index INTEGER NOT NULL,
+        visual_asset TEXT NOT NULL,
+        audio_asset TEXT NOT NULL,
+        display_text TEXT NOT NULL,
+        word_introduced_id INTEGER
+      )
+    ''');
+
+    // quiz_questions — separate from words
+    await db.execute('''
+      CREATE TABLE quiz_questions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_id INTEGER NOT NULL,
+        word_id INTEGER NOT NULL,
+        question_stem TEXT NOT NULL,
+        question_type TEXT NOT NULL,
+        correct_answer TEXT NOT NULL,
+        distractors_json TEXT NOT NULL,
+        show_image INTEGER DEFAULT 1,
+        order_index INTEGER NOT NULL
+      )
+    ''');
+
+    // quiz_config — per-level quiz rules
+    await db.execute('''
+      CREATE TABLE quiz_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        grade_level INTEGER NOT NULL,
+        difficulty TEXT NOT NULL,
+        quiz_size INTEGER NOT NULL,
+        buffer_size INTEGER NOT NULL DEFAULT 0,
+        randomized INTEGER NOT NULL DEFAULT 0,
+        passing_threshold INTEGER DEFAULT 70
+      )
+    ''');
+
+    // passages — G3+
+    await db.execute('''
+      CREATE TABLE passages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        full_text TEXT NOT NULL,
+        word_count INTEGER NOT NULL,
+        phil_iri_target_grade INTEGER NOT NULL,
+        phil_iri_readability_score REAL,
+        phil_iri_readability_tool TEXT,
+        cultural_elements_json TEXT
+      )
+    ''');
+
+    // passage_sentences
+    await db.execute('''
+      CREATE TABLE passage_sentences (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        passage_id INTEGER NOT NULL,
+        sentence_index INTEGER NOT NULL,
+        text TEXT NOT NULL,
+        audio_file TEXT NOT NULL
+      )
+    ''');
+
+    // passage_words
+    await db.execute('''
+      CREATE TABLE passage_words (
+        passage_id INTEGER NOT NULL,
+        word_id INTEGER NOT NULL,
+        is_tone_word INTEGER DEFAULT 0,
+        PRIMARY KEY (passage_id, word_id)
+      )
+    ''');
+
+    // word_encounters — Pokédex "seen"
+    await db.execute('''
+      CREATE TABLE word_encounters (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        word_id INTEGER NOT NULL,
+        first_seen_at TEXT NOT NULL,
+        times_seen INTEGER DEFAULT 1,
+        UNIQUE(student_id, word_id)
+      )
+    ''');
+
+    // word_mastery — Pokédex "mastered"
+    await db.execute('''
+      CREATE TABLE word_mastery (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        word_id INTEGER NOT NULL,
+        correct_count INTEGER DEFAULT 0,
+        wrong_count INTEGER DEFAULT 0,
+        mastered_at TEXT,
+        UNIQUE(student_id, word_id)
+      )
+    ''');
+
+    // starred_words
+    await db.execute('''
+      CREATE TABLE starred_words (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        word_id INTEGER NOT NULL,
+        starred_at TEXT NOT NULL,
+        UNIQUE(student_id, word_id)
+      )
+    ''');
+
+    // batch_visits — for Yse Opening Frame
+    await db.execute('''
+      CREATE TABLE batch_visits (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        batch_id INTEGER NOT NULL,
+        first_visit_at TEXT NOT NULL,
+        UNIQUE(student_id, batch_id)
+      )
+    ''');
+
+    // lesson_progress — for resume
+    await db.execute('''
+      CREATE TABLE lesson_progress (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        batch_id INTEGER NOT NULL,
+        current_phase TEXT NOT NULL,
+        current_index INTEGER DEFAULT 0,
+        last_updated TEXT NOT NULL,
+        UNIQUE(student_id, batch_id)
+      )
+    ''');
+
+    // quiz_attempts — replaces quiz_results for new flow
+    await db.execute('''
+      CREATE TABLE quiz_attempts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        batch_id INTEGER NOT NULL,
+        score INTEGER NOT NULL,
+        total_questions INTEGER NOT NULL,
+        points_earned INTEGER NOT NULL,
+        wrong_word_ids_json TEXT,
+        completed_at TEXT NOT NULL,
+        synced_to_cloud INTEGER DEFAULT 0
+      )
+    ''');
+
+    // quiz_question_responses — analytics
+    await db.execute('''
+      CREATE TABLE quiz_question_responses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        attempt_id INTEGER NOT NULL,
+        question_id INTEGER NOT NULL,
+        selected_answer TEXT NOT NULL,
+        is_correct INTEGER NOT NULL,
+        response_time_ms INTEGER
+      )
+    ''');
+
+    // daily_word_log — Word of the Day
+    await db.execute('''
+      CREATE TABLE daily_word_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        word_id INTEGER NOT NULL,
+        date_shown TEXT NOT NULL,
+        shown_at TEXT NOT NULL,
+        UNIQUE(student_id, date_shown)
+      )
+    ''');
+
+    // content_versions — track JSON imports
+    await db.execute('''
+      CREATE TABLE content_versions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        grade_level INTEGER NOT NULL,
+        version TEXT NOT NULL,
+        imported_at TEXT NOT NULL
+      )
+    ''');
+
+
+
+
   }
 
   Future<void> _upgradeTables(Database db, int oldVersion, int newVersion) async {
@@ -214,6 +437,232 @@ class DatabaseService {
         ''');
       } catch (_) {}
     }
+
+    if (oldVersion < 9) {
+    try {
+      await db.execute('ALTER TABLE words ADD COLUMN batch_id INTEGER');
+    } catch (_) {}
+    try {
+      await db.execute("ALTER TABLE words ADD COLUMN category TEXT DEFAULT 'general'");
+    } catch (_) {}
+    try {
+      await db.execute("ALTER TABLE words ADD COLUMN lesson_cue TEXT DEFAULT ''");
+    } catch (_) {}
+    try {
+      await db.execute("ALTER TABLE words ADD COLUMN definition TEXT DEFAULT ''");
+    } catch (_) {}
+    try {
+      await db.execute("ALTER TABLE words ADD COLUMN sample_sentence TEXT DEFAULT ''");
+    } catch (_) {}
+    try {
+      await db.execute("ALTER TABLE words ADD COLUMN source TEXT DEFAULT ''");
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE words ADD COLUMN sensitivity_reviewed INTEGER DEFAULT 0');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE words ADD COLUMN sensitivity_notes TEXT');
+    } catch (_) {}
+
+    // Create the new content tables
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS batches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        grade_level INTEGER NOT NULL,
+        difficulty TEXT NOT NULL,
+        batch_index INTEGER NOT NULL,
+        theme TEXT NOT NULL,
+        cultural_elements_json TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS opening_frames (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        grade_level INTEGER NOT NULL,
+        difficulty TEXT NOT NULL,
+        visual_asset TEXT NOT NULL,
+        audio_asset TEXT NOT NULL,
+        display_text TEXT NOT NULL,
+        trigger_type TEXT NOT NULL DEFAULT 'first_visit_only'
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS story_frames (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        grade_level INTEGER NOT NULL,
+        difficulty TEXT NOT NULL,
+        frame_index INTEGER NOT NULL,
+        visual_asset TEXT NOT NULL,
+        audio_asset TEXT NOT NULL,
+        display_text TEXT NOT NULL,
+        word_introduced_id INTEGER
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS quiz_questions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_id INTEGER NOT NULL,
+        word_id INTEGER NOT NULL,
+        question_stem TEXT NOT NULL,
+        question_type TEXT NOT NULL,
+        correct_answer TEXT NOT NULL,
+        distractors_json TEXT NOT NULL,
+        show_image INTEGER DEFAULT 1,
+        order_index INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS quiz_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        grade_level INTEGER NOT NULL,
+        difficulty TEXT NOT NULL,
+        quiz_size INTEGER NOT NULL,
+        buffer_size INTEGER NOT NULL DEFAULT 0,
+        randomized INTEGER NOT NULL DEFAULT 0,
+        passing_threshold INTEGER DEFAULT 70
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS passages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        full_text TEXT NOT NULL,
+        word_count INTEGER NOT NULL,
+        phil_iri_target_grade INTEGER NOT NULL,
+        phil_iri_readability_score REAL,
+        phil_iri_readability_tool TEXT,
+        cultural_elements_json TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS passage_sentences (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        passage_id INTEGER NOT NULL,
+        sentence_index INTEGER NOT NULL,
+        text TEXT NOT NULL,
+        audio_file TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS passage_words (
+        passage_id INTEGER NOT NULL,
+        word_id INTEGER NOT NULL,
+        is_tone_word INTEGER DEFAULT 0,
+        PRIMARY KEY (passage_id, word_id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS word_encounters (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        word_id INTEGER NOT NULL,
+        first_seen_at TEXT NOT NULL,
+        times_seen INTEGER DEFAULT 1,
+        UNIQUE(student_id, word_id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS word_mastery (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        word_id INTEGER NOT NULL,
+        correct_count INTEGER DEFAULT 0,
+        wrong_count INTEGER DEFAULT 0,
+        mastered_at TEXT,
+        UNIQUE(student_id, word_id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS starred_words (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        word_id INTEGER NOT NULL,
+        starred_at TEXT NOT NULL,
+        UNIQUE(student_id, word_id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS batch_visits (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        batch_id INTEGER NOT NULL,
+        first_visit_at TEXT NOT NULL,
+        UNIQUE(student_id, batch_id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS lesson_progress (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        batch_id INTEGER NOT NULL,
+        current_phase TEXT NOT NULL,
+        current_index INTEGER DEFAULT 0,
+        last_updated TEXT NOT NULL,
+        UNIQUE(student_id, batch_id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS quiz_attempts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        batch_id INTEGER NOT NULL,
+        score INTEGER NOT NULL,
+        total_questions INTEGER NOT NULL,
+        points_earned INTEGER NOT NULL,
+        wrong_word_ids_json TEXT,
+        completed_at TEXT NOT NULL,
+        synced_to_cloud INTEGER DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS quiz_question_responses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        attempt_id INTEGER NOT NULL,
+        question_id INTEGER NOT NULL,
+        selected_answer TEXT NOT NULL,
+        is_correct INTEGER NOT NULL,
+        response_time_ms INTEGER
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS daily_word_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        word_id INTEGER NOT NULL,
+        date_shown TEXT NOT NULL,
+        shown_at TEXT NOT NULL,
+        UNIQUE(student_id, date_shown)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS content_versions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        grade_level INTEGER NOT NULL,
+        version TEXT NOT NULL,
+        imported_at TEXT NOT NULL
+      )
+    ''');
+  }
+
+
+
   }
 
   // ---------- Student methods ----------
@@ -763,5 +1212,480 @@ class DatabaseService {
   }
 
 
+  // ============================================================
+  // CONTENT QUERIES
+  // ============================================================
+
+  /// Get all words in a specific batch (ordered).
+  Future<List<Word>> getWordsInBatch(int batchId) async {
+    final db = await database;
+    final maps = await db.query(
+      'words',
+      where: 'batch_id = ?',
+      whereArgs: [batchId],
+    );
+    return maps.map((m) => Word.fromMap(m)).toList();
+  }
+
+  /// Get the first batch for a (grade, difficulty) combination.
+  Future<LessonBatch?> getFirstBatch(int gradeLevel, String difficulty) async {
+    final db = await database;
+    final maps = await db.query(
+      'batches',
+      where: 'grade_level = ? AND difficulty = ?',
+      whereArgs: [gradeLevel, difficulty],
+      orderBy: 'batch_index ASC',
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return LessonBatch.fromMap(maps.first);
+  }
+
+  /// Get all batches for a (grade, difficulty).
+  Future<List<LessonBatch>> getBatchesForLevel(
+      int gradeLevel, String difficulty) async {
+    final db = await database;
+    final maps = await db.query(
+      'batches',
+      where: 'grade_level = ? AND difficulty = ?',
+      whereArgs: [gradeLevel, difficulty],
+      orderBy: 'batch_index ASC',
+    );
+    return maps.map((m) => LessonBatch.fromMap(m)).toList();
+  }
+
+  /// Get the quiz config for a level.
+  Future<QuizConfig?> getQuizConfig(
+      int gradeLevel, String difficulty) async {
+    final db = await database;
+    final maps = await db.query(
+      'quiz_config',
+      where: 'grade_level = ? AND difficulty = ?',
+      whereArgs: [gradeLevel, difficulty],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return QuizConfig.fromMap(maps.first);
+  }
+
+  /// Get all quiz questions for a batch.
+  Future<List<QuizQuestion>> getQuestionsForBatch(int batchId) async {
+    final db = await database;
+    final maps = await db.query(
+      'quiz_questions',
+      where: 'batch_id = ?',
+      whereArgs: [batchId],
+      orderBy: 'order_index ASC',
+    );
+    return maps.map((m) => QuizQuestion.fromMap(m)).toList();
+  }
+
+  /// Get the opening frame for Grade 1 level.
+  Future<OpeningFrame?> getOpeningFrame(
+      int gradeLevel, String difficulty) async {
+    final db = await database;
+    final maps = await db.query(
+      'opening_frames',
+      where: 'grade_level = ? AND difficulty = ?',
+      whereArgs: [gradeLevel, difficulty],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return OpeningFrame.fromMap(maps.first);
+  }
+
+  /// Get story frames for a (grade, difficulty).
+  Future<List<StoryFrame>> getStoryFrames(
+      int gradeLevel, String difficulty) async {
+    final db = await database;
+    final maps = await db.query(
+      'story_frames',
+      where: 'grade_level = ? AND difficulty = ?',
+      whereArgs: [gradeLevel, difficulty],
+      orderBy: 'frame_index ASC',
+    );
+    return maps.map((m) => StoryFrame.fromMap(m)).toList();
+  }
+
+  /// Get the passage for a batch (G3+).
+  Future<Passage?> getPassageForBatch(int batchId) async {
+    final db = await database;
+    final maps = await db.query(
+      'passages',
+      where: 'batch_id = ?',
+      whereArgs: [batchId],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return Passage.fromMap(maps.first);
+  }
+
+  /// Get all sentences for a passage.
+  Future<List<PassageSentence>> getSentencesForPassage(
+      int passageId) async {
+    final db = await database;
+    final maps = await db.query(
+      'passage_sentences',
+      where: 'passage_id = ?',
+      whereArgs: [passageId],
+      orderBy: 'sentence_index ASC',
+    );
+    return maps.map((m) => PassageSentence.fromMap(m)).toList();
+  }
+
+  // ============================================================
+  // M5.1 — PROGRESS METHODS
+  // ============================================================
+
+  /// Record a word encounter (Pokédex "seen").
+  Future<void> recordWordEncounter(int studentId, int wordId) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    await db.rawInsert('''
+      INSERT INTO word_encounters (student_id, word_id, first_seen_at, times_seen)
+      VALUES (?, ?, ?, 1)
+      ON CONFLICT(student_id, word_id) DO UPDATE SET
+        times_seen = times_seen + 1
+    ''', [studentId, wordId, now]);
+  }
+
+  /// Update word mastery after a quiz answer.
+  /// Returns true if the word just became mastered.
+  Future<bool> updateWordMastery({
+    required int studentId,
+    required int wordId,
+    required bool correct,
+  }) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+
+    // Fetch existing
+    final maps = await db.query(
+      'word_mastery',
+      where: 'student_id = ? AND word_id = ?',
+      whereArgs: [studentId, wordId],
+      limit: 1,
+    );
+
+    if (maps.isEmpty) {
+      // First attempt
+      final correctCount = correct ? 1 : 0;
+      final wrongCount = correct ? 0 : 1;
+      final masteredAt = correctCount >= 3 ? now : null;
+
+      await db.insert('word_mastery', {
+        'student_id': studentId,
+        'word_id': wordId,
+        'correct_count': correctCount,
+        'wrong_count': wrongCount,
+        'mastered_at': masteredAt,
+      });
+      return correctCount >= 3;
+    }
+
+    // Update existing
+    final existing = WordMastery.fromMap(maps.first);
+    final newCorrect = existing.correctCount + (correct ? 1 : 0);
+    final newWrong = existing.wrongCount + (correct ? 0 : 1);
+
+    String? newMasteredAt = existing.masteredAt;
+    bool justMastered = false;
+    if (newMasteredAt == null && newCorrect >= 3) {
+      newMasteredAt = now;
+      justMastered = true;
+    }
+
+    await db.update(
+      'word_mastery',
+      {
+        'correct_count': newCorrect,
+        'wrong_count': newWrong,
+        'mastered_at': newMasteredAt,
+      },
+      where: 'student_id = ? AND word_id = ?',
+      whereArgs: [studentId, wordId],
+    );
+    return justMastered;
+  }
+
+  /// Star a word.
+  Future<void> starWord(int studentId, int wordId) async {
+    final db = await database;
+    await db.insert(
+      'starred_words',
+      {
+        'student_id': studentId,
+        'word_id': wordId,
+        'starred_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+  }
+
+  /// Unstar a word.
+  Future<void> unstarWord(int studentId, int wordId) async {
+    final db = await database;
+    await db.delete(
+      'starred_words',
+      where: 'student_id = ? AND word_id = ?',
+      whereArgs: [studentId, wordId],
+    );
+  }
+
+  /// Get all starred words for a student.
+  Future<List<StarredWord>> getStarredWords(int studentId) async {
+    final db = await database;
+    final maps = await db.query(
+      'starred_words',
+      where: 'student_id = ?',
+      whereArgs: [studentId],
+      orderBy: 'starred_at DESC',
+    );
+    return maps.map((m) => StarredWord.fromMap(m)).toList();
+  }
+
+  /// Record a batch visit (Yse Opening Frame tracking).
+  Future<void> recordBatchVisit(int studentId, int batchId) async {
+    final db = await database;
+    await db.insert(
+      'batch_visits',
+      {
+        'student_id': studentId,
+        'batch_id': batchId,
+        'first_visit_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+  }
+
+  /// Check if a batch has been visited before.
+  Future<bool> hasVisitedBatch(int studentId, int batchId) async {
+    final db = await database;
+    final maps = await db.query(
+      'batch_visits',
+      where: 'student_id = ? AND batch_id = ?',
+      whereArgs: [studentId, batchId],
+      limit: 1,
+    );
+    return maps.isNotEmpty;
+  }
+
+  /// Get the last visited batch index for a level (for resume).
+  Future<int?> getLastBatchIndex(int studentId, int gradeLevel, String difficulty) async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT b.batch_index
+      FROM batch_visits bv
+      INNER JOIN batches b ON b.id = bv.batch_id
+      WHERE bv.student_id = ? AND b.grade_level = ? AND b.difficulty = ?
+      ORDER BY bv.first_visit_at DESC
+      LIMIT 1
+    ''', [studentId, gradeLevel, difficulty]);
+    if (maps.isEmpty) return null;
+    return maps.first['batch_index'] as int;
+  }
+
+  /// Save lesson progress (for resume).
+  Future<void> saveLessonProgress({
+    required int studentId,
+    required int batchId,
+    required String phase,
+    required int index,
+  }) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    await db.rawInsert('''
+      INSERT INTO lesson_progress
+        (student_id, batch_id, current_phase, current_index, last_updated)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(student_id, batch_id) DO UPDATE SET
+        current_phase = excluded.current_phase,
+        current_index = excluded.current_index,
+        last_updated = excluded.last_updated
+    ''', [studentId, batchId, phase, index, now]);
+  }
+
+  /// Get lesson progress for a batch.
+  Future<LessonProgress?> getLessonProgress(int studentId, int batchId) async {
+    final db = await database;
+    final maps = await db.query(
+      'lesson_progress',
+      where: 'student_id = ? AND batch_id = ?',
+      whereArgs: [studentId, batchId],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return LessonProgress.fromMap(maps.first);
+  }
+
+  /// Save a quiz attempt.
+  Future<int> saveQuizAttempt(QuizAttempt attempt) async {
+    final db = await database;
+    return await db.insert('quiz_attempts', attempt.toMap());
+  }
+
+  /// Get all quiz attempts for a student in a batch.
+  Future<List<QuizAttempt>> getQuizAttempts(int studentId, int batchId) async {
+    final db = await database;
+    final maps = await db.query(
+      'quiz_attempts',
+      where: 'student_id = ? AND batch_id = ?',
+      whereArgs: [studentId, batchId],
+      orderBy: 'completed_at DESC',
+    );
+    return maps.map((m) => QuizAttempt.fromMap(m)).toList();
+  }
+
+  /// Save a per-question response.
+  Future<void> saveQuestionResponse(QuizQuestionResponse response) async {
+    final db = await database;
+    await db.insert('quiz_question_responses', response.toMap());
+  }
+
+  /// Check if a word is starred.
+  Future<bool> isWordStarred(int studentId, int wordId) async {
+    final db = await database;
+    final maps = await db.query(
+      'starred_words',
+      where: 'student_id = ? AND word_id = ?',
+      whereArgs: [studentId, wordId],
+      limit: 1,
+    );
+    return maps.isNotEmpty;
+  }
+
+  /// Get word mastery for a specific word.
+  Future<WordMastery?> getWordMastery(int studentId, int wordId) async {
+    final db = await database;
+    final maps = await db.query(
+      'word_mastery',
+      where: 'student_id = ? AND word_id = ?',
+      whereArgs: [studentId, wordId],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return WordMastery.fromMap(maps.first);
+  }
+
+  /// Get all mastered words for a student.
+  Future<List<WordMastery>> getMasteredWords(int studentId) async {
+    final db = await database;
+    final maps = await db.query(
+      'word_mastery',
+      where: 'student_id = ? AND mastered_at IS NOT NULL',
+      whereArgs: [studentId],
+      orderBy: 'mastered_at DESC',
+    );
+    return maps.map((m) => WordMastery.fromMap(m)).toList();
+  }
+
+  /// Get all encountered word IDs for a student.
+  Future<List<int>> getEncounteredWordIds(int studentId) async {
+    final db = await database;
+    final maps = await db.query(
+      'word_encounters',
+      columns: ['word_id'],
+      where: 'student_id = ?',
+      whereArgs: [studentId],
+    );
+    return maps.map((m) => m['word_id'] as int).toList();
+  }
+
+  /// Get content version for a grade (returns null if not imported).
+  Future<ContentVersion?> getContentVersion(int gradeLevel) async {
+    final db = await database;
+    final maps = await db.query(
+      'content_versions',
+      where: 'grade_level = ?',
+      whereArgs: [gradeLevel],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return ContentVersion.fromMap(maps.first);
+  }
+
+  /// Save content version.
+  Future<void> saveContentVersion(ContentVersion version) async {
+    final db = await database;
+    await db.insert('content_versions', version.toMap());
+  }
+
+  /// Delete all content for a grade (for re-import).
+  Future<void> clearContentForGrade(int gradeLevel) async {
+    final db = await database;
+    await db.delete('words',
+        where: 'grade_level = ?', whereArgs: [gradeLevel]);
+    await db.delete('batches',
+        where: 'grade_level = ?', whereArgs: [gradeLevel]);
+    await db.delete('opening_frames',
+        where: 'grade_level = ?', whereArgs: [gradeLevel]);
+    await db.delete('story_frames',
+        where: 'grade_level = ?', whereArgs: [gradeLevel]);
+    await db.delete('quiz_config',
+        where: 'grade_level = ?', whereArgs: [gradeLevel]);
+    await db.delete('content_versions',
+        where: 'grade_level = ?', whereArgs: [gradeLevel]);
+  }
+
+  /// Record a Word of the Day shown to student.
+  Future<void> recordDailyWord({
+    required int studentId,
+    required int wordId,
+  }) async {
+    final db = await database;
+    final now = DateTime.now();
+    final dateShown =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    try {
+      await db.insert('daily_word_log', {
+        'student_id': studentId,
+        'word_id': wordId,
+        'date_shown': dateShown,
+        'shown_at': now.toIso8601String(),
+      });
+    } catch (_) {
+      // Already shown today
+    }
+  }
+
+  /// Get today's Word of the Day word ID for a student.
+  Future<int?> getTodaysWord(int studentId) async {
+    final db = await database;
+    final now = DateTime.now();
+    final dateShown =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final maps = await db.query(
+      'daily_word_log',
+      where: 'student_id = ? AND date_shown = ?',
+      whereArgs: [studentId, dateShown],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return maps.first['word_id'] as int;
+  }
+
+  // ============================================================
+  // M5.1 — CONTENT INSERT METHODS (used by importer)
+  // ============================================================
+
+  Future<int> insertBatch(LessonBatch batch) async {
+    final db = await database;
+    return await db.insert('batches', batch.toMap());
+  }
+
+  Future<int> insertOpeningFrame(OpeningFrame frame) async {
+    final db = await database;
+    return await db.insert('opening_frames', frame.toMap());
+  }
+
+  Future<int> insertQuizConfig(QuizConfig config) async {
+    final db = await database;
+    return await db.insert('quiz_config', config.toMap());
+  }
+
+  Future<int> insertQuizQuestion(QuizQuestion question) async {
+    final db = await database;
+    return await db.insert('quiz_questions', question.toMap());
+  }
 
 }

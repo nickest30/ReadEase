@@ -53,6 +53,8 @@ import 'screens/student/join_class_screen.dart';
 import 'providers/connectivity_provider.dart';
 import 'screens/parent/generate_link_code_screen.dart';
 import 'screens/student/link_parent_screen.dart';
+import 'services/content_importer.dart';
+
 
 
 void main() async {
@@ -62,7 +64,11 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Legacy seed (small set of words for the old Lesson screen)
   await seedWordsIfEmpty();
+
+  // NEW: Import bundled JSON content into SQLite
+  await ContentImporter.instance.importAllGrades();
 
   final settingsProvider = SettingsProvider();
   await settingsProvider.load();

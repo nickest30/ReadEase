@@ -315,21 +315,30 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   ),
                 ),
               ),
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: AppColors.accentYellow.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.accentYellow,
-                    width: 3,
+              // Real badge image
+              SizedBox(
+                width: 160,
+                height: 160,
+                child: Image.asset(
+                  AchievementBadge.imagePathFor(_gradeLevel, _difficulty),
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentYellow.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.accentYellow,
+                        width: 3,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.emoji_events_rounded,
+                      size: 64,
+                      color: AppColors.accentYellow,
+                    ),
                   ),
-                ),
-                child: const Icon(
-                  Icons.emoji_events_rounded,
-                  size: 64,
-                  color: AppColors.accentYellow,
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),

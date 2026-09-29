@@ -19,7 +19,6 @@ class AchievementBadge {
     this.syncedToCloud = false,
   });
 
-  /// Unique key for this badge per student
   String get key => '$gradeLevel-$difficulty';
 
   Map<String, dynamic> toMap() {
@@ -48,17 +47,45 @@ class AchievementBadge {
     );
   }
 
-  /// Get the badge name for a given (grade, difficulty).
+  /// Get the display name for a (grade, difficulty) combination.
   static String nameFor(int gradeLevel, String difficulty) {
-    switch (difficulty) {
-      case 'easy':
-        return 'Easy Reader';
-      case 'medium':
-        return 'Medium Master';
-      case 'hard':
-        return 'Hard Hero';
+    switch (gradeLevel) {
+      case 1:
+        if (difficulty == 'easy') return 'Sprout Reader';
+        if (difficulty == 'medium') return 'Growing Reader';
+        return 'Strong Reader';
+      case 2:
+        if (difficulty == 'easy') return 'Story Starter';
+        if (difficulty == 'medium') return 'Story Explorer';
+        return 'Story Master';
+      case 3:
+        if (difficulty == 'easy') return 'Word Builder';
+        if (difficulty == 'medium') return 'Sentence Solver';
+        return 'Comprehension Champ';
+      case 4:
+        if (difficulty == 'easy') return 'Meaning Hunter';
+        if (difficulty == 'medium') return 'Logic Thinker';
+        return 'Insight Master';
+      case 5:
+        if (difficulty == 'easy') return 'Vocab Virtuoso';
+        if (difficulty == 'medium') return 'Critical Reader';
+        return 'Scholar';
+      case 6:
+        if (difficulty == 'easy') return 'Passage Pilot';
+        if (difficulty == 'medium') return 'Advanced Analyst';
+        return 'Reading Champion';
       default:
-        return 'Grade $gradeLevel $difficulty';
+        return 'Badge';
     }
+  }
+
+  /// Asset path for the badge image (e.g. badge_g1_easy.png)
+  static String imagePathFor(int gradeLevel, String difficulty) {
+    return 'assets/images/badge/badge_g${gradeLevel}_$difficulty.png';
+  }
+
+  /// Asset path for special badges
+  static String specialImagePath(String specialKey) {
+    return 'assets/images/badge/badge_special_$specialKey.png';
   }
 }
