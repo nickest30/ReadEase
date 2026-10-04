@@ -10,7 +10,6 @@ import '../../utils/app_theme.dart';
 import '../../widgets/email_verification_banner.dart';
 import '../shared/account_security_screen.dart';
 
-
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({super.key});
 
@@ -268,8 +267,37 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
                           ),
               ),
 
-                            const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.sm),
 
+              // ── Create Class (RESTORED) ──
+              SizedBox(
+                height: 56,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    await Navigator.of(context).pushNamed('/create-class');
+                    _loadClasses();
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text(
+                    'Create Class',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentYellow,
+                    foregroundColor: AppColors.textPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.large),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.sm),
+
+              // ── Account & Security ──
               SizedBox(
                 height: 46,
                 child: OutlinedButton.icon(
@@ -303,6 +331,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
 
               const SizedBox(height: AppSpacing.sm),
 
+              // ── Log Out ──
               SizedBox(
                 height: 50,
                 child: OutlinedButton(
