@@ -974,6 +974,46 @@ class FirestoreService {
     }
   }
 
+  /// Save the backup code bcrypt hash at signup time.
+  Future<void> saveBackupCodeHash(
+    String uid,
+    String role,
+    String hash,
+  ) async {
+    final collection = role == 'parent' ? 'parents' : 'teachers';
+    try {
+      await _db.collection(collection).doc(uid).set({
+        'backupCodeHash': hash,
+        'backupCodeUsed': false,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      debugPrint('🔥 Firestore: saveBackupCodeHash($uid, $role)');
+    } catch (e) {
+      debugPrint('🔥 saveBackupCodeHash ERROR: $e');
+    }
+  }
+
+  /// Replace the backup code hash after a successful use.
+  /// Backup codes are single-use; a new one is always generated.
+  Future<void> rotateBackupCode(
+    String uid,
+    String role,
+    String newHash,
+  ) async {
+    final collection = role == 'parent' ? 'parents' : 'teachers';
+    try {
+      await _db.collection(collection).doc(uid).set({
+        'backupCodeHash': newHash,
+        'backupCodeUsed': false,
+        'backupCodeRotatedAt': FieldValue.serverTimestamp(),
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      debugPrint('🔥 Firestore: rotateBackupCode($uid, $role)');
+    } catch (e) {
+      debugPrint('🔥 rotateBackupCode ERROR: $e');
+    }
+  }
+
   // ============================================================
   // WORD ANALYTICS SYNC (mastery, encounters, starred)
   // ============================================================
