@@ -242,6 +242,15 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
     await DatabaseService.instance
         .updateParentBackupCodeHash(parent.id!, hashedBackup);
 
+    // Push hash to Firestore so it works on other devices
+    if (parent.firebaseUid != null) {
+      await FirestoreService.instance.saveBackupCodeHash(
+        parent.firebaseUid!,
+        'parent',
+        hashedBackup,
+      );
+    }
+
     // Mark phone verified in Firestore
     if (parent.firebaseUid != null) {
       await FirestoreService.instance

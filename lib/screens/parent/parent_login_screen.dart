@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:provider/provider.dart';
@@ -11,7 +12,10 @@ import '../../providers/parent_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/validators.dart';
 import '../../widgets/app_form.dart';
+import '../shared/backup_code_screen.dart';
+import '../shared/backup_code_entry_screen.dart';
 import '../shared/forgot_password_screen.dart';
+import '../shared/otp_verification_screen.dart';
 
 class ParentLoginScreen extends StatefulWidget {
   const ParentLoginScreen({super.key});
@@ -50,7 +54,6 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       final password = _passwordController.text;
       final isEmail = input.contains('@');
 
-      // ── Path 1: Email entered → cloud login ──
       if (isEmail) {
         await _loginWithEmail(
           email: input.toLowerCase(),
@@ -61,7 +64,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
         return;
       }
 
-      // ── Path 2: Username entered → try local first ──
+      // Username path (local-only)
       final localParent = await DatabaseService.instance
           .getParentByUsername(input.toLowerCase());
 
@@ -90,7 +93,6 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
         return;
       }
 
-      // Local miss — inform user to use email
       if (!mounted) return;
       setState(() {
         _errorMessage =
@@ -114,7 +116,6 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
     required AuthProvider authProvider,
     required ParentProvider parentProvider,
   }) async {
-    // 1. Firebase Auth
     final firebaseOk = await authProvider.signIn(email, password);
     if (!mounted) return;
 
@@ -126,7 +127,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       return;
     }
 
-    // 2. Check if this email is already a local parent (fast path)
+    // Fast path — already local
     Parent? localParent;
     final allParents = await DatabaseService.instance.getAllParents();
     for (final p in allParents) {
@@ -136,14 +137,6 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       }
     }
 
-    if (localParent != null) {
-      if (!mounted) return;
-      parentProvider.setParent(localParent);
-      Navigator.of(context).pushReplacementNamed('/parent-dashboard');
-      return;
-    }
-
-    // 3. Not local — fetch profile from Firestore by UID
     final uid = authProvider.uid;
     if (uid == null) {
       if (!mounted) return;
@@ -154,8 +147,53 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       return;
     }
 
-    final cloudDoc = await FirestoreService.instance.getParentByUid(uid);
+    // ── Phone 2FA gate ──
+    // Fetch the cloud doc to check phoneVerified state.
+    // If parent is already local, use the local firebaseUid.
+    final cloudDoc = await FirestoreService.instance.getParentByUidFull(uid);
 
+    final phoneVerified = cloudDoc?['phoneVerified'] == true;
+    final backupHash = cloudDoc?['backupCodeHash'] as String?;
+
+    if (phoneVerified) {
+      final trusted = await authProvider.isCurrentDeviceTrusted(uid);
+      if (!trusted) {
+        // Need OTP before proceeding
+        final verified = await _runLoginOtpFlow(
+          authProvider: authProvider,
+          phoneNumber: (cloudDoc?['phoneNumber'] as String?) ?? '',
+          uid: uid,
+          backupHash: backupHash,
+        );
+        if (!verified || !mounted) {
+          setState(() => _isSubmitting = false);
+          return;
+        }
+      }
+    }
+
+    if (!mounted) return;
+
+    // Continue with local save + dashboard
+    if (localParent != null) {
+      // Refresh classes/children
+      if (localParent.firebaseUid != null) {
+        try {
+          await CloudSyncService.instance.downloadParentChildren(
+            localParentId: localParent.id!,
+            firebaseUid: localParent.firebaseUid!,
+          );
+        } catch (e) {
+          debugPrint('☁️ Children refresh failed: $e');
+        }
+      }
+      if (!mounted) return;
+      parentProvider.setParent(localParent);
+      Navigator.of(context).pushReplacementNamed('/parent-dashboard');
+      return;
+    }
+
+    // Not local — create from cloud doc
     if (cloudDoc == null) {
       if (!mounted) return;
       setState(() {
@@ -167,7 +205,6 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       return;
     }
 
-    // 4. Save locally so future logins work offline
     final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
 
     final newLocalParent = Parent(
@@ -194,8 +231,6 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       return;
     }
 
-    debugPrint('🔑 Parent cloud login OK — local profile created');
-
     await CloudSyncService.instance.downloadParentChildren(
       localParentId: created.id!,
       firebaseUid: uid,
@@ -204,6 +239,102 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
     if (!mounted) return;
     parentProvider.setParent(created);
     Navigator.of(context).pushReplacementNamed('/parent-dashboard');
+  }
+
+  /// Show OTP screen with backup-code fallback.
+  /// Returns true if user successfully passed 2FA.
+  Future<bool> _runLoginOtpFlow({
+    required AuthProvider authProvider,
+    required String phoneNumber,
+    required String uid,
+    required String? backupHash,
+  }) async {
+    // Kick off OTP send
+    final completer = Completer<bool>();
+    bool codeSent = false;
+
+    await authProvider.startPhoneVerification(
+      phoneNumber: phoneNumber,
+      onCodeSent: () {
+        codeSent = true;
+        if (!completer.isCompleted) completer.complete(true);
+      },
+      onAutoVerified: () {
+        if (!completer.isCompleted) completer.complete(true);
+      },
+      onError: (msg) {
+        debugPrint('📱 OTP send failed: $msg');
+        if (!completer.isCompleted) completer.complete(false);
+      },
+    );
+
+    final sent = await completer.future;
+    if (!sent || !mounted || !codeSent) return false;
+
+    // Show OTP screen. onVerified pops with true.
+    final verified = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => OtpVerificationScreen(
+          phoneNumber: phoneNumber,
+          accentColor: AppColors.accentPurple,
+          backgroundColor: AppColors.parentBg,
+          isSignup: false,
+          onVerified: () => Navigator.of(context).pop(true),
+          onNoPhoneFallback: () {
+            // Handled inside the screen — it navigates to backup entry
+          },
+        ),
+      ),
+    );
+
+    if (verified == true) {
+      // Trust this device for 30 days
+      await authProvider.trustCurrentDevice(uid);
+      return true;
+    }
+
+    // If OTP was cancelled and user picked "no phone", route to backup code
+    if (!mounted) return false;
+
+    if (backupHash == null || backupHash.isEmpty) {
+      setState(() {
+        _errorMessage =
+            'No backup code saved for this account. '
+            'Use "Forgot password" to recover.';
+      });
+      return false;
+    }
+
+    // Backup code entry
+    final newCode = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => BackupCodeEntryScreen(
+          backupCodeHash: backupHash,
+          accentColor: AppColors.accentPurple,
+          backgroundColor: AppColors.parentBg,
+          onVerified: (code) => Navigator.of(context).pop(code),
+        ),
+      ),
+    );
+
+    if (newCode == null || !mounted) return false;
+
+    // Rotate backup code — hash + save locally + push to cloud
+    final newHash = BCrypt.hashpw(newCode, BCrypt.gensalt());
+    await FirestoreService.instance.rotateBackupCode(uid, 'parent', newHash);
+
+    if (!mounted) return false;
+
+    // Show new code to user
+    await BackupCodeDialog.show(
+      context,
+      code: newCode,
+      accentColor: AppColors.accentPurple,
+    );
+
+    // Trust device
+    await authProvider.trustCurrentDevice(uid);
+    return true;
   }
 
   @override
@@ -256,8 +387,9 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
                   hintText: 'Enter your password',
                   textInputAction: TextInputAction.done,
                   focusColor: AppColors.accentPurple,
-                  validator: (v) =>
-                      (v == null || v.isEmpty) ? 'Please enter your password' : null,
+                  validator: (v) => (v == null || v.isEmpty)
+                      ? 'Please enter your password'
+                      : null,
                 ),
 
                 Align(

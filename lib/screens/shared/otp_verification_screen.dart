@@ -316,7 +316,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   const SizedBox(height: AppSpacing.sm),
                   Center(
                     child: TextButton(
-                      onPressed: widget.onNoPhoneFallback,
+                      onPressed: () {
+                        widget.onNoPhoneFallback?.call();
+                        Navigator.of(context).pop(false);
+                      },
                       child: const Text(
                         'I don\'t have my phone',
                         style: TextStyle(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:provider/provider.dart';
@@ -11,7 +12,10 @@ import '../../providers/teacher_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/validators.dart';
 import '../../widgets/app_form.dart';
+import '../shared/backup_code_entry_screen.dart';
+import '../shared/backup_code_screen.dart';
 import '../shared/forgot_password_screen.dart';
+import '../shared/otp_verification_screen.dart';
 
 class TeacherLoginScreen extends StatefulWidget {
   const TeacherLoginScreen({super.key});
@@ -137,7 +141,42 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
       return;
     }
 
-    // Check if already local
+    final uid = authProvider.uid;
+    if (uid == null) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Session error. Try again.';
+        _isSubmitting = false;
+      });
+      return;
+    }
+
+    // ── Phone 2FA gate ──
+    // Fetch cloud doc to check phoneVerified state.
+    final cloudDoc = await FirestoreService.instance.getTeacherByUidFull(uid);
+
+    final phoneVerified = cloudDoc?['phoneVerified'] == true;
+    final backupHash = cloudDoc?['backupCodeHash'] as String?;
+
+    if (phoneVerified) {
+      final trusted = await authProvider.isCurrentDeviceTrusted(uid);
+      if (!trusted) {
+        final verified = await _runLoginOtpFlow(
+          authProvider: authProvider,
+          phoneNumber: (cloudDoc?['phoneNumber'] as String?) ?? '',
+          uid: uid,
+          backupHash: backupHash,
+        );
+        if (!verified || !mounted) {
+          setState(() => _isSubmitting = false);
+          return;
+        }
+      }
+    }
+
+    if (!mounted) return;
+
+    // Fast path — already local
     Teacher? localTeacher;
     final allTeachers = await DatabaseService.instance.getAllTeachers();
     for (final t in allTeachers) {
@@ -149,7 +188,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
 
     if (localTeacher != null) {
       // Password may have changed in Firebase since last local save.
-      // Refresh the local hash so offline logins still work.
       final freshHash = BCrypt.hashpw(password, BCrypt.gensalt());
       await DatabaseService.instance
           .updateTeacherPasswordHash(localTeacher.id!, freshHash);
@@ -173,19 +211,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
     }
 
     // Not local — fetch from Firestore
-    final uid = authProvider.uid;
-    if (uid == null) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = 'Session error. Try again.';
-        _isSubmitting = false;
-      });
-      return;
-    }
-
-    final cloudDoc =
-        await FirestoreService.instance.getTeacherByUidFull(uid);
-
     if (cloudDoc == null) {
       if (!mounted) return;
       setState(() {
@@ -234,6 +259,102 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
     if (!mounted) return;
     teacherProvider.setTeacher(created);
     Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
+  }
+
+  /// Show OTP screen with backup-code fallback.
+  /// Returns true if user successfully passed 2FA.
+  Future<bool> _runLoginOtpFlow({
+    required AuthProvider authProvider,
+    required String phoneNumber,
+    required String uid,
+    required String? backupHash,
+  }) async {
+    // Kick off OTP send
+    final completer = Completer<bool>();
+    bool codeSent = false;
+
+    await authProvider.startPhoneVerification(
+      phoneNumber: phoneNumber,
+      onCodeSent: () {
+        codeSent = true;
+        if (!completer.isCompleted) completer.complete(true);
+      },
+      onAutoVerified: () {
+        if (!completer.isCompleted) completer.complete(true);
+      },
+      onError: (msg) {
+        debugPrint('📱 OTP send failed: $msg');
+        if (!completer.isCompleted) completer.complete(false);
+      },
+    );
+
+    final sent = await completer.future;
+    if (!sent || !mounted || !codeSent) return false;
+
+    // Show OTP screen. onVerified pops with true.
+    final verified = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => OtpVerificationScreen(
+          phoneNumber: phoneNumber,
+          accentColor: AppColors.accentYellow,
+          backgroundColor: AppColors.teacherBg,
+          isSignup: false,
+          onVerified: () => Navigator.of(context).pop(true),
+          onNoPhoneFallback: () {
+            // Handled by the screen — it pops with false
+          },
+        ),
+      ),
+    );
+
+    if (verified == true) {
+      // Trust this device for 30 days
+      await authProvider.trustCurrentDevice(uid);
+      return true;
+    }
+
+    // User cancelled OTP (probably tapped "I don't have my phone")
+    if (!mounted) return false;
+
+    if (backupHash == null || backupHash.isEmpty) {
+      setState(() {
+        _errorMessage =
+            'No backup code saved for this account. '
+            'Use "Forgot password" to recover.';
+      });
+      return false;
+    }
+
+    // Backup code entry
+    final newCode = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => BackupCodeEntryScreen(
+          backupCodeHash: backupHash,
+          accentColor: AppColors.accentYellow,
+          backgroundColor: AppColors.teacherBg,
+          onVerified: (code) => Navigator.of(context).pop(code),
+        ),
+      ),
+    );
+
+    if (newCode == null || !mounted) return false;
+
+    // Rotate backup code — hash + push to cloud
+    final newHash = BCrypt.hashpw(newCode, BCrypt.gensalt());
+    await FirestoreService.instance.rotateBackupCode(uid, 'teacher', newHash);
+
+    if (!mounted) return false;
+
+    // Show new code to user
+    await BackupCodeDialog.show(
+      context,
+      code: newCode,
+      accentColor: AppColors.accentYellow,
+    );
+
+    // Trust device
+    await authProvider.trustCurrentDevice(uid);
+    return true;
   }
 
   @override
@@ -286,8 +407,9 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
                   hintText: 'Enter your password',
                   textInputAction: TextInputAction.done,
                   focusColor: AppColors.accentYellow,
-                  validator: (v) =>
-                      (v == null || v.isEmpty) ? 'Please enter your password' : null,
+                  validator: (v) => (v == null || v.isEmpty)
+                      ? 'Please enter your password'
+                      : null,
                 ),
 
                 Align(
@@ -308,7 +430,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
                         fontFamily: 'Nunito',
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
-                        color: AppColors.textYellow, // darker for yellow contrast
+                        color: AppColors.textYellow,
                       ),
                     ),
                   ),

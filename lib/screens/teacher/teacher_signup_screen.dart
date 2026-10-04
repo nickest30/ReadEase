@@ -250,6 +250,14 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
     await DatabaseService.instance
         .updateTeacherBackupCodeHash(teacher.id!, hashedBackup);
 
+    if (teacher.firebaseUid != null) {
+      await FirestoreService.instance.saveBackupCodeHash(
+        teacher.firebaseUid!,
+        'teacher',
+        hashedBackup,
+      );
+    }
+
     // Mark phone verified in Firestore
     if (teacher.firebaseUid != null) {
       await FirestoreService.instance
