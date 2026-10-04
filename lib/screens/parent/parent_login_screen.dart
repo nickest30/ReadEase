@@ -38,11 +38,36 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
     super.dispose();
   }
 
+  String _formatRemaining(Duration d) {
+    if (d.inMinutes >= 1) {
+      final m = d.inMinutes;
+      final s = d.inSeconds % 60;
+      return s == 0 ? '$m min' : '$m min $s sec';
+    }
+    return '${d.inSeconds} sec';
+  }
+
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Capture providers BEFORE any await
     final authProvider = context.read<AuthProvider>();
     final parentProvider = context.read<ParentProvider>();
+
+    final identifier = _identifierController.text.trim().toLowerCase();
+
+    // ── Rate limit gate ──
+    final remaining = await DatabaseService.instance
+        .loginRateLimitRemaining(identifier);
+    if (remaining != null) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage =
+            'Too many failed attempts. Try again in ${_formatRemaining(remaining)}.';
+        _isSubmitting = false;
+      });
+      return;
+    }
 
     setState(() {
       _isSubmitting = true;
@@ -58,6 +83,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
         await _loginWithEmail(
           email: input.toLowerCase(),
           password: password,
+          identifier: identifier,
           authProvider: authProvider,
           parentProvider: parentProvider,
         );
@@ -73,6 +99,10 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
             BCrypt.checkpw(password, localParent.passwordHash);
 
         if (!isCorrect) {
+          await DatabaseService.instance.recordLoginAttempt(
+            identifier: identifier,
+            success: false,
+          );
           if (!mounted) return;
           setState(() {
             _errorMessage = 'Incorrect password.';
@@ -87,17 +117,22 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
           // Offline — proceed
         }
 
+        await DatabaseService.instance.clearLoginAttempts(identifier);
         if (!mounted) return;
         parentProvider.setParent(localParent);
         Navigator.of(context).pushReplacementNamed('/parent-dashboard');
         return;
       }
 
+      await DatabaseService.instance.recordLoginAttempt(
+        identifier: identifier,
+        success: false,
+      );
       if (!mounted) return;
       setState(() {
         _errorMessage =
             'Username not found on this device.\n'
-            'If this is a new device, log in with your email instead.';
+            'If a new device, log in with your email instead.';
         _isSubmitting = false;
       });
     } catch (e) {
@@ -110,9 +145,10 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
     }
   }
 
-  Future<void> _loginWithEmail({
+    Future<void> _loginWithEmail({
     required String email,
     required String password,
+    required String identifier,
     required AuthProvider authProvider,
     required ParentProvider parentProvider,
   }) async {
@@ -120,6 +156,11 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
     if (!mounted) return;
 
     if (!firebaseOk) {
+      await DatabaseService.instance.recordLoginAttempt(
+        identifier: identifier,
+        success: false,
+      );
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Incorrect email or password.';
         _isSubmitting = false;
@@ -139,6 +180,10 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
 
     final uid = authProvider.uid;
     if (uid == null) {
+      await DatabaseService.instance.recordLoginAttempt(
+        identifier: identifier,
+        success: false,
+      );
       if (!mounted) return;
       setState(() {
         _errorMessage = 'Session error. Try again.';
@@ -176,6 +221,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
 
     // Continue with local save + dashboard
     if (localParent != null) {
+      await DatabaseService.instance.clearLoginAttempts(identifier);
       // Refresh classes/children
       if (localParent.firebaseUid != null) {
         try {
@@ -235,6 +281,8 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       localParentId: created.id!,
       firebaseUid: uid,
     );
+
+    await DatabaseService.instance.clearLoginAttempts(identifier);
 
     if (!mounted) return;
     parentProvider.setParent(created);

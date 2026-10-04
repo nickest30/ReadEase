@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:provider/provider.dart';
@@ -33,11 +34,36 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
     super.dispose();
   }
 
+  String _formatRemaining(Duration d) {
+    if (d.inMinutes >= 1) {
+      final m = d.inMinutes;
+      final s = d.inSeconds % 60;
+      return s == 0 ? '$m min' : '$m min $s sec';
+    }
+    return '${d.inSeconds} sec';
+  }
+
   Future<void> _handleSignIn() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Capture providers BEFORE any await (fixes use_build_context_synchronously)
     final authProvider = context.read<AuthProvider>();
     final studentProvider = context.read<StudentProvider>();
+
+    final identifier = _usernameController.text.trim().toLowerCase();
+
+    // ── Rate limit gate ──
+    final remaining = await DatabaseService.instance
+        .loginRateLimitRemaining(identifier);
+    if (remaining != null) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage =
+            'Too many failed attempts. Try again in ${_formatRemaining(remaining)}.';
+        _isSubmitting = false;
+      });
+      return;
+    }
 
     setState(() {
       _isSubmitting = true;
@@ -53,8 +79,13 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
           await DatabaseService.instance.getStudentByUsername(username);
 
       if (localStudent != null) {
+        // Verify local password
         final storedHash = localStudent.passwordHash;
         if (storedHash == null || storedHash.isEmpty) {
+          await DatabaseService.instance.recordLoginAttempt(
+            identifier: identifier,
+            success: false,
+          );
           if (!mounted) return;
           setState(() {
             _errorMessage =
@@ -66,11 +97,12 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
         }
 
         final isCorrect = BCrypt.checkpw(password, storedHash);
-        if (!isCorrect) {
-          // ... existing wrong-password handling
-        }
 
         if (!isCorrect) {
+          await DatabaseService.instance.recordLoginAttempt(
+            identifier: identifier,
+            success: false,
+          );
           if (!mounted) return;
           setState(() {
             _errorMessage = 'Incorrect password.';
@@ -79,6 +111,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
           return;
         }
 
+        // Local login succeeded — try Firebase restore silently
         if (localStudent.firebaseUid != null) {
           try {
             await authProvider.signIn(
@@ -90,6 +123,8 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
           }
         }
 
+        await DatabaseService.instance.clearLoginAttempts(identifier);
+
         if (!mounted) return;
         studentProvider.setStudent(localStudent);
         _navigateAfterLogin(localStudent);
@@ -99,10 +134,15 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
       // ── STEP 2: Not found locally → try cloud login ──
       debugPrint('🔑 Local miss — trying cloud for "$username"');
 
+      // 2a. Firebase Auth with synthetic email
       final syntheticEmail = '$username@readease.app';
       final firebaseOk = await authProvider.signIn(syntheticEmail, password);
 
       if (!firebaseOk) {
+        await DatabaseService.instance.recordLoginAttempt(
+          identifier: identifier,
+          success: false,
+        );
         if (!mounted) return;
         setState(() {
           _errorMessage =
@@ -112,8 +152,13 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
         return;
       }
 
+      // 2b. Fetch profile by UID
       final uid = authProvider.uid;
       if (uid == null) {
+        await DatabaseService.instance.recordLoginAttempt(
+          identifier: identifier,
+          success: false,
+        );
         if (!mounted) return;
         setState(() {
           _errorMessage = 'Session error. Try again.';
@@ -125,6 +170,10 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
       final cloudDoc = await FirestoreService.instance.getStudentByUid(uid);
 
       if (cloudDoc == null) {
+        await DatabaseService.instance.recordLoginAttempt(
+          identifier: identifier,
+          success: false,
+        );
         if (!mounted) return;
         setState(() {
           _errorMessage =
@@ -135,6 +184,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
         return;
       }
 
+      // 2c. Save to local SQLite
       final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
 
       final newLocalStudent = Student(
@@ -159,6 +209,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
           await DatabaseService.instance.getStudentById(newLocalId);
 
       if (createdLocal == null) {
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'Could not save your profile. Try again.';
           _isSubmitting = false;
@@ -166,13 +217,21 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
         return;
       }
 
-      debugPrint('🔑 Cloud login succeeded — local profile created ($newLocalId)');
-
-      CloudSyncService.instance.downloadStudentData(
-        localStudentId: createdLocal.id!,
-        firebaseUid: createdLocal.firebaseUid!,
+      debugPrint(
+        '🔑 Cloud login succeeded — local profile created ($newLocalId)',
       );
 
+      // Hydrate cloud data (results, badges, mastery, encounters, starred)
+      unawaited(
+        CloudSyncService.instance.downloadStudentData(
+          localStudentId: createdLocal.id!,
+          firebaseUid: createdLocal.firebaseUid!,
+        ),
+      );
+
+      await DatabaseService.instance.clearLoginAttempts(identifier);
+
+      if (!mounted) return;
       studentProvider.setStudent(createdLocal);
       _navigateAfterLogin(createdLocal);
     } catch (e) {
@@ -185,6 +244,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
     }
   }
 
+  /// After successful login, decide whether to send to Set PIN or Home.
   void _navigateAfterLogin(Student student) {
     if (student.pinHash == null || student.pinHash!.isEmpty) {
       Navigator.of(context).pushReplacementNamed(
@@ -228,8 +288,9 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
                   controller: _usernameController,
                   textInputAction: TextInputAction.next,
                   validator: Validators.username,
-                  decoration:
-                      buildInputDecoration(hint: 'Enter your username'),
+                  decoration: buildInputDecoration(
+                    hint: 'Enter your username',
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -238,8 +299,9 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
                   controller: _passwordController,
                   hintText: 'Enter your password',
                   textInputAction: TextInputAction.done,
-                  validator: (v) =>
-                      (v == null || v.isEmpty) ? 'Please enter your password' : null,
+                  validator: (v) => (v == null || v.isEmpty)
+                      ? 'Please enter your password'
+                      : null,
                 ),
 
                 if (_errorMessage != null) ...[

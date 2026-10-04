@@ -38,11 +38,36 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
     super.dispose();
   }
 
+  String _formatRemaining(Duration d) {
+    if (d.inMinutes >= 1) {
+      final m = d.inMinutes;
+      final s = d.inSeconds % 60;
+      return s == 0 ? '$m min' : '$m min $s sec';
+    }
+    return '${d.inSeconds} sec';
+  }
+
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Capture providers BEFORE any await
     final authProvider = context.read<AuthProvider>();
     final teacherProvider = context.read<TeacherProvider>();
+
+    final identifier = _identifierController.text.trim().toLowerCase();
+
+    // ── Rate limit gate ──
+    final remaining = await DatabaseService.instance
+        .loginRateLimitRemaining(identifier);
+    if (remaining != null) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage =
+            'Too many failed attempts. Try again in ${_formatRemaining(remaining)}.';
+        _isSubmitting = false;
+      });
+      return;
+    }
 
     setState(() {
       _isSubmitting = true;
@@ -59,6 +84,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
         await _loginWithEmail(
           email: input.toLowerCase(),
           password: password,
+          identifier: identifier,
           authProvider: authProvider,
           teacherProvider: teacherProvider,
         );
@@ -74,6 +100,10 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
             BCrypt.checkpw(password, localTeacher.passwordHash);
 
         if (!isCorrect) {
+          await DatabaseService.instance.recordLoginAttempt(
+            identifier: identifier,
+            success: false,
+          );
           if (!mounted) return;
           setState(() {
             _errorMessage = 'Incorrect password.';
@@ -101,12 +131,19 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
           }
         }
 
+        await DatabaseService.instance.clearLoginAttempts(identifier);
+
         if (!mounted) return;
         teacherProvider.setTeacher(localTeacher);
         Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
         return;
       }
 
+      // Local miss — username not found
+      await DatabaseService.instance.recordLoginAttempt(
+        identifier: identifier,
+        success: false,
+      );
       if (!mounted) return;
       setState(() {
         _errorMessage =
@@ -127,6 +164,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
   Future<void> _loginWithEmail({
     required String email,
     required String password,
+    required String identifier,
     required AuthProvider authProvider,
     required TeacherProvider teacherProvider,
   }) async {
@@ -134,6 +172,11 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
     if (!mounted) return;
 
     if (!firebaseOk) {
+      await DatabaseService.instance.recordLoginAttempt(
+        identifier: identifier,
+        success: false,
+      );
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Incorrect email or password.';
         _isSubmitting = false;
@@ -143,6 +186,10 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
 
     final uid = authProvider.uid;
     if (uid == null) {
+      await DatabaseService.instance.recordLoginAttempt(
+        identifier: identifier,
+        success: false,
+      );
       if (!mounted) return;
       setState(() {
         _errorMessage = 'Session error. Try again.';
@@ -152,7 +199,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
     }
 
     // ── Phone 2FA gate ──
-    // Fetch cloud doc to check phoneVerified state.
     final cloudDoc = await FirestoreService.instance.getTeacherByUidFull(uid);
 
     final phoneVerified = cloudDoc?['phoneVerified'] == true;
@@ -204,6 +250,8 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
         }
       }
 
+      await DatabaseService.instance.clearLoginAttempts(identifier);
+
       if (!mounted) return;
       teacherProvider.setTeacher(localTeacher);
       Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
@@ -212,6 +260,10 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
 
     // Not local — fetch from Firestore
     if (cloudDoc == null) {
+      await DatabaseService.instance.recordLoginAttempt(
+        identifier: identifier,
+        success: false,
+      );
       if (!mounted) return;
       setState(() {
         _errorMessage =
@@ -242,6 +294,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
         await DatabaseService.instance.getTeacherById(newId);
 
     if (created == null) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Could not save profile. Try again.';
         _isSubmitting = false;
@@ -255,6 +308,8 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
       localTeacherId: created.id!,
       firebaseUid: uid,
     );
+
+    await DatabaseService.instance.clearLoginAttempts(identifier);
 
     if (!mounted) return;
     teacherProvider.setTeacher(created);

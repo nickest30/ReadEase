@@ -2428,6 +2428,31 @@ class DatabaseService {
     return count >= kMaxLoginAttempts;
   }
 
+  Future<Duration?> loginRateLimitRemaining(String identifier) async {
+    final db = await database;
+    final cutoff =
+        DateTime.now().subtract(kRateLimitWindow).toIso8601String();
+
+    final rows = await db.query(
+      'login_attempts',
+      columns: ['attempt_at'],
+      where: 'identifier = ? AND attempt_at > ? AND success = 0',
+      whereArgs: [identifier.toLowerCase(), cutoff],
+      orderBy: 'attempt_at DESC',
+    );
+
+    if (rows.length < kMaxLoginAttempts) return null;
+
+    final mostRecentRaw = rows.first['attempt_at'] as String?;
+    if (mostRecentRaw == null) return null;
+    final mostRecent = DateTime.tryParse(mostRecentRaw);
+    if (mostRecent == null) return null;
+
+    final expiry = mostRecent.add(kRateLimitWindow);
+    final remaining = expiry.difference(DateTime.now());
+    return remaining.isNegative ? null : remaining;
+  }
+
   /// Clear failed attempts for an identifier (call after successful login).
   Future<void> clearLoginAttempts(String identifier) async {
     final db = await database;
