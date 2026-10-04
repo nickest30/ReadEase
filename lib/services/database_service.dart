@@ -2498,4 +2498,28 @@ class DatabaseService {
     return LessonBatch.fromMap(maps.first);
   }
 
+  /// Save a bcrypt hash of the parent's backup code.
+  Future<bool> updateParentBackupCodeHash(int parentId, String hash) async {
+    final db = await database;
+    final rows = await db.update(
+      'parents',
+      {'backup_code_hash': hash, 'backup_code_used': 0},
+      where: 'id = ?',
+      whereArgs: [parentId],
+    );
+    return rows > 0;
+  }
+
+  /// Save a bcrypt hash of the teacher's backup code.
+  Future<bool> updateTeacherBackupCodeHash(int teacherId, String hash) async {
+    final db = await database;
+    final rows = await db.update(
+      'teachers',
+      {'backup_code_hash': hash, 'backup_code_used': 0},
+      where: 'id = ?',
+      whereArgs: [teacherId],
+    );
+    return rows > 0;
+  }
+
 }

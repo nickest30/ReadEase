@@ -1158,4 +1158,26 @@ class FirestoreService {
     }
   }
 
+
+  /// Save the raw phone number at signup, before verification.
+  /// `phoneVerified` is set to false; a separate call to
+  /// `markPhoneVerified()` flips it after the OTP succeeds.
+  Future<void> markPhoneNumber(
+    String uid,
+    String role,
+    String phoneNumber,
+  ) async {
+    final collection = role == 'parent' ? 'parents' : 'teachers';
+    try {
+      await _db.collection(collection).doc(uid).set({
+        'phoneNumber': phoneNumber,
+        'phoneVerified': false,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      debugPrint('🔥 Firestore: markPhoneNumber($uid, $role)');
+    } catch (e) {
+      debugPrint('🔥 markPhoneNumber ERROR: $e');
+    }
+  }
+
 }

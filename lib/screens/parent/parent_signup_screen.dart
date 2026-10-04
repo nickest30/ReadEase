@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:provider/provider.dart';
 
@@ -8,8 +10,11 @@ import '../../services/firestore_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/parent_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/backup_code.dart';
 import '../../utils/validators.dart';
 import '../../widgets/app_form.dart';
+import '../shared/backup_code_screen.dart';
+import '../shared/otp_verification_screen.dart';
 
 class ParentSignupScreen extends StatefulWidget {
   const ParentSignupScreen({super.key});
@@ -23,6 +28,7 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
   final _usernameController = TextEditingController();
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
   bool _isSubmitting = false;
@@ -33,9 +39,23 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
     _usernameController.dispose();
     _fullNameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
+  }
+
+  /// Normalize PH phone to E.164. Returns null if invalid.
+  /// Accepts: "9123456789" (10 digits), "+639123456789", "09123456789".
+  String? _normalizePhone(String raw) {
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) return null;
+    if (digits.startsWith('63') && digits.length == 12) return '+$digits';
+    if (digits.startsWith('0') && digits.length == 11) {
+      return '+63${digits.substring(1)}';
+    }
+    if (digits.length == 10) return '+63$digits';
+    return null;
   }
 
   Future<void> _handleSignup() async {
@@ -54,7 +74,11 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
 
     try {
       final email = _emailController.text.trim().toLowerCase();
+      final phoneRaw = _phoneController.text.trim();
+      final normalizedPhone =
+          phoneRaw.isNotEmpty ? _normalizePhone(phoneRaw) : null;
 
+      // Local uniqueness check
       final existing = await DatabaseService.instance
           .getParentByUsername(_usernameController.text.trim());
       if (existing != null) {
@@ -92,8 +116,8 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
         passwordHash: hashedPassword,
         fullName: _fullNameController.text.trim(),
         email: email,
-        firebaseUid: firebaseUid,
         createdAt: DateTime.now().toIso8601String(),
+        firebaseUid: firebaseUid,
       );
 
       final newId = await DatabaseService.instance.insertParent(newParent);
@@ -116,17 +140,131 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
         username: createdParent.username,
         fullName: createdParent.fullName,
         email: createdParent.email,
+        phoneNumber: normalizedPhone,
+        phoneVerified: false,
+        emailVerified: false,
       );
       if (!mounted) return;
 
-      Navigator.of(context).pushReplacementNamed('/parent-dashboard');
+      // Send email verification in background (non-blocking)
+      unawaited(_sendEmailVerification(authProvider));
+
+      // ── Phone path or skip ──
+      if (normalizedPhone != null) {
+        await _runPhoneVerificationFlow(
+          normalizedPhone: normalizedPhone,
+          parent: createdParent,
+          authProvider: authProvider,
+        );
+      } else {
+        // No phone — straight to dashboard
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed('/parent-dashboard');
+      }
     } catch (e) {
+      debugPrint('👨‍👩‍👧 Signup ERROR: $e');
       if (!mounted) return;
       setState(() {
         _errorMessage = 'Something went wrong. Please try again.';
         _isSubmitting = false;
       });
     }
+  }
+
+  Future<void> _sendEmailVerification(AuthProvider authProvider) async {
+    try {
+      await authProvider.sendVerificationEmail();
+      debugPrint('📧 Verification email sent');
+    } catch (e) {
+      debugPrint('📧 sendVerificationEmail failed: $e');
+    }
+  }
+
+  /// Start phone verification → push OTP screen → on success show backup code.
+  Future<void> _runPhoneVerificationFlow({
+    required String normalizedPhone,
+    required Parent parent,
+    required AuthProvider authProvider,
+  }) async {
+    // Kick off phone verification — the pending verification ID is
+    // stored inside AuthService, OTP screen reads from there.
+    final completer = Completer<void>();
+    bool codeSent = false;
+
+    await authProvider.startPhoneVerification(
+      phoneNumber: normalizedPhone,
+      onCodeSent: () {
+        codeSent = true;
+        if (!completer.isCompleted) completer.complete();
+      },
+      onAutoVerified: () {
+        if (!completer.isCompleted) completer.complete();
+      },
+      onError: (msg) {
+        if (!completer.isCompleted) {
+          completer.completeError(msg);
+        }
+      },
+    );
+
+    try {
+      await completer.future;
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Could not send code: $e';
+        _isSubmitting = false;
+      });
+      return;
+    }
+
+    if (!mounted || !codeSent) return;
+
+    // Navigate to OTP screen
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => OtpVerificationScreen(
+          phoneNumber: normalizedPhone,
+          accentColor: AppColors.accentPurple,
+          backgroundColor: AppColors.parentBg,
+          isSignup: true,
+          onVerified: () => Navigator.of(context).pop(),
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
+    // OTP done → generate + show backup code
+    final backupCode = BackupCode.generate();
+    final hashedBackup = BCrypt.hashpw(backupCode, BCrypt.gensalt());
+
+    await DatabaseService.instance
+        .updateParentBackupCodeHash(parent.id!, hashedBackup);
+
+    // Mark phone verified in Firestore
+    if (parent.firebaseUid != null) {
+      await FirestoreService.instance
+          .markPhoneVerified(parent.firebaseUid!, 'parent');
+    }
+
+    if (!mounted) return;
+
+    final saved = await BackupCodeDialog.show(
+      context,
+      code: backupCode,
+      accentColor: AppColors.accentPurple,
+    );
+
+    if (!saved || !mounted) return;
+
+    // Trust this device for 30 days
+    if (parent.firebaseUid != null) {
+      await authProvider.trustCurrentDevice(parent.firebaseUid!);
+    }
+
+    if (!mounted) return;
+    Navigator.of(context).pushReplacementNamed('/parent-dashboard');
   }
 
   Future<bool> _showTermsModal() async {
@@ -166,7 +304,8 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
               ),
               Text(
                 '• Name and grade (to personalize lessons)\n'
-                '• Reading progress and badges',
+                '• Reading progress and badges\n'
+                '• Email and optional phone number (for account security)',
                 style: TextStyle(fontFamily: 'Nunito', fontSize: 13),
               ),
               SizedBox(height: 10),
@@ -179,7 +318,8 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
                 ),
               ),
               Text(
-                '• On this device by default. Cloud sync activates when you register.',
+                '• On this device by default. Cloud sync activates '
+                'when you register.',
                 style: TextStyle(fontFamily: 'Nunito', fontSize: 13),
               ),
               SizedBox(height: 10),
@@ -259,7 +399,7 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
 
                 const SizedBox(height: AppSpacing.sm),
 
-                // Header row with Motter
+                // Header
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -285,7 +425,8 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
                         width: 120,
                         height: 120,
                         decoration: BoxDecoration(
-                          color: AppColors.accentPurple.withValues(alpha: 0.15),
+                          color:
+                              AppColors.accentPurple.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: AppColors.accentPurple,
@@ -304,7 +445,7 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
 
                 const SizedBox(height: AppSpacing.xl),
 
-                // Full Name
+                // Full name
                 const FieldLabel('Full Name'),
                 TextFormField(
                   controller: _fullNameController,
@@ -347,11 +488,52 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
 
                 const SizedBox(height: AppSpacing.md),
 
+                // ── Phone (optional) ──
+                const FieldLabel('Phone Number (optional)'),
+                TextFormField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'[\d\s\+\-\(\)]'),
+                    ),
+                  ],
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    // validate only if provided
+                    if (_normalizePhone(v) == null) {
+                      return 'Enter a valid PH number (e.g. 9123456789)';
+                    }
+                    return null;
+                  },
+                  decoration: buildInputDecoration(
+                    hint: '912 345 6789',
+                    focusColor: AppColors.accentPurple,
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(top: 6, left: 4),
+                  child: Text(
+                    'Recommended. We\'ll send a one-time code to this number '
+                    'when you sign in on a new device. You can skip this and '
+                    'add it later in Settings.',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: AppSpacing.md),
+
                 // Password
                 const FieldLabel('Password'),
                 PasswordField(
                   controller: _passwordController,
-                  hintText: 'At least 6 characters',
+                  hintText: 'At least 8 chars, mix letters/numbers',
                   textInputAction: TextInputAction.next,
                   focusColor: AppColors.accentPurple,
                   validator: (v) => Validators.password(v),
@@ -359,7 +541,7 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
 
                 const SizedBox(height: AppSpacing.md),
 
-                // Confirm Password
+                // Confirm
                 const FieldLabel('Confirm Password'),
                 PasswordField(
                   controller: _confirmController,
