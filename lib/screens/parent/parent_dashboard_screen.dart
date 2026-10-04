@@ -8,6 +8,7 @@ import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/error_state.dart';
+import '../../widgets/email_verification_banner.dart';
 
 class ParentDashboardScreen extends StatefulWidget {
   const ParentDashboardScreen({super.key});
@@ -16,7 +17,7 @@ class ParentDashboardScreen extends StatefulWidget {
   State<ParentDashboardScreen> createState() => _ParentDashboardScreenState();
 }
 
-class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
+class _ParentDashboardScreenState extends State<ParentDashboardScreen> with WidgetsBindingObserver {
   List<Student> _children = [];
   bool _loading = true;
   String? _error;
@@ -24,7 +25,24 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadChildren());
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadChildren();
+      _checkEmailVerification();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkEmailVerification();
+    }
   }
 
   Future<void> _loadChildren() async {
@@ -104,6 +122,27 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         _loading = false;
         _error = 'We couldn\'t load your children right now.';
       });
+    }
+  }
+
+  Future<void> _checkEmailVerification() async {
+    final parent = context.read<ParentProvider>().currentParent;
+    if (parent == null || parent.firebaseUid == null) return;
+    if (parent.emailVerified) return; // already verified, nothing to do
+
+    final authProvider = context.read<AuthProvider>();
+    final verified = await authProvider.checkEmailVerified();
+    if (!verified || !mounted) return;
+
+    // Update local + cloud
+    await DatabaseService.instance.markParentEmailVerified(parent.id!);
+    await FirestoreService.instance
+        .markEmailVerified(parent.firebaseUid!, 'parent');
+
+    // Refresh provider so the banner disappears
+    final updated = await DatabaseService.instance.getParentById(parent.id!);
+    if (updated != null && mounted) {
+      context.read<ParentProvider>().setParent(updated);
     }
   }
 
@@ -199,7 +238,16 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
             children: [
               const SizedBox(height: AppSpacing.md),
               _buildHeader(parent.fullName),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.md),
+
+              // Email verification banner (only shows if not verified)
+              if (parent.firebaseUid != null && !parent.emailVerified)
+                EmailVerificationBanner(
+                  accentColor: AppColors.accentPurple,
+                  role: 'parent',
+                ),
+
+              const SizedBox(height: AppSpacing.sm),
               Expanded(child: _buildBody()),
               const SizedBox(height: AppSpacing.md),
               _buildActions(),

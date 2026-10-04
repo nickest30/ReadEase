@@ -5,7 +5,9 @@ import '../../models/class_group.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/teacher_provider.dart';
 import '../../services/database_service.dart';
+import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
+import '../../widgets/email_verification_banner.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({super.key});
@@ -15,14 +17,32 @@ class TeacherDashboardScreen extends StatefulWidget {
       _TeacherDashboardScreenState();
 }
 
-class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
+class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
+    with WidgetsBindingObserver {
   List<ClassGroup> _classes = [];
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadClasses());
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadClasses();
+      _checkEmailVerification();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkEmailVerification();
+    }
   }
 
   Future<void> _loadClasses() async {
@@ -36,6 +56,26 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       _classes = classes;
       _loading = false;
     });
+  }
+
+  Future<void> _checkEmailVerification() async {
+    final teacher = context.read<TeacherProvider>().currentTeacher;
+    if (teacher == null || teacher.firebaseUid == null) return;
+    if (teacher.emailVerified) return;
+
+    final authProvider = context.read<AuthProvider>();
+    final verified = await authProvider.checkEmailVerified();
+    if (!verified || !mounted) return;
+
+    await DatabaseService.instance.markTeacherEmailVerified(teacher.id!);
+    await FirestoreService.instance
+        .markEmailVerified(teacher.firebaseUid!, 'teacher');
+
+    final updated =
+        await DatabaseService.instance.getTeacherById(teacher.id!);
+    if (updated != null && mounted) {
+      context.read<TeacherProvider>().setTeacher(updated);
+    }
   }
 
   Future<void> _handleLogout() async {
@@ -174,7 +214,16 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 ],
               ),
 
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.md),
+
+              // ── Email verification banner (only when unverified) ──
+              if (teacher.firebaseUid != null && !teacher.emailVerified)
+                EmailVerificationBanner(
+                  accentColor: AppColors.accentYellow,
+                  role: 'teacher',
+                ),
+
+              const SizedBox(height: AppSpacing.sm),
 
               const Text(
                 'My Classes',
@@ -374,8 +423,8 @@ class _ClassCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 8, vertical: 2),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                 color: AppColors.introBg,
                 borderRadius: BorderRadius.circular(8),

@@ -1271,6 +1271,17 @@ class DatabaseService {
     );
   }
 
+  Future<bool> markParentEmailVerified(int parentId) async {
+    final db = await database;
+    final rows = await db.update(
+      'parents',
+      {'email_verified': 1},
+      where: 'id = ?',
+      whereArgs: [parentId],
+    );
+    return rows > 0;
+  }
+
   // ---------- Teacher methods ----------
 
   Future<int> insertTeacher(Teacher teacher) async {
@@ -1311,6 +1322,17 @@ class DatabaseService {
     );
     if (maps.isEmpty) return null;
     return Teacher.fromMap(maps.first);
+  }
+
+  Future<bool> markTeacherEmailVerified(int teacherId) async {
+    final db = await database;
+    final rows = await db.update(
+      'teachers',
+      {'email_verified': 1},
+      where: 'id = ?',
+      whereArgs: [teacherId],
+    );
+    return rows > 0;
   }
 
   // ---------- ClassGroup methods ----------

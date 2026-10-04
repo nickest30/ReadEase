@@ -176,6 +176,10 @@ class AuthProvider extends ChangeNotifier {
     return AuthService.instance.isEmailVerified();
   }
 
+  Future<bool> checkEmailVerified() async {
+    return AuthService.instance.isEmailVerified();
+  }
+
   /// Start phone verification flow.
   /// Used at signup (linked to account) and login (as 2FA step).
   Future<void> startPhoneVerification({

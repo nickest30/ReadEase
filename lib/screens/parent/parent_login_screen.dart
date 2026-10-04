@@ -258,6 +258,9 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       passwordHash: hashedPassword,
       fullName: (cloudDoc['fullName'] ?? '') as String,
       email: email,
+      emailVerified: cloudDoc['emailVerified'] == true,
+      phoneNumber: cloudDoc['phoneNumber'] as String?,
+      phoneVerified: cloudDoc['phoneVerified'] == true,
       firebaseUid: uid,
       createdAt: DateTime.now().toIso8601String(),
     );
