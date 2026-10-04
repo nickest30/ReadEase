@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../providers/auth_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../../providers/connectivity_provider.dart';
 
 class JoinClassScreen extends StatefulWidget {
   const JoinClassScreen({super.key});
@@ -69,7 +69,10 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
   Future<void> _confirmJoin() async {
     if (_foundClass == null) return;
 
-    final student = context.read<StudentProvider>().currentStudent;
+    final studentProvider = context.read<StudentProvider>();
+    final authProvider = context.read<AuthProvider>();
+
+    final student = studentProvider.currentStudent;
     if (student == null || student.id == null) return;
 
     if (student.firebaseUid == null) {
@@ -78,6 +81,27 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
             'Please connect to the internet and log in with your full credentials to join a class.';
       });
       return;
+    }
+
+    // ── Ensure Firebase Auth session is active ──
+    // Without this, the Firestore enrollment write below fails silently
+    // with PERMISSION_DENIED (common right after a PIN-only login).
+    if (authProvider.uid != student.firebaseUid) {
+      debugPrint('🔑 JoinClass: restoring session for ${student.firebaseUid}');
+      final restored = await authProvider.tryRestoreSessionFor(
+        uid: student.firebaseUid!,
+      );
+
+      if (!mounted) return;
+
+      if (!restored) {
+        setState(() {
+          _isSubmitting = false;
+          _errorMessage =
+              'Could not connect. Please check your internet and try again.';
+        });
+        return;
+      }
     }
 
     // ── Warn if switching classes ──
@@ -150,8 +174,8 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
     final classFirestoreId = _foundClass!['firestoreId'] as String;
     final className = _foundClass!['className'] as String;
 
-    debugPrint('🔑 DEBUG student.firebaseUid = ${student.firebaseUid}');
-    debugPrint('🔑 DEBUG current auth uid    = ${FirebaseAuth.instance.currentUser?.uid}');
+    debugPrint('🔑 JoinClass: studentUid=${student.firebaseUid} '
+        'authUid=${authProvider.uid}');
 
     // 1. Enroll in Firestore
     final enrolled = await FirestoreService.instance.transferStudent(
@@ -188,7 +212,7 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
         await DatabaseService.instance.getStudentById(student.id!);
     if (!mounted || refreshed == null) return;
 
-    context.read<StudentProvider>().updateStudent(refreshed);
+    studentProvider.setStudent(refreshed);
 
     // 4. Show success
     await showDialog(
