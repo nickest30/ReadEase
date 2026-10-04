@@ -4,9 +4,13 @@ import 'package:provider/provider.dart';
 
 import '../../models/student.dart';
 import '../../services/database_service.dart';
+import '../../services/firestore_service.dart';
+import '../../services/cloud_sync_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/validators.dart';
+import '../../widgets/app_form.dart';
 
 class StudentSignInScreen extends StatefulWidget {
   const StudentSignInScreen({super.key});
@@ -16,6 +20,7 @@ class StudentSignInScreen extends StatefulWidget {
 }
 
 class _StudentSignInScreenState extends State<StudentSignInScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isSubmitting = false;
@@ -29,13 +34,8 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
   }
 
   Future<void> _handleSignIn() async {
-    if (_usernameController.text.trim().isEmpty ||
-        _passwordController.text.isEmpty) {
-      setState(() => _errorMessage = 'Please fill in all fields.');
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
-    // ── Capture providers BEFORE any await ──
     final authProvider = context.read<AuthProvider>();
     final studentProvider = context.read<StudentProvider>();
 
@@ -46,94 +46,137 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
 
     try {
       final username = _usernameController.text.trim().toLowerCase();
+      final password = _passwordController.text;
 
-      final student =
+      // ── STEP 1: Try local SQLite first ──
+      Student? localStudent =
           await DatabaseService.instance.getStudentByUsername(username);
 
-      if (!mounted) return;
+      if (localStudent != null) {
+        final storedHash = localStudent.passwordHash;
+        if (storedHash == null || storedHash.isEmpty) {
+          if (!mounted) return;
+          setState(() {
+            _errorMessage =
+                'This account has no password set on this device. '
+                'Use your PIN or ask your parent to re-link.';
+            _isSubmitting = false;
+          });
+          return;
+        }
 
-      if (student == null) {
-        setState(() {
-          _errorMessage = 'Username not found on this device.';
-          _isSubmitting = false;
-        });
-        return;
-      }
+        final isCorrect = BCrypt.checkpw(password, storedHash);
+        if (!isCorrect) {
+          // ... existing wrong-password handling
+        }
 
-      final isCorrect = BCrypt.checkpw(
-        _passwordController.text,
-        student.passwordHash,
-      );
+        if (!isCorrect) {
+          if (!mounted) return;
+          setState(() {
+            _errorMessage = 'Incorrect password.';
+            _isSubmitting = false;
+          });
+          return;
+        }
 
-      if (!mounted) return;
-
-      if (!isCorrect) {
-        setState(() {
-          _errorMessage = 'Incorrect password.';
-          _isSubmitting = false;
-        });
-        return;
-      }
-
-      // ── Firebase sign-in ──
-      final syntheticEmail = '$username@readease.app';
-      final firebaseOk = await authProvider.signIn(
-        syntheticEmail,
-        _passwordController.text,
-      );
-
-      if (!mounted) return;
-
-      // Backfill firebase_uid if missing
-      Student finalStudent = student;
-      if (firebaseOk && student.firebaseUid == null) {
-        final uid = authProvider.uid;
-        if (uid != null) {
-          final updated = await DatabaseService.instance
-              .updateStudentFirebaseUid(student.id!, uid);
-          if (updated) {
-            final refreshed = await DatabaseService.instance
-                .getStudentById(student.id!);
-            if (refreshed != null) {
-              finalStudent = refreshed;
-            }
+        if (localStudent.firebaseUid != null) {
+          try {
+            await authProvider.signIn(
+              '${localStudent.username}@readease.app',
+              password,
+            );
+          } catch (_) {
+            // Offline — proceed
           }
         }
+
+        if (!mounted) return;
+        studentProvider.setStudent(localStudent);
+        _navigateAfterLogin(localStudent);
+        return;
       }
 
-      if (!mounted) return;
+      // ── STEP 2: Not found locally → try cloud login ──
+      debugPrint('🔑 Local miss — trying cloud for "$username"');
 
-      studentProvider.setStudent(finalStudent);
+      final syntheticEmail = '$username@readease.app';
+      final firebaseOk = await authProvider.signIn(syntheticEmail, password);
 
       if (!firebaseOk) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Signed in offline. Cloud features will sync later.',
-            ),
-            duration: Duration(seconds: 3),
-          ),
-        );
+        if (!mounted) return;
+        setState(() {
+          _errorMessage =
+              'Username not found. Try again or register a new account.';
+          _isSubmitting = false;
+        });
+        return;
       }
 
-      if (!mounted) return;
-      if (finalStudent.pinHash != null && finalStudent.pinHash!.isNotEmpty) {
-        // PIN already set — go straight to dashboard
-        Navigator.of(context).pushReplacementNamed('/student-home');
-      } else {
-        // First-time login on this device — set PIN
-        if (finalStudent.pinHash != null && finalStudent.pinHash!.isNotEmpty) {
-          // PIN already set — go straight to dashboard
-          Navigator.of(context).pushReplacementNamed('/student-home');
-        } else {
-          // First-time login on this device — set PIN
-          Navigator.of(context).pushReplacementNamed(
-            '/set-pin',
-            arguments: finalStudent,
-          );
-        }
+      final uid = authProvider.uid;
+      if (uid == null) {
+        if (!mounted) return;
+        setState(() {
+          _errorMessage = 'Session error. Try again.';
+          _isSubmitting = false;
+        });
+        return;
       }
+
+      final cloudDoc = await FirestoreService.instance.getStudentByUid(uid);
+
+      if (cloudDoc == null) {
+        if (!mounted) return;
+        setState(() {
+          _errorMessage =
+              'Account found but profile data is missing. Contact support.';
+          _isSubmitting = false;
+        });
+        await authProvider.signOut();
+        return;
+      }
+
+      final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+
+      final newLocalStudent = Student(
+        username: username,
+        passwordHash: hashedPassword,
+        displayName: (cloudDoc['displayName'] ?? username) as String,
+        gradeLevel: (cloudDoc['gradeLevel'] ?? 1) as int,
+        totalPoints: (cloudDoc['totalPoints'] ?? 0) as int,
+        firebaseUid: cloudDoc['uid'] as String,
+        classFirestoreId: cloudDoc['classId'] as String?,
+        className: cloudDoc['className'] as String?,
+        parentId: null,
+        createdAt: DateTime.now().toIso8601String(),
+      );
+
+      final newLocalId = await DatabaseService.instance
+          .insertStudent(newLocalStudent);
+
+      if (!mounted) return;
+
+      final createdLocal =
+          await DatabaseService.instance.getStudentById(newLocalId);
+
+      if (createdLocal == null) {
+        setState(() {
+          _errorMessage = 'Could not save your profile. Try again.';
+          _isSubmitting = false;
+        });
+        return;
+      }
+
+      debugPrint('🔑 Cloud login succeeded — local profile created ($newLocalId)');
+
+      CloudSyncService.instance.downloadStudentData(
+        localStudentId: createdLocal.id!,
+        firebaseUid: createdLocal.firebaseUid!,
+      );
+
+      studentProvider.setStudent(createdLocal);
+      _navigateAfterLogin(createdLocal);
     } catch (e) {
+      debugPrint('🔑 SignIn ERROR: $e');
       if (!mounted) return;
       setState(() {
         _errorMessage = 'Something went wrong. Please try again.';
@@ -142,131 +185,110 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
     }
   }
 
+  void _navigateAfterLogin(Student student) {
+    if (student.pinHash == null || student.pinHash!.isEmpty) {
+      Navigator.of(context).pushReplacementNamed(
+        '/set-pin',
+        arguments: student,
+      );
+    } else {
+      Navigator.of(context).pushReplacementNamed('/student-home');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.arrow_back,
-                    color: AppColors.textPrimary),
-                alignment: Alignment.centerLeft,
-                padding: EdgeInsets.zero,
-              ),
-              const SizedBox(height: 16),
-              const Text('Sign In', style: AppText.h1),
-              const Text(
-                'Log in with your credentials',
-                style: AppText.caption,
-              ),
-              const SizedBox(height: 28),
-
-              const Text(
-                'Username',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textMuted,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.arrow_back,
+                      color: AppColors.textPrimary),
+                  alignment: Alignment.centerLeft,
+                  padding: EdgeInsets.zero,
                 ),
-              ),
-              const SizedBox(height: 5),
-              TextField(
-                controller: _usernameController,
-                decoration: _inputDecoration('Enter your username'),
-              ),
-              const SizedBox(height: 16),
-
-              const Text(
-                'Password',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textMuted,
+                const SizedBox(height: 16),
+                const Text('Sign In', style: AppText.h1),
+                const Text(
+                  'Log in with your credentials',
+                  style: AppText.caption,
                 ),
-              ),
-              const SizedBox(height: 5),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: _inputDecoration('Enter your password'),
-              ),
+                const SizedBox(height: 28),
 
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 14),
-                Text(
-                  _errorMessage!,
-                  style: const TextStyle(
-                    color: AppColors.textCoral,
-                    fontFamily: 'Nunito',
-                    fontWeight: FontWeight.w600,
+                const FieldLabel('Username'),
+                TextFormField(
+                  controller: _usernameController,
+                  textInputAction: TextInputAction.next,
+                  validator: Validators.username,
+                  decoration:
+                      buildInputDecoration(hint: 'Enter your username'),
+                ),
+                const SizedBox(height: 16),
+
+                const FieldLabel('Password'),
+                PasswordField(
+                  controller: _passwordController,
+                  hintText: 'Enter your password',
+                  textInputAction: TextInputAction.done,
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Please enter your password' : null,
+                ),
+
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    _errorMessage!,
+                    style: const TextStyle(
+                      color: AppColors.textCoral,
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 28),
+
+                SizedBox(
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _isSubmitting ? null : _handleSignIn,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentTeal,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          )
+                        : const Text(
+                            'LOGIN',
+                            style: TextStyle(
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                   ),
                 ),
               ],
-
-              const SizedBox(height: 28),
-
-              SizedBox(
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _handleSignIn,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentTeal,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.5,
-                          ),
-                        )
-                      : const Text(
-                          'LOGIN',
-                          style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      filled: true,
-      fillColor: AppColors.surface,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: AppColors.border),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: AppColors.border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.accentTeal, width: 2),
       ),
     );
   }

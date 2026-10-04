@@ -171,10 +171,10 @@ class _AddChildScreenState extends State<AddChildScreen> {
       if (childFirebaseUid != null) {
         await FirestoreService.instance.saveLinkedChild(
           childUid: childFirebaseUid,
+          username: newChild.username,
           displayName: newChild.displayName,
           gradeLevel: newChild.gradeLevel,
           parentUid: parentUid,
-          isLinked: true,
         );
       }
 

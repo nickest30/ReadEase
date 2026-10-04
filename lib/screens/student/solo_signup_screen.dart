@@ -8,6 +8,8 @@ import '../../services/firestore_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/validators.dart';
+import '../../widgets/app_form.dart';
 
 class SoloSignupScreen extends StatefulWidget {
   const SoloSignupScreen({super.key});
@@ -36,7 +38,6 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // ── Capture providers BEFORE any await ──
     final authProvider = context.read<AuthProvider>();
     final studentProvider = context.read<StudentProvider>();
 
@@ -49,12 +50,10 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
       final username = _usernameController.text.trim().toLowerCase();
       final password = _passwordController.text;
 
-      // 1. Check local uniqueness
+      // 1. Local uniqueness
       final existing = await DatabaseService.instance
           .getStudentByUsername(username);
-
       if (!mounted) return;
-
       if (existing != null) {
         setState(() {
           _errorMessage = 'That username is already taken on this device.';
@@ -63,19 +62,15 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
         return;
       }
 
-      // 2. Hash password locally for offline login
+      // 2. Hash password
       final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
 
-      // 3. Register with Firebase Auth using synthetic email
+      // 3. Register with Firebase Auth
       final syntheticEmail = '$username@readease.app';
-      final firebaseUid = await authProvider.register(
-        syntheticEmail,
-        password,
-      );
-
+      final firebaseUid =
+          await authProvider.register(syntheticEmail, password);
       if (!mounted) return;
 
-      // 4. If Firebase registration failed, show friendly message
       if (firebaseUid == null) {
         setState(() {
           _errorMessage =
@@ -86,16 +81,14 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
         return;
       }
 
-      // Save credentials to secure storage
       await authProvider.saveCredentials(
         uid: firebaseUid,
         email: syntheticEmail,
         password: password,
       );
-
       if (!mounted) return;
 
-      // 6. Create local Student record
+      // 6. Create local Student
       final newStudent = Student(
         username: username,
         passwordHash: hashedPassword,
@@ -106,28 +99,21 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
       );
 
       final newId = await DatabaseService.instance.insertStudent(newStudent);
-
       if (!mounted) return;
 
       final createdStudent =
           await DatabaseService.instance.getStudentById(newId);
-
       if (!mounted || createdStudent == null) return;
 
-      // 7. Sync student profile to Firestore
-      //    Creates students/{firebaseUid} so teachers can see enrollments.
+      // 7. Sync to Firestore
       await FirestoreService.instance.saveStudent(
         firebaseUid,
         createdStudent.displayName,
         createdStudent.gradeLevel,
       );
-
       if (!mounted) return;
 
-      // 8. Store in session
       studentProvider.setStudent(createdStudent);
-
-      // 9. Go to PIN setup
       Navigator.of(context).pushReplacementNamed(
         '/set-pin',
         arguments: createdStudent,
@@ -158,7 +144,6 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
               children: [
                 const SizedBox(height: AppSpacing.sm),
 
-                // Back button
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.arrow_back,
@@ -169,7 +154,7 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
 
                 const SizedBox(height: AppSpacing.sm),
 
-                // Header with Yse
+                // Header
                 Row(
                   children: [
                     const Expanded(
@@ -215,25 +200,18 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
                 const SizedBox(height: AppSpacing.xl),
 
                 // Username
-                _FieldLabel('Username'),
+                const FieldLabel('Username'),
                 TextFormField(
                   controller: _usernameController,
-                  decoration: _inputDecoration('Pick a username'),
-                  validator: (value) {
-                    if (value == null || value.trim().length < 3) {
-                      return 'Username must be at least 3 characters';
-                    }
-                    if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value.trim())) {
-                      return 'Only letters, numbers, and underscores';
-                    }
-                    return null;
-                  },
+                  textInputAction: TextInputAction.next,
+                  validator: Validators.username,
+                  decoration: buildInputDecoration(hint: 'Pick a username'),
                 ),
 
                 const SizedBox(height: AppSpacing.lg),
 
                 // Grade Level
-                _FieldLabel('Grade Level'),
+                const FieldLabel('Grade Level'),
                 GridView.count(
                   crossAxisCount: 3,
                   shrinkWrap: true,
@@ -281,33 +259,26 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
                 const SizedBox(height: AppSpacing.lg),
 
                 // Password
-                _FieldLabel('Password'),
-                TextFormField(
+                const FieldLabel('Password'),
+                PasswordField(
                   controller: _passwordController,
-                  obscureText: true,
-                  decoration: _inputDecoration('At least 6 characters'),
-                  validator: (value) {
-                    if (value == null || value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
+                  hintText: 'At least 6 characters',
+                  textInputAction: TextInputAction.next,
+                  validator: (v) => Validators.password(v),
                 ),
 
                 const SizedBox(height: AppSpacing.lg),
 
                 // Confirm Password
-                _FieldLabel('Confirm Password'),
-                TextFormField(
+                const FieldLabel('Confirm Password'),
+                PasswordField(
                   controller: _confirmController,
-                  obscureText: true,
-                  decoration: _inputDecoration('Re-enter your password'),
-                  validator: (value) {
-                    if (value != _passwordController.text) {
-                      return 'Passwords do not match';
-                    }
-                    return null;
-                  },
+                  hintText: 'Re-enter your password',
+                  textInputAction: TextInputAction.done,
+                  validator: (v) => Validators.confirmPassword(
+                    v,
+                    _passwordController.text,
+                  ),
                 ),
 
                 if (_errorMessage != null) ...[
@@ -347,7 +318,6 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
 
                 const SizedBox(height: AppSpacing.xl),
 
-                // Sign Up button
                 SizedBox(
                   height: 56,
                   child: ElevatedButton(
@@ -382,14 +352,13 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
 
                 const SizedBox(height: AppSpacing.md),
 
-                // Back button
                 SizedBox(
                   height: 52,
                   child: OutlinedButton(
                     onPressed: () => Navigator.of(context).pop(),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textMuted,
-                      side: BorderSide(color: AppColors.border),
+                      side: const BorderSide(color: AppColors.border),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppRadius.large),
                       ),
@@ -408,53 +377,6 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      filled: true,
-      fillColor: AppColors.surface,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.medium),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.medium),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.medium),
-        borderSide: const BorderSide(color: AppColors.accentTeal, width: 2),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────
-// Private widgets
-// ─────────────────────────────────────────────────────────
-
-class _FieldLabel extends StatelessWidget {
-  final String text;
-  const _FieldLabel(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontFamily: 'Nunito',
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textMuted,
         ),
       ),
     );

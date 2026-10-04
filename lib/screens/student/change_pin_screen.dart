@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
+import '../../widgets/number_pad.dart';
+import '../../widgets/pin_dots.dart';
 
 class ChangePinScreen extends StatefulWidget {
   const ChangePinScreen({super.key});
@@ -14,13 +17,14 @@ class ChangePinScreen extends StatefulWidget {
 }
 
 class _ChangePinScreenState extends State<ChangePinScreen> {
-  // Stages: 0=enter old PIN, 1=enter new PIN, 2=confirm new PIN
+  // 0 = enter current PIN, 1 = enter new PIN, 2 = confirm new PIN
   int _stage = 0;
   String _oldPin = '';
   String _newPin = '';
   String _confirmPin = '';
   String? _errorMessage;
   bool _isSaving = false;
+  PinDotState _dotState = PinDotState.idle;
 
   String get _currentPin {
     if (_stage == 0) return _oldPin;
@@ -29,106 +33,173 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
   }
 
   String get _stageTitle {
-    if (_stage == 0) return 'Enter Current PIN';
-    if (_stage == 1) return 'Enter New PIN';
-    return 'Confirm New PIN';
-  }
-
-  String get _stageSubtitle {
-    if (_stage == 0) return 'Verify it\'s really you';
-    if (_stage == 1) return 'Choose a 4-digit PIN';
-    return 'Re-enter your new PIN';
-  }
-
-  void _onDigitPressed(String digit) {
-    if (_isSaving) return;
-
-    setState(() {
-      _errorMessage = null;
-      if (_stage == 0 && _oldPin.length < 4) _oldPin += digit;
-      if (_stage == 1 && _newPin.length < 4) _newPin += digit;
-      if (_stage == 2 && _confirmPin.length < 4) _confirmPin += digit;
-    });
-
-    if (_currentPin.length == 4) {
-      _handleStageComplete();
+    switch (_stage) {
+      case 0:
+        return 'Enter Current PIN';
+      case 1:
+        return 'Enter New PIN';
+      default:
+        return 'Confirm New PIN';
     }
   }
 
-  void _onBackspace() {
-    if (_isSaving) return;
+  String get _stageSubtitle {
+    switch (_stage) {
+      case 0:
+        return 'Verify it\'s really you';
+      case 1:
+        return 'Choose a 4-digit PIN';
+      default:
+        return 'Re-enter your new PIN';
+    }
+  }
+
+  void _setCurrentPin(String value) {
+    if (_stage == 0) _oldPin = value;
+    if (_stage == 1) _newPin = value;
+    if (_stage == 2) _confirmPin = value;
+  }
+
+  void _onDigitPressed(String digit) {
+    if (_isSaving || _currentPin.length >= 4) return;
+
+    if (_dotState != PinDotState.idle) {
+      setState(() => _dotState = PinDotState.idle);
+    }
+    HapticFeedback.selectionClick();
+
     setState(() {
       _errorMessage = null;
-      if (_stage == 0 && _oldPin.isNotEmpty) {
-        _oldPin = _oldPin.substring(0, _oldPin.length - 1);
-      } else if (_stage == 1 && _newPin.isNotEmpty) {
-        _newPin = _newPin.substring(0, _newPin.length - 1);
-      } else if (_stage == 2 && _confirmPin.isNotEmpty) {
-        _confirmPin = _confirmPin.substring(0, _confirmPin.length - 1);
-      }
+      _setCurrentPin(_currentPin + digit);
+    });
+
+    if (_currentPin.length == 4) _handleStageComplete();
+  }
+
+  void _onBackspace() {
+    if (_isSaving || _currentPin.isEmpty) return;
+
+    HapticFeedback.lightImpact();
+    setState(() {
+      _errorMessage = null;
+      _dotState = PinDotState.idle;
+      _setCurrentPin(_currentPin.substring(0, _currentPin.length - 1));
     });
   }
 
-  void _handleStageComplete() {
+  Future<void> _handleStageComplete() async {
     final student = context.read<StudentProvider>().currentStudent;
     if (student == null) return;
 
     if (_stage == 0) {
-      // Verify old PIN
-      final isCorrect = BCrypt.checkpw(_oldPin, student.pinHash ?? '');
-      if (!isCorrect) {
-        setState(() {
-          _errorMessage = 'Incorrect PIN. Try again.';
-          _oldPin = '';
-        });
-        return;
-      }
-      setState(() => _stage = 1);
+      await _verifyCurrentPin(student.pinHash);
     } else if (_stage == 1) {
-      // New PIN entered — check it's not trivially weak
-      if (_newPin == '0000' || _newPin == '1111' || _newPin == '1234') {
-        setState(() {
-          _errorMessage = 'That PIN is too easy. Pick another.';
-          _newPin = '';
-        });
-        return;
-      }
-      if (_newPin == _oldPin) {
-        setState(() {
-          _errorMessage = 'New PIN must be different from old PIN.';
-          _newPin = '';
-        });
-        return;
-      }
-      setState(() => _stage = 2);
+      await _validateNewPin();
     } else {
-      // Confirm
-      if (_newPin != _confirmPin) {
-        setState(() {
-          _errorMessage = 'PINs don\'t match. Start over.';
-          _newPin = '';
-          _confirmPin = '';
-          _stage = 1;
-        });
-        return;
-      }
-      _saveNewPin(student.id!);
+      await _confirmNewPin(student.id!);
     }
   }
 
-  Future<void> _saveNewPin(int studentId) async {
-    setState(() => _isSaving = true);
+  // ── Stage 0: verify current PIN ──────────────────────────────────
 
+  Future<void> _verifyCurrentPin(String? storedHash) async {
+    final isCorrect = BCrypt.checkpw(_oldPin, storedHash ?? '');
+    if (isCorrect) {
+      setState(() => _stage = 1);
+      return;
+    }
+
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _dotState = PinDotState.error;
+      _errorMessage = 'Incorrect PIN. Try again.';
+    });
+
+    await Future.delayed(const Duration(milliseconds: 1200));
+    if (!mounted) return;
+    setState(() {
+      _oldPin = '';
+      _dotState = PinDotState.idle;
+      _errorMessage = null;
+    });
+  }
+
+  // ── Stage 1: validate new PIN ────────────────────────────────────
+
+  Future<void> _validateNewPin() async {
+    // Trivial PINs
+    if (_newPin == '0000' || _newPin == '1111' || _newPin == '1234') {
+      await _rejectNewPin('That PIN is too easy. Pick another.');
+      return;
+    }
+    // Same as old
+    if (_newPin == _oldPin) {
+      await _rejectNewPin('New PIN must be different from old PIN.');
+      return;
+    }
+
+    setState(() => _stage = 2);
+  }
+
+  Future<void> _rejectNewPin(String message) async {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _dotState = PinDotState.error;
+      _errorMessage = message;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 1200));
+    if (!mounted) return;
+    setState(() {
+      _newPin = '';
+      _dotState = PinDotState.idle;
+      _errorMessage = null;
+    });
+  }
+
+  // ── Stage 2: confirm + save ──────────────────────────────────────
+
+  Future<void> _confirmNewPin(int studentId) async {
+    if (_newPin != _confirmPin) {
+      HapticFeedback.mediumImpact();
+      setState(() {
+        _dotState = PinDotState.error;
+        _errorMessage = 'PINs don\'t match. Start over.';
+      });
+
+      await Future.delayed(const Duration(milliseconds: 1200));
+      if (!mounted) return;
+      setState(() {
+        _newPin = '';
+        _confirmPin = '';
+        _stage = 1;
+        _dotState = PinDotState.idle;
+        _errorMessage = null;
+      });
+      return;
+    }
+
+    HapticFeedback.heavyImpact();
+    setState(() {
+      _isSaving = true;
+      _dotState = PinDotState.success;
+    });
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+
+    await _saveNewPin(studentId);
+  }
+
+  Future<void> _saveNewPin(int studentId) async {
     try {
       final hashed = BCrypt.hashpw(_newPin, BCrypt.gensalt());
       await DatabaseService.instance.updatePin(studentId, hashed);
-
       if (!mounted) return;
 
-      // Refresh student in provider
       final refreshed =
           await DatabaseService.instance.getStudentById(studentId);
       if (!mounted || refreshed == null) return;
+
       context.read<StudentProvider>().updateStudent(refreshed);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -148,9 +219,12 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
       setState(() {
         _errorMessage = 'Something went wrong. Please try again.';
         _isSaving = false;
+        _dotState = PinDotState.idle;
       });
     }
   }
+
+  // ── Build ────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -177,13 +251,12 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Back button (top-left)
+              // Back button
               Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.arrow_back,
                       color: AppColors.textPrimary),
                   padding: EdgeInsets.zero,
@@ -192,28 +265,7 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
 
               const Spacer(),
 
-              // Stage indicator dots
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(3, (index) {
-                  final active = index == _stage;
-                  final done = index < _stage;
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: done
-                          ? AppColors.accentTeal
-                          : active
-                              ? AppColors.accentTeal
-                              : AppColors.border,
-                    ),
-                  );
-                }),
-              ),
-
+              _StageIndicator(current: _stage),
               const SizedBox(height: AppSpacing.lg),
 
               const Icon(
@@ -237,45 +289,38 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
 
               const SizedBox(height: AppSpacing.xl),
 
-              // PIN dots
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(4, (index) {
-                  final filled = index < _currentPin.length;
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: filled ? AppColors.accentTeal : AppColors.border,
-                    ),
-                  );
-                }),
+              PinDots(
+                filledCount: _currentPin.length,
+                state: _dotState,
               ),
+              const SizedBox(height: AppSpacing.sm),
 
-              if (_errorMessage != null) ...[
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  _errorMessage!,
-                  style: const TextStyle(
-                    color: AppColors.textCoral,
-                    fontFamily: 'Nunito',
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+              // Reserved height so layout doesn't jump.
+              SizedBox(
+                height: 22,
+                child: _errorMessage != null
+                    ? Text(
+                        _errorMessage!,
+                        style: AppText.caption.copyWith(
+                          color: AppColors.textCoral,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        textAlign: TextAlign.center,
+                      )
+                    : _dotState == PinDotState.success
+                        ? Text(
+                            'Saving...',
+                            style: AppText.caption.copyWith(
+                              color: kPinSuccessColor,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+              ),
+              const SizedBox(height: AppSpacing.lg),
 
-              if (_isSaving) ...[
-                const SizedBox(height: AppSpacing.lg),
-                const CircularProgressIndicator(),
-              ],
-
-              const SizedBox(height: AppSpacing.xl),
-
-              _NumberPad(
+              NumberPad(
+                enabled: !_isSaving,
                 onDigit: _onDigitPressed,
                 onBackspace: _onBackspace,
               ),
@@ -289,60 +334,29 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
   }
 }
 
-class _NumberPad extends StatelessWidget {
-  final void Function(String) onDigit;
-  final VoidCallback onBackspace;
+// 3-dot stage progress indicator at the top of the screen.
+class _StageIndicator extends StatelessWidget {
+  final int current;
 
-  const _NumberPad({required this.onDigit, required this.onBackspace});
+  const _StageIndicator({required this.current});
 
   @override
   Widget build(BuildContext context) {
-    final layout = [
-      ['1', '2', '3'],
-      ['4', '5', '6'],
-      ['7', '8', '9'],
-      ['', '0', '⌫'],
-    ];
-
-    return Column(
-      children: layout.map((row) {
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: row.map((key) {
-            if (key.isEmpty) return const SizedBox(width: 72, height: 64);
-            return Padding(
-              padding: const EdgeInsets.all(6),
-              child: SizedBox(
-                width: 64,
-                height: 64,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (key == '⌫') {
-                      onBackspace();
-                    } else {
-                      onDigit(key);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.surface,
-                    foregroundColor: AppColors.textPrimary,
-                    elevation: 1,
-                    shape: const CircleBorder(),
-                  ),
-                  child: Text(
-                    key,
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(3, (i) {
+        final isActiveOrDone = i <= current;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: isActiveOrDone ? 12 : 10,
+          height: isActiveOrDone ? 12 : 10,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isActiveOrDone ? AppColors.accentTeal : AppColors.border,
+          ),
         );
-      }).toList(),
+      }),
     );
   }
 }

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../models/quiz_result.dart';
 import '../../models/student.dart';
+import '../../models/word.dart';
 import '../../services/database_service.dart';
-import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
 
 class ChildProgressScreen extends StatefulWidget {
@@ -14,94 +13,65 @@ class ChildProgressScreen extends StatefulWidget {
 }
 
 class _ChildProgressScreenState extends State<ChildProgressScreen> {
-  List<QuizResult> _results = [];
-  int _totalPoints = 0;
-  int _badgeCount = 0;
   bool _loading = true;
-  bool _fromCloud = false;
+  List<Map<String, dynamic>> _attempts = [];
+  List<Word> _weakWords = [];
+  int _completedLevels = 0;
+  int _badgeCount = 0;
+  double _accuracy = 0.0;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadResults());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
   }
 
-  Future<void> _loadResults() async {
+  Future<void> _loadData() async {
     final args = ModalRoute.of(context)!.settings.arguments as Map;
     final child = args['child'] as Student;
 
-    List<QuizResult> results = [];
-
-    // If the child is local (has an ID), load from SQLite
-    if (child.id != null) {
-      results = await DatabaseService.instance
-          .getResultsForStudent(child.id!);
-    }
-    // Otherwise, load from Firestore using firebaseUid
-    else if (child.firebaseUid != null && child.firebaseUid!.isNotEmpty) {
-      try {
-        final cloudResults = await FirestoreService.instance
-            .getStudentResultsFromCloud(child.firebaseUid!);
-
-        results = cloudResults.map((r) {
-          return QuizResult(
-            id: null,
-            studentId: 0,
-            gradeLevel: (r['gradeLevel'] ?? 0) as int,
-            difficulty: (r['difficulty'] ?? 'easy') as String,
-            score: (r['score'] ?? 0) as int,
-            totalQuestions: (r['totalQuestions'] ?? 0) as int,
-            pointsEarned: (r['pointsEarned'] ?? 0) as int,
-            completedAt: (r['completedAt'] ?? '') as String,
-            syncedToCloud: true,
-          );
-        }).toList();
-      } catch (e) {
-        debugPrint('🔥 Cloud results load failed: $e');
-      }
+    if (child.id == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
     }
 
-    if (!mounted) return;
+    try {
+      final attempts = await DatabaseService.instance
+          .getAllQuizAttemptsWithBatch(child.id!);
+      final completed =
+          await DatabaseService.instance.getCompletedLevelCount(child.id!);
+      final stats = await DatabaseService.instance
+          .getQuizStatsForStudent(child.id!);
+      final weak = await DatabaseService.instance
+          .getWeakWordsFromAttempts(child.id!);
+      final badges = await DatabaseService.instance
+          .getBadgesForStudent(child.id!);
 
-    final Set<String> passed = {};
-    for (final r in results) {
-      if (r.isPassing) passed.add('${r.gradeLevel}-${r.difficulty}');
+      if (!mounted) return;
+      setState(() {
+        _attempts = attempts;
+        _completedLevels = completed;
+        _accuracy = (stats['accuracy'] as double?) ?? 0.0;
+        _weakWords = weak;
+        _badgeCount = badges.length;
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint('📊 ChildProgress load ERROR: $e');
+      if (mounted) setState(() => _loading = false);
     }
-
-    setState(() {
-      _results = results;
-      _totalPoints = child.totalPoints;
-      _badgeCount = passed.length;
-      _loading = false;
-      _fromCloud = child.id == null;
-    });
   }
 
-  double get _overallAccuracy {
-    if (_results.isEmpty) return 0;
-    final total = _results.fold(0, (sum, r) => sum + r.totalQuestions);
-    final correct = _results.fold(0, (sum, r) => sum + r.score);
-    return total == 0 ? 0 : correct / total;
-  }
-
-  int get _completedLevels {
-    final passed = _results.where((r) => r.isPassing);
-    final Set<String> unique = {};
-    for (final r in passed) {
-      unique.add('${r.gradeLevel}-${r.difficulty}');
-    }
-    return unique.length;
-  }
-
-  Map<String, QuizResult> get _bestPerLevel {
-    final Map<String, QuizResult> best = {};
-    for (final r in _results) {
-      final key = '${r.gradeLevel}-${r.difficulty}';
-      final current = best[key];
+  Map<int, Map<String, dynamic>> get _bestPerBatch {
+    final Map<int, Map<String, dynamic>> best = {};
+    for (final a in _attempts) {
+      final batchId = a['batch_id'] as int;
+      final accuracy =
+          (a['score'] as int) / (a['total_questions'] as int);
+      final current = best[batchId];
       if (current == null ||
-          (r.score / r.totalQuestions) >
-              (current.score / current.totalQuestions)) {
-        best[key] = r;
+          accuracy > (current['_accuracy'] as double)) {
+        best[batchId] = {...a, '_accuracy': accuracy};
       }
     }
     return best;
@@ -117,7 +87,6 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.xl,
@@ -141,138 +110,20 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
                           style: AppText.h2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Text(
-                              'Grade ${child.gradeLevel}',
-                              style: AppText.caption,
-                            ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.accentYellow.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.star_rounded,
-                                    size: 10,
-                                    color: AppColors.textYellow,
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    '$_totalPoints pts',
-                                    style: const TextStyle(
-                                      fontFamily: 'Nunito',
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textYellow,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (_fromCloud) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.accentTeal
-                                      .withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(
-                                      Icons.cloud_done_rounded,
-                                      size: 10,
-                                      color: AppColors.textTeal,
-                                    ),
-                                    SizedBox(width: 3),
-                                    Text(
-                                      'Cloud',
-                                      style: TextStyle(
-                                        fontFamily: 'Nunito',
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.textTeal,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
+                        Text('Grade ${child.gradeLevel}',
+                            style: AppText.caption),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
-                  : RefreshIndicator(
-                      onRefresh: _loadResults,
-                      color: AppColors.accentPurple,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: AppSpacing.sm),
-
-                            // Motter presenting
-                            Image.asset(
-                              'assets/images/mascot/motter_presenting.png',
-                              width: 200,
-                              height: 200,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, _, _) => Container(
-                                width: 200,
-                                height: 200,
-                                decoration: BoxDecoration(
-                                  color: AppColors.accentPurple
-                                      .withValues(alpha: 0.15),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: AppColors.accentPurple,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.family_restroom_rounded,
-                                  size: 80,
-                                  color: AppColors.accentPurple,
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: AppSpacing.sm),
-
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.xl),
-                              child: _results.isEmpty
-                                  ? _buildEmptyMessage()
-                                  : _buildContentBody(),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                  : _attempts.isEmpty
+                      ? _buildEmpty()
+                      : _buildContent(),
             ),
           ],
         ),
@@ -280,143 +131,240 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
     );
   }
 
-  Widget _buildEmptyMessage() {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: Column(
-        children: const [
-          Text(
-            'No progress yet',
-            style: AppText.h2,
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: AppSpacing.xs),
-          Text(
-            'Your child hasn\'t taken a quiz yet.',
-            style: AppText.caption,
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: AppSpacing.xl),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContentBody() {
-    final best = _bestPerLevel;
-    final entries = best.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
+  Widget _buildEmpty() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            _StatCard(
-              icon: Icons.emoji_events_rounded,
-              label: 'Badges',
-              value: '$_badgeCount',
-              color: AppColors.accentYellow,
+            Image.asset(
+              'assets/images/mascot/motter_gentle.png',
+              width: 140,
+              height: 140,
+              errorBuilder: (_, _, _) => const Icon(
+                Icons.family_restroom_rounded,
+                size: 80,
+                color: AppColors.accentPurple,
+              ),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            _StatCard(
-              icon: Icons.verified_rounded,
-              label: 'Levels',
-              value: '$_completedLevels',
-              color: AppColors.accentPurple,
+            const SizedBox(height: AppSpacing.lg),
+            const Text(
+              'No progress yet',
+              style: AppText.h2,
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(width: AppSpacing.sm),
-            _StatCard(
-              icon: Icons.insights_rounded,
-              label: 'Accuracy',
-              value: '${(_overallAccuracy * 100).toStringAsFixed(0)}%',
-              color: AppColors.accentTeal,
+            const SizedBox(height: AppSpacing.xs),
+            const Text(
+              'Your child hasn\'t completed a quiz yet.',
+              style: AppText.caption,
+              textAlign: TextAlign.center,
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
+      ),
+    );
+  }
 
-        const Text('OVERALL COMPLETION', style: AppText.caption),
-        const SizedBox(height: AppSpacing.xs),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.small),
-          child: LinearProgressIndicator(
-            value: _completedLevels / 18,
-            minHeight: 12,
-            backgroundColor: AppColors.border,
-            valueColor: const AlwaysStoppedAnimation<Color>(
-              AppColors.accentPurple,
+  Widget _buildContent() {
+    final best = _bestPerBatch;
+    final entries = best.entries.toList()
+      ..sort((a, b) {
+        final ga = a.value['grade_level'] as int;
+        final gb = b.value['grade_level'] as int;
+        if (ga != gb) return ga.compareTo(gb);
+        return (a.value['difficulty'] as String)
+            .compareTo(b.value['difficulty'] as String);
+      });
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.sm),
+
+          // Motter presenting
+          Image.asset(
+            'assets/images/mascot/motter_presenting.png',
+            width: 200,
+            height: 200,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                color: AppColors.accentPurple.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.accentPurple,
+                  width: 2,
+                ),
+              ),
+              child: const Icon(
+                Icons.family_restroom_rounded,
+                size: 80,
+                color: AppColors.accentPurple,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text('$_completedLevels / 18 levels passed', style: AppText.caption),
 
-        const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.sm),
 
-        const Text('BEST SCORES', style: AppText.caption),
-        const SizedBox(height: AppSpacing.sm),
-        ...entries.map((entry) {
-          final r = entry.value;
-          final parts = entry.key.split('-');
-          final grade = parts[0];
-          final difficulty = parts[1];
-          final capitalized = difficulty.isEmpty
-              ? ''
-              : difficulty[0].toUpperCase() + difficulty.substring(1);
+          Row(
+            children: [
+              _StatCard(
+                icon: Icons.emoji_events_rounded,
+                label: 'Badges',
+                value: '$_badgeCount',
+                color: AppColors.accentYellow,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _StatCard(
+                icon: Icons.verified_rounded,
+                label: 'Levels',
+                value: '$_completedLevels',
+                color: AppColors.accentPurple,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _StatCard(
+                icon: Icons.insights_rounded,
+                label: 'Accuracy',
+                value: '${(_accuracy * 100).toStringAsFixed(0)}%',
+                color: AppColors.accentTeal,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
 
-          return Container(
-            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.md,
+          const Text('OVERALL COMPLETION', style: AppText.caption),
+          const SizedBox(height: AppSpacing.xs),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.small),
+            child: LinearProgressIndicator(
+              value: _completedLevels / 18,
+              minHeight: 12,
+              backgroundColor: AppColors.border,
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.accentPurple,
+              ),
             ),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(AppRadius.medium),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                Expanded(
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text('$_completedLevels / 18 levels passed',
+              style: AppText.caption),
+
+          const SizedBox(height: AppSpacing.xl),
+
+          const Text('BEST SCORES', style: AppText.caption),
+          const SizedBox(height: AppSpacing.sm),
+          ...entries.map((entry) {
+            final a = entry.value;
+            final grade = a['grade_level'] as int;
+            final difficulty = a['difficulty'] as String;
+            final theme = (a['theme'] as String?) ?? '';
+            final score = a['score'] as int;
+            final total = a['total_questions'] as int;
+            final isPassing = (score / total) >= 0.70;
+            final diffLabel = difficulty[0].toUpperCase() +
+                difficulty.substring(1);
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Grade $grade — $diffLabel',
+                          style: const TextStyle(
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        if (theme.isNotEmpty)
+                          Text(theme, style: AppText.caption),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '$score/$total',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: isPassing
+                          ? AppColors.textPurple
+                          : AppColors.textCoral,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Icon(
+                    isPassing
+                        ? Icons.check_circle_rounded
+                        : Icons.cancel_rounded,
+                    size: 18,
+                    color: isPassing
+                        ? AppColors.accentPurple
+                        : AppColors.accentCoral,
+                  ),
+                ],
+              ),
+            );
+          }),
+
+          const SizedBox(height: AppSpacing.xl),
+
+          if (_weakWords.isNotEmpty) ...[
+            const Text('WORDS TO PRACTICE', style: AppText.caption),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: _weakWords.map((word) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentOrange.withValues(alpha: 0.15),
+                    borderRadius:
+                        BorderRadius.circular(AppRadius.medium),
+                    border: Border.all(
+                      color:
+                          AppColors.accentOrange.withValues(alpha: 0.4),
+                    ),
+                  ),
                   child: Text(
-                    'Grade $grade — $capitalized',
+                    word.text,
                     style: const TextStyle(
                       fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
                       fontSize: 14,
-                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textOrange,
                     ),
                   ),
-                ),
-                Text(
-                  '${r.score}/${r.totalQuestions}',
-                  style: TextStyle(
-                    fontFamily: 'Nunito',
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                    color: r.isPassing
-                        ? AppColors.textPurple
-                        : AppColors.textCoral,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Icon(
-                  r.isPassing
-                      ? Icons.check_circle_rounded
-                      : Icons.cancel_rounded,
-                  size: 18,
-                  color: r.isPassing
-                      ? AppColors.accentPurple
-                      : AppColors.accentCoral,
-                ),
-              ],
+                );
+              }).toList(),
             ),
-          );
-        }),
-
-        const SizedBox(height: AppSpacing.xl),
-      ],
+            const SizedBox(height: AppSpacing.xl),
+          ],
+        ],
+      ),
     );
   }
 }

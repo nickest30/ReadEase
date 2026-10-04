@@ -7,6 +7,8 @@ import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/error_state.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -20,14 +22,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   List<Map<String, dynamic>> _localEntries = [];
   bool _loadingLocal = true;
+  String? _localError;
 
   List<Map<String, dynamic>> _classEntries = [];
   bool _loadingClass = false;
-  bool _classAttempted = false;
+  String? _classError;
 
   List<Map<String, dynamic>> _globalEntries = [];
   bool _loadingGlobal = false;
-  bool _globalAttempted = false;
+  String? _globalError;
 
   @override
   void initState() {
@@ -40,69 +43,93 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   // ─────────────────────────────────────────────────────────
 
   Future<void> _loadLocal() async {
-    final students = await DatabaseService.instance.getAllStudents();
-    if (!mounted) return;
-
-    final entries = students.map((s) {
-      return {
-        'uid': s.firebaseUid ?? 'local-${s.id}',
-        'displayName': s.displayName,
-        'totalPoints': s.totalPoints,
-        'gradeLevel': s.gradeLevel,
-        'badgeCount': 0,
-        'isCurrentUser': false,
-      };
-    }).toList()
-      ..sort((a, b) =>
-          (b['totalPoints'] as int).compareTo(a['totalPoints'] as int));
-
     setState(() {
-      _localEntries = entries;
-      _loadingLocal = false;
+      _loadingLocal = true;
+      _localError = null;
     });
+
+    try {
+      final students = await DatabaseService.instance.getAllStudents();
+      if (!mounted) return;
+
+      final entries = students.map((s) {
+        return {
+          'uid': s.firebaseUid ?? 'local-${s.id}',
+          'displayName': s.displayName,
+          'totalPoints': s.totalPoints,
+          'gradeLevel': s.gradeLevel,
+          'badgeCount': 0,
+          'isCurrentUser': false,
+        };
+      }).toList()
+        ..sort((a, b) =>
+            (b['totalPoints'] as int).compareTo(a['totalPoints'] as int));
+
+      setState(() {
+        _localEntries = entries;
+        _loadingLocal = false;
+      });
+    } catch (e) {
+      debugPrint('🏆 Local leaderboard ERROR: $e');
+      if (!mounted) return;
+      setState(() {
+        _loadingLocal = false;
+        _localError = 'We couldn\'t load local rankings.';
+      });
+    }
   }
 
   Future<void> _loadClass() async {
     if (_loadingClass) return;
 
     final student = context.read<StudentProvider>().currentStudent;
-    final isOnline = context.read<ConnectivityProvider>().isOnline;
+    if (student == null) return;
 
-    setState(() {
-      _loadingClass = true;
-      _classAttempted = true;
-    });
-
-    // No class joined yet
-    if (student?.classFirestoreId == null ||
-        student!.classFirestoreId!.isEmpty) {
+    // No class joined yet — clear and bail.
+    if (student.classFirestoreId == null ||
+        student.classFirestoreId!.isEmpty) {
       if (!mounted) return;
       setState(() {
         _classEntries = [];
         _loadingClass = false;
+        _classError = null;
       });
       return;
     }
 
-    // Offline — can't fetch class leaderboard
+    final isOnline = context.read<ConnectivityProvider>().isOnline;
     if (!isOnline) {
       if (!mounted) return;
       setState(() {
         _classEntries = [];
         _loadingClass = false;
+        _classError = null;
       });
       return;
     }
 
-    final entries = await FirestoreService.instance.getClassLeaderboard(
-      classId: student.classFirestoreId!,
-    );
-
-    if (!mounted) return;
     setState(() {
-      _classEntries = entries;
-      _loadingClass = false;
+      _loadingClass = true;
+      _classError = null;
     });
+
+    try {
+      final entries = await FirestoreService.instance.getClassLeaderboard(
+        classId: student.classFirestoreId!,
+      );
+      if (!mounted) return;
+      setState(() {
+        _classEntries = entries;
+        _loadingClass = false;
+      });
+    } catch (e) {
+      debugPrint('🏆 Class leaderboard ERROR: $e');
+      if (!mounted) return;
+      setState(() {
+        _loadingClass = false;
+        _classError = 'We couldn\'t load class rankings.';
+      });
+    }
   }
 
   Future<void> _loadGlobal() async {
@@ -111,23 +138,45 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     if (!context.read<ConnectivityProvider>().isOnline) {
       setState(() {
         _globalEntries = [];
-        _globalAttempted = true;
+        _globalError = null;
       });
       return;
     }
 
     setState(() {
       _loadingGlobal = true;
-      _globalAttempted = true;
+      _globalError = null;
     });
 
-    final entries = await FirestoreService.instance.getGlobalLeaderboard();
+    try {
+      final entries =
+          await FirestoreService.instance.getGlobalLeaderboard();
+      if (!mounted) return;
+      setState(() {
+        _globalEntries = entries;
+        _loadingGlobal = false;
+      });
+    } catch (e) {
+      debugPrint('🏆 Global leaderboard ERROR: $e');
+      if (!mounted) return;
+      setState(() {
+        _loadingGlobal = false;
+        _globalError = 'We couldn\'t load global rankings.';
+      });
+    }
+  }
 
-    if (!mounted) return;
-    setState(() {
-      _globalEntries = entries;
-      _loadingGlobal = false;
-    });
+  // Reset flags when switching tabs so offline → online recovers.
+  void _onTabSelected(int index) {
+    if (_selectedTab == index) return;
+    setState(() => _selectedTab = index);
+
+    if (index == 1 && _classEntries.isEmpty && !_loadingClass) {
+      _loadClass();
+    }
+    if (index == 2 && _globalEntries.isEmpty && !_loadingGlobal) {
+      _loadGlobal();
+    }
   }
 
   // ─────────────────────────────────────────────────────────
@@ -158,102 +207,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.md,
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back,
-                        color: AppColors.textPrimary),
-                    padding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Leaderboard', style: AppText.h2),
-                        SizedBox(height: 2),
-                        Text('See how you rank', style: AppText.caption),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Tabs
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(AppRadius.medium),
-                ),
-                child: Row(
-                  children: [
-                    _TabButton(
-                      label: 'Local',
-                      selected: _selectedTab == 0,
-                      onTap: () => setState(() => _selectedTab = 0),
-                    ),
-                    _TabButton(
-                      label: 'Class',
-                      selected: _selectedTab == 1,
-                      onTap: () {
-                        setState(() => _selectedTab = 1);
-                        if (!_classAttempted) _loadClass();
-                      },
-                    ),
-                    _TabButton(
-                      label: 'Global',
-                      selected: _selectedTab == 2,
-                      onTap: () {
-                        setState(() => _selectedTab = 2);
-                        if (!_globalAttempted) _loadGlobal();
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
+            _buildHeader(),
+            _buildTabs(),
             const SizedBox(height: AppSpacing.sm),
-
-            // Yse victory centered
-            Image.asset(
-              'assets/images/mascot/yse_victory.png',
-              width: 200,
-              height: 200,
-              fit: BoxFit.contain,
-              errorBuilder: (_, _, _) => Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  color: AppColors.accentYellow.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.accentYellow,
-                    width: 2,
-                  ),
-                ),
-                child: const Icon(
-                  Icons.emoji_events_rounded,
-                  size: 80,
-                  color: AppColors.accentYellow,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: AppSpacing.sm),
-
-            // Tab content
             Expanded(
               child: _selectedTab == 0
                   ? _buildLocalTab(student)
@@ -268,28 +224,115 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   // ─────────────────────────────────────────────────────────
+  // Header + tabs
+  // ─────────────────────────────────────────────────────────
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl,
+        vertical: AppSpacing.md,
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.arrow_back,
+                color: AppColors.textPrimary),
+            padding: EdgeInsets.zero,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Leaderboard', style: AppText.h2),
+                SizedBox(height: 2),
+                Text('See how you rank', style: AppText.caption),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabs() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: AppColors.border,
+          borderRadius: BorderRadius.circular(AppRadius.medium),
+        ),
+        child: Row(
+          children: [
+            _TabButton(
+              label: 'Local',
+              selected: _selectedTab == 0,
+              onTap: () => _onTabSelected(0),
+            ),
+            _TabButton(
+              label: 'Class',
+              selected: _selectedTab == 1,
+              onTap: () => _onTabSelected(1),
+            ),
+            _TabButton(
+              label: 'Global',
+              selected: _selectedTab == 2,
+              onTap: () => _onTabSelected(2),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────
   // Local tab
   // ─────────────────────────────────────────────────────────
 
   Widget _buildLocalTab(Student currentStudent) {
     if (_loadingLocal) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.accentTeal),
+      );
     }
+
+    if (_localError != null) {
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ErrorState(
+          title: 'Can\'t load rankings',
+          message: _localError,
+          onRetry: _loadLocal,
+        ),
+      );
+    }
+
     if (_localEntries.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.leaderboard_rounded,
-        title: 'No profiles yet',
-        subtitle: 'Create a profile to see rankings.',
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: const EmptyState(
+          icon: Icons.leaderboard_rounded,
+          title: 'No profiles yet',
+          subtitle: 'Create a profile to see rankings on this device.',
+        ),
       );
     }
 
     final entries = _localEntries.map((e) {
-      e['isCurrentUser'] =
-          e['uid'] == (currentStudent.firebaseUid ?? 'local-${currentStudent.id}');
+      e['isCurrentUser'] = e['uid'] ==
+          (currentStudent.firebaseUid ?? 'local-${currentStudent.id}');
       return e;
     }).toList();
 
-    return _buildRankedContent(entries);
+    return RefreshIndicator(
+      onRefresh: _loadLocal,
+      color: AppColors.accentTeal,
+      child: _buildRankedContent(entries, showHero: true),
+    );
   }
 
   // ─────────────────────────────────────────────────────────
@@ -297,14 +340,23 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   // ─────────────────────────────────────────────────────────
 
   Widget _buildClassTab(Student currentStudent) {
-    // No class joined
-    if (currentStudent.classFirestoreId == null ||
-        currentStudent.classFirestoreId!.isEmpty) {
+    final hasClass = currentStudent.classFirestoreId != null &&
+        currentStudent.classFirestoreId!.isNotEmpty;
+
+    if (!hasClass) {
       return _buildJoinClassPrompt();
     }
 
-    // Class banner — shows which class the student is in
-    final classBanner = Padding(
+    return Column(
+      children: [
+        _buildClassBanner(currentStudent),
+        Expanded(child: _buildClassContent(currentStudent)),
+      ],
+    );
+  }
+
+  Widget _buildClassBanner(Student currentStudent) {
+    return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.xl,
         vertical: AppSpacing.sm,
@@ -360,46 +412,52 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         ),
       ),
     );
+  }
 
+  Widget _buildClassContent(Student currentStudent) {
     if (_loadingClass) {
-      return Column(
-        children: [
-          classBanner,
-          const Expanded(
-            child: Center(child: CircularProgressIndicator()),
-          ),
-        ],
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.accentTeal),
+      );
+    }
+
+    if (_classError != null) {
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ErrorState(
+          title: 'Can\'t load class rankings',
+          message: _classError,
+          onRetry: _loadClass,
+        ),
       );
     }
 
     final isOnline = context.watch<ConnectivityProvider>().isOnline;
     if (!isOnline) {
-      return Column(
-        children: [
-          classBanner,
-          Expanded(
-            child: _buildEmptyState(
-              icon: Icons.cloud_off_rounded,
-              title: 'You\'re offline',
-              subtitle: 'Connect to see your class leaderboard.',
-            ),
-          ),
-        ],
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: EmptyState(
+          icon: Icons.cloud_off_rounded,
+          title: 'You\'re offline',
+          subtitle: 'Connect to see your class leaderboard.',
+          actionLabel: 'Try Again',
+          onAction: _loadClass,
+        ),
       );
     }
 
     if (_classEntries.isEmpty) {
-      return Column(
-        children: [
-          classBanner,
-          Expanded(
-            child: _buildEmptyState(
-              icon: Icons.emoji_events_outlined,
-              title: 'No rankings yet',
-              subtitle: 'Take a quiz to appear on the board!',
-            ),
+      return RefreshIndicator(
+        onRefresh: _loadClass,
+        color: AppColors.accentTeal,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: const EmptyState(
+            icon: Icons.emoji_events_outlined,
+            title: 'No rankings yet',
+            subtitle: 'Take a quiz to appear on the board!',
           ),
-        ],
+        ),
       );
     }
 
@@ -408,64 +466,74 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       return e;
     }).toList();
 
-    return Column(
-      children: [
-        classBanner,
-        Expanded(
-          child: _buildRankedContent(entries, refresh: _loadClass),
-        ),
-      ],
+    return RefreshIndicator(
+      onRefresh: _loadClass,
+      color: AppColors.accentTeal,
+      child: _buildRankedContent(entries),
     );
   }
 
+  // ─────────────────────────────────────────────────────────
+  // Join class prompt
+  // ─────────────────────────────────────────────────────────
 
   Widget _buildJoinClassPrompt() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              'assets/images/mascot/yse_thinking.png',
-              width: 140,
-              height: 140,
-              errorBuilder: (_, _, _) => const Icon(
-                Icons.class_rounded,
-                size: 80,
-                color: AppColors.accentPurple,
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Column(
+        children: [
+          Image.asset(
+            'assets/images/mascot/yse_thinking.png',
+            width: 160,
+            height: 160,
+            errorBuilder: (_, _, _) => const SizedBox(
+              height: 160,
+              child: Center(
+                child: Icon(
+                  Icons.class_rounded,
+                  size: 80,
+                  color: AppColors.accentPurple,
+                ),
               ),
             ),
-            const SizedBox(height: AppSpacing.lg),
-            const Text(
-              'No class yet',
-              style: AppText.h2,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            const Text(
-              'Join a class with your teacher\'s code\nto see how you rank with classmates.',
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          const Text(
+            'No class yet',
+            style: AppText.h2,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+            child: Text(
+              'Join a class with your teacher\'s code '
+              'to see how you rank with classmates.',
               textAlign: TextAlign.center,
               style: AppText.caption,
             ),
-            const SizedBox(height: AppSpacing.xl),
-            ElevatedButton.icon(
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          SizedBox(
+            height: 52,
+            child: ElevatedButton.icon(
               onPressed: () async {
                 await Navigator.of(context).pushNamed('/join-class');
                 if (mounted) {
                   setState(() {
-                    _classAttempted = false;
                     _classEntries = [];
+                    _classError = null;
                   });
                   _loadClass();
                 }
               },
-              icon: const Icon(Icons.group_add_rounded),
+              icon: const Icon(Icons.group_add_rounded, size: 20),
               label: const Text(
                 'Join a Class',
                 style: TextStyle(
                   fontFamily: 'Nunito',
                   fontWeight: FontWeight.w700,
+                  fontSize: 15,
                 ),
               ),
               style: ElevatedButton.styleFrom(
@@ -473,15 +541,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.xl,
-                  vertical: AppSpacing.md,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.large),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -492,18 +559,40 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   Widget _buildGlobalTab(Student currentStudent) {
     if (_loadingGlobal) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.accentTeal),
+      );
     }
+
+    if (_globalError != null) {
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ErrorState(
+          title: 'Can\'t load global rankings',
+          message: _globalError,
+          onRetry: _loadGlobal,
+        ),
+      );
+    }
+
+    final isOnline = context.watch<ConnectivityProvider>().isOnline;
+
     if (_globalEntries.isEmpty) {
-      final isOnline = context.watch<ConnectivityProvider>().isOnline;
-      return _buildEmptyState(
-        icon: isOnline
-            ? Icons.emoji_events_outlined
-            : Icons.cloud_off_rounded,
-        title: isOnline ? 'No global rankings yet' : 'You\'re offline',
-        subtitle: isOnline
-            ? 'Be the first to make it to the top!'
-            : 'Connect to see the global leaderboard.',
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: isOnline
+            ? const EmptyState(
+                icon: Icons.emoji_events_outlined,
+                title: 'No global rankings yet',
+                subtitle: 'Be the first to make it to the top!',
+              )
+            : EmptyState(
+                icon: Icons.cloud_off_rounded,
+                title: 'You\'re offline',
+                subtitle: 'Connect to see the global leaderboard.',
+                actionLabel: 'Try Again',
+                onAction: _loadGlobal,
+              ),
       );
     }
 
@@ -512,7 +601,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       return e;
     }).toList();
 
-    return _buildRankedContent(entries, refresh: _loadGlobal);
+    return RefreshIndicator(
+      onRefresh: _loadGlobal,
+      color: AppColors.accentTeal,
+      child: _buildRankedContent(entries),
+    );
   }
 
   // ─────────────────────────────────────────────────────────
@@ -521,35 +614,49 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   Widget _buildRankedContent(
     List<Map<String, dynamic>> entries, {
-    Future<void> Function()? refresh,
+    bool showHero = false,
   }) {
-    final body = Column(
-      children: [
-        const SizedBox(height: AppSpacing.sm),
-        if (entries.isNotEmpty) _buildPodium(entries),
-        const SizedBox(height: AppSpacing.lg),
-        ...entries.asMap().entries.map((entry) {
-          return _RankRow(rank: entry.key + 1, data: entry.value);
-        }),
-        const SizedBox(height: AppSpacing.xl),
-      ],
-    );
-
-    if (refresh != null) {
-      return RefreshIndicator(
-        onRefresh: refresh,
-        color: AppColors.accentTeal,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: body,
-        ),
-      );
-    }
-
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-      child: body,
+      child: Column(
+        children: [
+          if (showHero) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Image.asset(
+              'assets/images/mascot/yse_victory.png',
+              width: 160,
+              height: 160,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => Container(
+                width: 160,
+                height: 160,
+                decoration: BoxDecoration(
+                  color:
+                      AppColors.accentYellow.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.accentYellow,
+                    width: 2,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.emoji_events_rounded,
+                  size: 72,
+                  color: AppColors.accentYellow,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          if (entries.isNotEmpty) _buildPodium(entries),
+          const SizedBox(height: AppSpacing.lg),
+          ...entries.asMap().entries.map((entry) {
+            return _RankRow(rank: entry.key + 1, data: entry.value);
+          }),
+          const SizedBox(height: AppSpacing.xl),
+        ],
+      ),
     );
   }
 
@@ -594,28 +701,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               color: const Color(0xFFCD7F32),
             ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 64, color: AppColors.textMuted),
-            const SizedBox(height: AppSpacing.md),
-            Text(title, style: AppText.h2, textAlign: TextAlign.center),
-            const SizedBox(height: AppSpacing.xs),
-            Text(subtitle, style: AppText.caption, textAlign: TextAlign.center),
-          ],
-        ),
       ),
     );
   }

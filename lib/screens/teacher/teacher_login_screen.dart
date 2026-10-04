@@ -4,9 +4,14 @@ import 'package:provider/provider.dart';
 
 import '../../models/teacher.dart';
 import '../../services/database_service.dart';
+import '../../services/firestore_service.dart';
+import '../../services/cloud_sync_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/teacher_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/validators.dart';
+import '../../widgets/app_form.dart';
+import '../shared/forgot_password_screen.dart';
 
 class TeacherLoginScreen extends StatefulWidget {
   const TeacherLoginScreen({super.key});
@@ -16,24 +21,21 @@ class TeacherLoginScreen extends StatefulWidget {
 }
 
 class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
-  final _usernameController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isSubmitting = false;
   String? _errorMessage;
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _handleLogin() async {
-    if (_usernameController.text.trim().isEmpty ||
-        _passwordController.text.isEmpty) {
-      setState(() => _errorMessage = 'Please fill in all fields.');
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AuthProvider>();
     final teacherProvider = context.read<TeacherProvider>();
@@ -44,73 +46,163 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
     });
 
     try {
-      final teacher = await DatabaseService.instance
-          .getTeacherByUsername(_usernameController.text.trim());
+      final input = _identifierController.text.trim();
+      final password = _passwordController.text;
+      final isEmail = input.contains('@');
 
-      if (!mounted) return;
-
-      if (teacher == null) {
-        setState(() {
-          _errorMessage = 'Username not found.';
-          _isSubmitting = false;
-        });
+      // ── Path 1: Email → cloud ──
+      if (isEmail) {
+        await _loginWithEmail(
+          email: input.toLowerCase(),
+          password: password,
+          authProvider: authProvider,
+          teacherProvider: teacherProvider,
+        );
         return;
       }
 
-      final isCorrect =
-          BCrypt.checkpw(_passwordController.text, teacher.passwordHash);
+      // ── Path 2: Username → local first ──
+      final localTeacher = await DatabaseService.instance
+          .getTeacherByUsername(input.toLowerCase());
 
-      if (!mounted) return;
+      if (localTeacher != null) {
+        final isCorrect =
+            BCrypt.checkpw(password, localTeacher.passwordHash);
 
-      if (!isCorrect) {
-        setState(() {
-          _errorMessage = 'Incorrect password.';
-          _isSubmitting = false;
-        });
-        return;
-      }
-
-      final firebaseOk = await authProvider.signIn(
-        teacher.email,
-        _passwordController.text,
-      );
-
-      if (!mounted) return;
-
-      if (!firebaseOk) {
-        setState(() {
-          _errorMessage =
-              'Internet required. Teacher portal needs an active connection.';
-          _isSubmitting = false;
-        });
-        return;
-      }
-
-      Teacher finalTeacher = teacher;
-      if (teacher.firebaseUid == null) {
-        final uid = authProvider.uid;
-        if (uid != null) {
-          final updated = await DatabaseService.instance
-              .updateTeacherFirebaseUid(teacher.id!, uid);
-          if (updated) {
-            final refreshed =
-                await DatabaseService.instance.getTeacherById(teacher.id!);
-            if (refreshed != null) finalTeacher = refreshed;
-          }
+        if (!isCorrect) {
+          if (!mounted) return;
+          setState(() {
+            _errorMessage = 'Incorrect password.';
+            _isSubmitting = false;
+          });
+          return;
         }
+
+        try {
+          await authProvider.signIn(localTeacher.email, password);
+        } catch (_) {
+          // Offline — proceed
+        }
+
+        if (!mounted) return;
+        teacherProvider.setTeacher(localTeacher);
+        Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
+        return;
       }
 
       if (!mounted) return;
-      teacherProvider.setTeacher(finalTeacher);
-
-      Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
+      setState(() {
+        _errorMessage =
+            'Username not found on this device.\n'
+            'If this is a new device, log in with your email instead.';
+        _isSubmitting = false;
+      });
     } catch (e) {
+      debugPrint('🔑 Teacher login ERROR: $e');
       if (!mounted) return;
       setState(() {
         _errorMessage = 'Something went wrong. Please try again.';
         _isSubmitting = false;
       });
     }
+  }
+
+  Future<void> _loginWithEmail({
+    required String email,
+    required String password,
+    required AuthProvider authProvider,
+    required TeacherProvider teacherProvider,
+  }) async {
+    final firebaseOk = await authProvider.signIn(email, password);
+    if (!mounted) return;
+
+    if (!firebaseOk) {
+      setState(() {
+        _errorMessage = 'Incorrect email or password.';
+        _isSubmitting = false;
+      });
+      return;
+    }
+
+    // Check if already local
+    Teacher? localTeacher;
+    final allTeachers = await DatabaseService.instance.getAllTeachers();
+    for (final t in allTeachers) {
+      if (t.email.toLowerCase() == email) {
+        localTeacher = t;
+        break;
+      }
+    }
+
+    if (localTeacher != null) {
+      if (!mounted) return;
+      teacherProvider.setTeacher(localTeacher);
+      Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
+      return;
+    }
+
+    // Not local — fetch from Firestore
+    final uid = authProvider.uid;
+    if (uid == null) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Session error. Try again.';
+        _isSubmitting = false;
+      });
+      return;
+    }
+
+    final cloudDoc =
+        await FirestoreService.instance.getTeacherByUidFull(uid);
+
+    if (cloudDoc == null) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage =
+            'Account exists but profile is missing. Try signing up again.';
+        _isSubmitting = false;
+      });
+      await authProvider.signOut();
+      return;
+    }
+
+    final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+
+    final newLocalTeacher = Teacher(
+      username: (cloudDoc['username'] ?? '') as String,
+      passwordHash: hashedPassword,
+      fullName: (cloudDoc['fullName'] ?? '') as String,
+      email: email,
+      schoolName: (cloudDoc['schoolName'] ?? '') as String,
+      firebaseUid: uid,
+      createdAt: DateTime.now().toIso8601String(),
+    );
+
+    final newId =
+        await DatabaseService.instance.insertTeacher(newLocalTeacher);
+    if (!mounted) return;
+
+    final created =
+        await DatabaseService.instance.getTeacherById(newId);
+
+    if (created == null) {
+      setState(() {
+        _errorMessage = 'Could not save profile. Try again.';
+        _isSubmitting = false;
+      });
+      return;
+    }
+
+    debugPrint('🔑 Teacher cloud login OK — local profile created');
+
+    await CloudSyncService.instance.downloadTeacherClasses(
+      localTeacherId: created.id!,
+      firebaseUid: uid,
+    );
+
+    if (!mounted) return;
+    teacherProvider.setTeacher(created);
+    Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
   }
 
   @override
@@ -120,159 +212,126 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppSpacing.md),
-
-              IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.arrow_back,
-                    color: AppColors.textPrimary),
-                alignment: Alignment.centerLeft,
-                padding: EdgeInsets.zero,
-              ),
-
-              const SizedBox(height: AppSpacing.sm),
-
-              const Text('Teacher Login', style: AppText.h1),
-              const SizedBox(height: 2),
-              const Text('Sign in to continue', style: AppText.caption),
-
-              const SizedBox(height: AppSpacing.xl),
-
-              const Text(
-                'Username',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textMuted,
-                ),
-              ),
-              const SizedBox(height: 5),
-              TextField(
-                controller: _usernameController,
-                decoration: _inputDecoration('Enter your username'),
-              ),
-
-              const SizedBox(height: AppSpacing.lg),
-
-              const Text(
-                'Password',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textMuted,
-                ),
-              ),
-              const SizedBox(height: 5),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: _inputDecoration('Enter your password'),
-              ),
-
-              if (_errorMessage != null) ...[
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
                 const SizedBox(height: AppSpacing.md),
-                Text(
-                  _errorMessage!,
-                  style: const TextStyle(
-                    color: AppColors.textCoral,
-                    fontFamily: 'Nunito',
-                    fontWeight: FontWeight.w600,
+
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.arrow_back,
+                      color: AppColors.textPrimary),
+                  alignment: Alignment.centerLeft,
+                  padding: EdgeInsets.zero,
+                ),
+
+                const SizedBox(height: AppSpacing.sm),
+
+                const Text('Teacher Login', style: AppText.h1),
+                const SizedBox(height: 2),
+                const Text('Sign in to continue', style: AppText.caption),
+
+                const SizedBox(height: AppSpacing.xl),
+
+                const FieldLabel('Username or Email'),
+                TextFormField(
+                  controller: _identifierController,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  validator: Validators.usernameOrEmail,
+                  decoration: buildInputDecoration(
+                    hint: 'Enter username or email',
+                    focusColor: AppColors.accentYellow,
                   ),
                 ),
-              ],
 
-              const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
 
-              SizedBox(
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _handleLogin,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentYellow,
-                    foregroundColor: AppColors.textPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.large),
-                    ),
-                  ),
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: AppColors.textPrimary,
-                            strokeWidth: 2.5,
-                          ),
-                        )
-                      : const Text(
-                          'LOGIN',
-                          style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w700,
+                const FieldLabel('Password'),
+                PasswordField(
+                  controller: _passwordController,
+                  hintText: 'Enter your password',
+                  textInputAction: TextInputAction.done,
+                  focusColor: AppColors.accentYellow,
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Please enter your password' : null,
+                ),
+
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordScreen(
+                            role: ForgotPasswordRole.teacher,
                           ),
                         ),
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.xl),
-
-              // Groo below the button — waving
-              Center(
-                child: Image.asset(
-                  'assets/images/mascot/groo_waving.png',
-                  width: 320,
-                  height: 320,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => Container(
-                    width: 320,
-                    height: 320,
-                    decoration: BoxDecoration(
-                      color: AppColors.accentYellow.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.accentYellow,
-                        width: 2,
+                      );
+                    },
+                    child: const Text(
+                      'Forgot password?',
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: AppColors.textYellow, // darker for yellow contrast
                       ),
-                    ),
-                    child: const Icon(
-                      Icons.school_rounded,
-                      size: 64,
-                      color: AppColors.accentYellow,
                     ),
                   ),
                 ),
-              ),
 
-              const SizedBox(height: AppSpacing.xl),
-            ],
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    _errorMessage!,
+                    style: const TextStyle(
+                      color: AppColors.textCoral,
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: AppSpacing.xl),
+
+                SizedBox(
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _isSubmitting ? null : _handleLogin,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentYellow,
+                      foregroundColor: AppColors.textPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.large),
+                      ),
+                    ),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              color: AppColors.textPrimary,
+                              strokeWidth: 2.5,
+                            ),
+                          )
+                        : const Text(
+                            'LOGIN',
+                            style: TextStyle(
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                  ),
+                ),
+
+                const SizedBox(height: AppSpacing.xl),
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      filled: true,
-      fillColor: AppColors.surface,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.medium),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.medium),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.medium),
-        borderSide: const BorderSide(color: AppColors.accentYellow, width: 2),
       ),
     );
   }

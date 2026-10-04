@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
 import 'utils/app_theme.dart';
-import 'utils/seed_data.dart';
 import 'utils/color_blind_filter.dart';
 
 // Providers
@@ -24,8 +23,6 @@ import 'screens/student/pin_entry_screen.dart';
 import 'screens/student/student_home_screen.dart';
 import 'screens/student/grade_selection_screen.dart';
 import 'screens/student/difficulty_selection_screen.dart';
-import 'screens/student/lesson_screen.dart';
-import 'screens/student/quiz_screen.dart';
 import 'screens/student/results_screen.dart';
 import 'screens/student/progress_dashboard_screen.dart';
 import 'screens/student/badge_collection_screen.dart';
@@ -54,6 +51,9 @@ import 'providers/connectivity_provider.dart';
 import 'screens/parent/generate_link_code_screen.dart';
 import 'screens/student/link_parent_screen.dart';
 import 'services/content_importer.dart';
+import 'screens/student/lesson_play_screen.dart';
+import 'screens/student/quiz_play_screen.dart';
+import 'screens/student/my_dictionary_screen.dart';
 
 
 
@@ -64,10 +64,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Legacy seed (small set of words for the old Lesson screen)
-  await seedWordsIfEmpty();
-
-  // NEW: Import bundled JSON content into SQLite
+  // Import bundled JSON content into SQLite
   await ContentImporter.instance.importAllGrades();
 
   final settingsProvider = SettingsProvider();
@@ -127,8 +124,6 @@ class ReadEaseApp extends StatelessWidget {
           '/student-home': (context) => const StudentHomeScreen(),
           '/grade-selection': (context) => const GradeSelectionScreen(),
           '/difficulty-selection': (context) => const DifficultySelectionScreen(),
-          '/lesson': (context) => const LessonScreen(),
-          '/quiz': (context) => const QuizScreen(),
           '/results': (context) => const ResultsScreen(),
           '/progress': (context) => const ProgressDashboardScreen(),
           '/badges': (context) => const BadgeCollectionScreen(),
@@ -155,6 +150,9 @@ class ReadEaseApp extends StatelessWidget {
           '/join-class': (context) => const JoinClassScreen(),
           '/generate-link-code': (context) => const GenerateLinkCodeScreen(),
           '/link-parent': (context) => const LinkParentScreen(),
+          '/lesson-play': (context) => const LessonPlayScreen(),
+          '/quiz-play': (context) => const QuizPlayScreen(),
+          '/my-dictionary': (context) => const MyDictionaryScreen(),
             },
           );
         },

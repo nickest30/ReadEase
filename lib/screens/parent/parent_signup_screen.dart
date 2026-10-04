@@ -4,10 +4,12 @@ import 'package:provider/provider.dart';
 
 import '../../models/parent.dart';
 import '../../services/database_service.dart';
+import '../../services/firestore_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/parent_provider.dart';
 import '../../utils/app_theme.dart';
-import '../../services/firestore_service.dart';
+import '../../utils/validators.dart';
+import '../../widgets/app_form.dart';
 
 class ParentSignupScreen extends StatefulWidget {
   const ParentSignupScreen({super.key});
@@ -73,13 +75,13 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
         email,
         _passwordController.text,
       );
-
       if (!mounted) return;
 
       if (firebaseUid == null) {
         setState(() {
           _errorMessage =
-              'Email is already registered or network failed. Try a different email.';
+              'Email is already registered or network failed. '
+              'Try a different email.';
           _isSubmitting = false;
         });
         return;
@@ -103,21 +105,18 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
 
       parentProvider.setParent(createdParent);
 
-      // Save credentials to secure storage for silent Firebase re-auth
       await authProvider.saveCredentials(
         uid: firebaseUid,
         email: email,
         password: _passwordController.text,
       );
 
-      // Sync parent profile to Firestore for cross-device login
       await FirestoreService.instance.saveParent(
         parentUid: firebaseUid,
         username: createdParent.username,
         fullName: createdParent.fullName,
         email: createdParent.email,
       );
-
       if (!mounted) return;
 
       Navigator.of(context).pushReplacementNamed('/parent-dashboard');
@@ -305,40 +304,73 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
 
                 const SizedBox(height: AppSpacing.xl),
 
-                _buildField('Full Name', _fullNameController,
-                    validator: (v) =>
-                        v == null || v.trim().isEmpty ? 'Required' : null),
+                // Full Name
+                const FieldLabel('Full Name'),
+                TextFormField(
+                  controller: _fullNameController,
+                  textInputAction: TextInputAction.next,
+                  validator: Validators.displayName,
+                  decoration: buildInputDecoration(
+                    hint: 'Enter your full name',
+                    focusColor: AppColors.accentPurple,
+                  ),
+                ),
 
                 const SizedBox(height: AppSpacing.md),
 
-                _buildField('Username', _usernameController,
-                    validator: (v) => v == null || v.trim().length < 3
-                        ? 'At least 3 characters'
-                        : null),
+                // Username
+                const FieldLabel('Username'),
+                TextFormField(
+                  controller: _usernameController,
+                  textInputAction: TextInputAction.next,
+                  validator: Validators.username,
+                  decoration: buildInputDecoration(
+                    hint: 'Pick a username',
+                    focusColor: AppColors.accentPurple,
+                  ),
+                ),
 
                 const SizedBox(height: AppSpacing.md),
 
-                _buildField('Email', _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (v) => v == null || !v.contains('@')
-                        ? 'Enter a valid email'
-                        : null),
+                // Email
+                const FieldLabel('Email'),
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  validator: Validators.email,
+                  decoration: buildInputDecoration(
+                    hint: 'name@example.com',
+                    focusColor: AppColors.accentPurple,
+                  ),
+                ),
 
                 const SizedBox(height: AppSpacing.md),
 
-                _buildField('Password', _passwordController,
-                    obscure: true,
-                    validator: (v) => v == null || v.length < 6
-                        ? 'At least 6 characters'
-                        : null),
+                // Password
+                const FieldLabel('Password'),
+                PasswordField(
+                  controller: _passwordController,
+                  hintText: 'At least 6 characters',
+                  textInputAction: TextInputAction.next,
+                  focusColor: AppColors.accentPurple,
+                  validator: (v) => Validators.password(v),
+                ),
 
                 const SizedBox(height: AppSpacing.md),
 
-                _buildField('Confirm Password', _confirmController,
-                    obscure: true,
-                    validator: (v) => v != _passwordController.text
-                        ? 'Passwords do not match'
-                        : null),
+                // Confirm Password
+                const FieldLabel('Confirm Password'),
+                PasswordField(
+                  controller: _confirmController,
+                  hintText: 'Re-enter your password',
+                  textInputAction: TextInputAction.done,
+                  focusColor: AppColors.accentPurple,
+                  validator: (v) => Validators.confirmPassword(
+                    v,
+                    _passwordController.text,
+                  ),
+                ),
 
                 if (_errorMessage != null) ...[
                   const SizedBox(height: AppSpacing.md),
@@ -390,55 +422,6 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildField(
-    String label,
-    TextEditingController controller, {
-    bool obscure = false,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontFamily: 'Nunito',
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textMuted,
-          ),
-        ),
-        const SizedBox(height: 5),
-        TextFormField(
-          controller: controller,
-          obscureText: obscure,
-          keyboardType: keyboardType,
-          validator: validator,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.surface,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.medium),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.medium),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.medium),
-              borderSide:
-                  const BorderSide(color: AppColors.accentPurple, width: 2),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

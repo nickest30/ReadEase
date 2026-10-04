@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../../models/class_group.dart';
 import '../../models/quiz_result.dart';
 import '../../models/student.dart';
-import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
+import '../../services/firestore_service.dart';
+
 
 class ClassAnalyticsScreen extends StatefulWidget {
   const ClassAnalyticsScreen({super.key});
@@ -28,10 +29,42 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
     final students = args['students'] as List<Student>;
 
     final List<QuizResult> allResults = [];
+
     for (final student in students) {
-      final results = await DatabaseService.instance
-          .getResultsForStudent(student.id!);
-      allResults.addAll(results);
+      if (student.firebaseUid == null) {
+        debugPrint(
+          '📊 Skipping ${student.displayName}: no firebaseUid',
+        );
+        continue;
+      }
+
+      try {
+        debugPrint(
+          '📊 Fetching results for ${student.displayName} '
+          '(${student.firebaseUid})...',
+        );
+        final cloudResults = await FirestoreService.instance
+            .getStudentResultsFromCloud(student.firebaseUid!);
+        debugPrint(
+          '📊 Got ${cloudResults.length} results for ${student.displayName}',
+        );
+
+        for (final r in cloudResults) {
+          allResults.add(QuizResult(
+            id: null,
+            studentId: 0,
+            gradeLevel: (r['gradeLevel'] ?? 0) as int,
+            difficulty: (r['difficulty'] ?? 'easy') as String,
+            score: (r['score'] ?? 0) as int,
+            totalQuestions: (r['totalQuestions'] ?? 0) as int,
+            pointsEarned: (r['pointsEarned'] ?? 0) as int,
+            completedAt: (r['completedAt'] ?? '') as String,
+            syncedToCloud: true,
+          ));
+        }
+      } catch (e) {
+        debugPrint('📊 Cloud results fetch failed for ${student.displayName}: $e');
+      }
     }
 
     if (!mounted) return;
@@ -187,7 +220,7 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
                                       style: AppText.caption,
                                     ),
                                   )
-                                else ...[
+                                 else ...[
                                   const Text(
                                     'PER STUDENT SUMMARY',
                                     style: TextStyle(
@@ -200,13 +233,6 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
                                   ),
                                   const SizedBox(height: AppSpacing.sm),
                                   ...students.map((student) {
-                                    final sr = _allResults
-                                        .where((r) =>
-                                            r.studentId == student.id)
-                                        .toList();
-                                    final passingCount = sr
-                                        .where((r) => r.isPassing)
-                                        .length;
                                     return Container(
                                       margin: const EdgeInsets.only(
                                           bottom: AppSpacing.sm),
@@ -236,7 +262,7 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
                                             ),
                                           ),
                                           Text(
-                                            '$passingCount passed · ${student.totalPoints} pts',
+                                            '${student.totalPoints} pts',
                                             style: AppText.caption,
                                           ),
                                         ],

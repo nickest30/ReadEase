@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/class_group.dart';
+import '../../models/student.dart'; 
 import '../../providers/connectivity_provider.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
@@ -14,7 +15,7 @@ class ClassOverviewScreen extends StatefulWidget {
 }
 
 class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
-  List<Map<String, dynamic>> _students = [];
+  List<Student> _students = [];
   bool _loading = true;
   String? _errorMessage;
 
@@ -28,7 +29,6 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
     final args = ModalRoute.of(context)!.settings.arguments as Map;
     final classGroup = args['classGroup'] as ClassGroup;
 
-    // Fast-fail when offline
     if (!context.read<ConnectivityProvider>().isOnline) {
       if (!mounted) return;
       setState(() {
@@ -38,7 +38,6 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
       return;
     }
 
-    // Class must be synced to Firestore to have enrollments
     if (classGroup.firestoreId == null || classGroup.firestoreId!.isEmpty) {
       if (!mounted) return;
       setState(() {
@@ -49,8 +48,23 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
       return;
     }
 
-    final students = await FirestoreService.instance
+    final raw = await FirestoreService.instance
         .getEnrolledStudentsDetailed(classGroup.firestoreId!);
+
+    // Convert Firestore Maps → Student objects for navigation
+    final students = raw.map((m) {
+      return Student(
+        id: null, // cloud-only, no local ID
+        username: '',
+        passwordHash: '',
+        displayName: (m['studentName'] ?? m['displayName'] ?? 'Unknown')
+            as String,
+        gradeLevel: (m['gradeLevel'] ?? 0) as int,
+        totalPoints: (m['totalPoints'] ?? 0) as int,
+        firebaseUid: m['uid'] as String?,
+        createdAt: '',
+      );
+    }).toList();
 
     if (!mounted) return;
     setState(() {
@@ -426,18 +440,17 @@ class _ActionButton extends StatelessWidget {
 }
 
 class _StudentRow extends StatelessWidget {
-  final Map<String, dynamic> student;
+  final Student student;
   final VoidCallback onTap;
 
   const _StudentRow({required this.student, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final name = (student['studentName'] as String?) ?? 'Unknown';
+    final name = student.displayName;
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
-    final grade = student['gradeLevel'] ?? 0;
-    final points = student['totalPoints'] ?? 0;
-    final badges = student['badgeCount'] ?? 0;
+    final grade = student.gradeLevel;
+    final points = student.totalPoints;
 
     return InkWell(
       onTap: onTap,
@@ -489,35 +502,10 @@ class _StudentRow extends StatelessWidget {
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  Text(
-                    'Grade $grade',
-                    style: AppText.caption,
-                  ),
+                  Text('Grade $grade', style: AppText.caption),
                 ],
               ),
             ),
-            if (badges > 0) ...[
-              Row(
-                children: [
-                  const Icon(
-                    Icons.emoji_events_rounded,
-                    color: AppColors.accentYellow,
-                    size: 14,
-                  ),
-                  const SizedBox(width: 2),
-                  Text(
-                    '$badges',
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textYellow,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: AppSpacing.sm),
-            ],
             Text(
               '$points pts',
               style: const TextStyle(

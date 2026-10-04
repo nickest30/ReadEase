@@ -5,6 +5,7 @@ import '../../models/badge.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
+import '../../widgets/error_state.dart';
 
 class BadgeCollectionScreen extends StatefulWidget {
   const BadgeCollectionScreen({super.key});
@@ -16,6 +17,7 @@ class BadgeCollectionScreen extends StatefulWidget {
 class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
   Map<String, AchievementBadge> _earnedBadges = {};
   bool _loading = true;
+  String? _error;
 
   static const _difficulties = ['easy', 'medium', 'hard'];
 
@@ -28,18 +30,37 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
   Future<void> _loadBadges() async {
     final student = context.read<StudentProvider>().currentStudent;
     if (student == null || student.id == null) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'Please sign in again to view your badges.';
+        });
+      }
       return;
     }
 
-    final badges =
-        await DatabaseService.instance.getBadgesForStudent(student.id!);
-
-    if (!mounted) return;
     setState(() {
-      _earnedBadges = {for (final b in badges) b.key: b};
-      _loading = false;
+      _loading = true;
+      _error = null;
     });
+
+    try {
+      final badges = await DatabaseService.instance
+          .getBadgesForStudent(student.id!);
+
+      if (!mounted) return;
+      setState(() {
+        _earnedBadges = {for (final b in badges) b.key: b};
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint('🏅 Load badges failed: $e');
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'We couldn\'t load your badges right now.';
+      });
+    }
   }
 
   int get _totalEarned => _earnedBadges.length;
@@ -49,6 +70,7 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
     required String difficulty,
     required AchievementBadge? earned,
   }) {
+    // ... unchanged, keep as-is ...
     final badgeName = AchievementBadge.nameFor(gradeLevel, difficulty);
     final imagePath =
         AchievementBadge.imagePathFor(gradeLevel, difficulty);
@@ -92,7 +114,7 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
                   child: Container(
                     width: 36,
                     height: 36,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.studentBg,
                       shape: BoxShape.circle,
                     ),
@@ -168,9 +190,9 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
                     color: AppColors.border.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(AppRadius.medium),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       Icon(
                         Icons.lock_rounded,
                         size: 16,
@@ -235,126 +257,174 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.md,
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back,
-                        color: AppColors.textPrimary),
-                    padding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('My Badges', style: AppText.h2),
-                        Text(
-                          '$_totalEarned of 18 unlocked',
-                          style: AppText.caption,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : RefreshIndicator(
-                      onRefresh: _loadBadges,
-                      color: AppColors.accentTeal,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: AppSpacing.sm),
-
-                            // Yse with gold book
-                            Image.asset(
-                              'assets/images/mascot/yse_gold_book.png',
-                              width: 200,
-                              height: 200,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, _, _) => Container(
-                                width: 200,
-                                height: 200,
-                                decoration: BoxDecoration(
-                                  color: AppColors.accentYellow
-                                      .withValues(alpha: 0.15),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: AppColors.accentYellow,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.menu_book_rounded,
-                                  size: 80,
-                                  color: AppColors.accentYellow,
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: AppSpacing.sm),
-
-                            // Grid of 18 core badges
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.xl),
-                              child: GridView.builder(
-                                shrinkWrap: true,
-                                physics:
-                                    const NeverScrollableScrollPhysics(),
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 3,
-                                  mainAxisSpacing: AppSpacing.md,
-                                  crossAxisSpacing: AppSpacing.md,
-                                  childAspectRatio: 1.0,
-                                ),
-                                itemCount: 18,
-                                itemBuilder: (context, index) {
-                                  final grade = (index ~/ 3) + 1;
-                                  final difficulty =
-                                      _difficulties[index % 3];
-                                  final key = '$grade-$difficulty';
-                                  final earned = _earnedBadges[key];
-
-                                  return _BadgeTile(
-                                    gradeLevel: grade,
-                                    difficulty: difficulty,
-                                    earned: earned,
-                                    onTap: () => _showBadgeDetail(
-                                      gradeLevel: grade,
-                                      difficulty: difficulty,
-                                      earned: earned,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-
-                            const SizedBox(height: AppSpacing.xl),
-                          ],
-                        ),
-                      ),
-                    ),
-            ),
+            _buildHeader(),
+            Expanded(child: _buildBody()),
           ],
         ),
       ),
     );
   }
+
+  // ── Header ───────────────────────────────────────────────────────
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl,
+        vertical: AppSpacing.md,
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.arrow_back,
+                color: AppColors.textPrimary),
+            padding: EdgeInsets.zero,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('My Badges', style: AppText.h2),
+                Text(
+                  '$_totalEarned of 18 unlocked',
+                  style: AppText.caption,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Body ─────────────────────────────────────────────────────────
+
+  Widget _buildBody() {
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.accentTeal),
+      );
+    }
+
+    if (_error != null) {
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ErrorState(
+          title: 'Can\'t load badges',
+          message: _error,
+          onRetry: _loadBadges,
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadBadges,
+      color: AppColors.accentTeal,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          children: [
+            const SizedBox(height: AppSpacing.sm),
+            _buildHero(),
+            const SizedBox(height: AppSpacing.sm),
+            _buildGrid(),
+            const SizedBox(height: AppSpacing.xl),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Hero — Yse + encouraging line ────────────────────────────────
+
+  Widget _buildHero() {
+    // Swap the message based on badge count. Same image either way.
+    final hasBadges = _totalEarned > 0;
+    final message = hasBadges
+        ? 'Look at your collection!'
+        : 'Earn your first badge by passing a quiz!';
+
+    return Column(
+      children: [
+        Image.asset(
+          'assets/images/mascot/yse_gold_book.png',
+          width: 200,
+          height: 200,
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) => Container(
+            width: 200,
+            height: 200,
+            decoration: BoxDecoration(
+              color: AppColors.accentYellow.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.accentYellow,
+                width: 2,
+              ),
+            ),
+            child: const Icon(
+              Icons.menu_book_rounded,
+              size: 80,
+              color: AppColors.accentYellow,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          message,
+          textAlign: TextAlign.center,
+          style: AppText.caption.copyWith(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: hasBadges
+                ? AppColors.textYellow
+                : AppColors.textMuted,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Grid of 18 badges ────────────────────────────────────────────
+
+  Widget _buildGrid() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          mainAxisSpacing: AppSpacing.md,
+          crossAxisSpacing: AppSpacing.md,
+          childAspectRatio: 1.0,
+        ),
+        itemCount: 18,
+        itemBuilder: (context, index) {
+          final grade = (index ~/ 3) + 1;
+          final difficulty = _difficulties[index % 3];
+          final key = '$grade-$difficulty';
+          final earned = _earnedBadges[key];
+
+          return _BadgeTile(
+            gradeLevel: grade,
+            difficulty: difficulty,
+            earned: earned,
+            onTap: () => _showBadgeDetail(
+              gradeLevel: grade,
+              difficulty: difficulty,
+              earned: earned,
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
+// _BadgeTile unchanged — keep as-is from your original.
 class _BadgeTile extends StatelessWidget {
   final int gradeLevel;
   final String difficulty;
@@ -421,7 +491,6 @@ class _BadgeTile extends StatelessWidget {
                   ),
                 ),
               ),
-              // Grade indicator bottom-left
               Positioned(
                 left: 2,
                 bottom: 2,
@@ -445,7 +514,6 @@ class _BadgeTile extends StatelessWidget {
                   ),
                 ),
               ),
-              // Lock icon for not earned
               if (!isEarned)
                 const Positioned(
                   right: 2,

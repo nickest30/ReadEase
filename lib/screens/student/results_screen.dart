@@ -1,14 +1,9 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../../models/quiz_result.dart';
-import '../../providers/student_provider.dart';
-import '../../services/database_service.dart';
-import '../../services/firestore_service.dart';
-import '../../utils/app_theme.dart';
 import '../../models/badge.dart';
+import '../../utils/app_theme.dart';
 
 class ResultsScreen extends StatefulWidget {
   const ResultsScreen({super.key});
@@ -18,18 +13,16 @@ class ResultsScreen extends StatefulWidget {
 }
 
 class _ResultsScreenState extends State<ResultsScreen> {
-  bool _saved = false;
-  bool _isPassing = false;
-  int _pointsEarned = 0;
+  bool _loaded = false;
   int _score = 0;
   int _totalQuestions = 0;
+  int _pointsDelta = 0;
   int _gradeLevel = 1;
   String _difficulty = 'easy';
+  bool _isNewBadge = false;
   int _starsEarned = 0;
-  String _encouragementComment = '';
-  List<int> _wrongWordIds = [];
+  String _comment = '';
 
-  // Star-tier comments (4 per tier, randomly picked)
   static const Map<int, List<String>> _commentsByStars = {
     1: [
       'Every detective starts somewhere!',
@@ -66,160 +59,36 @@ class _ResultsScreenState extends State<ResultsScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_saved) {
-      _saved = true;
-      _saveResult();
+    if (!_loaded) {
+      _loaded = true;
+      _loadArgs();
     }
   }
 
-  Future<void> _saveResult() async {
+  void _loadArgs() {
     final args = ModalRoute.of(context)!.settings.arguments as Map;
-    _gradeLevel = args['gradeLevel'] as int;
-    _difficulty = args['difficulty'] as String;
     _score = args['score'] as int;
     _totalQuestions = args['totalQuestions'] as int;
-    _wrongWordIds = (args['wrongWordIds'] as List?)?.cast<int>() ?? [];
+    _pointsDelta = args['pointsDelta'] as int;
+    _gradeLevel = args['gradeLevel'] as int;
+    _difficulty = args['difficulty'] as String;
+    _isNewBadge = (args['isNewBadge'] as bool?) ?? false;
 
-    final student = context.read<StudentProvider>().currentStudent;
-    if (student == null || student.id == null) return;
-
-    // Compute points delta (best-score-per-level rule)
-    final pointsEarned = await DatabaseService.instance.computePointsDelta(
-      studentId: student.id!,
-      gradeLevel: _gradeLevel,
-      difficulty: _difficulty,
-      newScore: _score,
-    );
-
-    final wrongIdsJson = _wrongWordIds.isEmpty
-        ? null
-        : '[${_wrongWordIds.join(',')}]';
-
-    final result = QuizResult(
-      studentId: student.id!,
-      gradeLevel: _gradeLevel,
-      difficulty: _difficulty,
-      score: _score,
-      totalQuestions: _totalQuestions,
-      pointsEarned: pointsEarned,
-      completedAt: DateTime.now().toIso8601String(),
-      wrongWordIds: wrongIdsJson,
-    );
-
-    // Save result locally (always, for history + weak words)
-    await DatabaseService.instance.insertQuizResult(result);
-
-    // Only add points if this is an improvement
-    if (pointsEarned > 0) {
-      await DatabaseService.instance.addPoints(student.id!, pointsEarned);
-      debugPrint('🔥 Points earned: $pointsEarned (improvement)');
-    } else {
-      debugPrint('🔥 Points earned: 0 (not an improvement)');
-    }
-
-    // Refresh student + update provider
-    final updated = await DatabaseService.instance.getStudentById(student.id!);
-    if (!mounted) return;
-    if (updated != null) {
-      context.read<StudentProvider>().updateStudent(updated);
-    }
-
-    // Sync to Firestore if student has Firebase account
-    if (student.firebaseUid != null && updated != null) {
-      try {
-        final allResults =
-            await DatabaseService.instance.getResultsForStudent(student.id!);
-
-        // Compute badge count from results
-        final Set<String> passedKeys = {};
-
-        for (final r in allResults) {
-          if (r.isPassing) {
-            passedKeys.add('${r.gradeLevel}-${r.difficulty}');
-          }
-        }
-
-        if (result.isPassing) {
-          final badgeName = AchievementBadge.nameFor(_gradeLevel, _difficulty);
-          final badge = AchievementBadge(
-            studentId: student.id!,
-            gradeLevel: _gradeLevel,
-            difficulty: _difficulty,
-            badgeName: badgeName,
-            pointsEarned: pointsEarned,
-            earnedAt: DateTime.now().toIso8601String(),
-          );
-
-          final isNewBadge =
-              await DatabaseService.instance.awardBadge(badge);
-
-          if (isNewBadge) {
-            debugPrint('🏆 New badge awarded: $badgeName');
-
-            if (student.firebaseUid != null) {
-              await FirestoreService.instance.syncBadge(
-                studentUid: student.firebaseUid!,
-                badgeKey: badge.key,
-                gradeLevel: _gradeLevel,
-                difficulty: _difficulty,
-                badgeName: badgeName,
-                pointsEarned: pointsEarned,
-                earnedAt: badge.earnedAt,
-              );
-            }
-          } else {
-            debugPrint('🏆 Badge already earned: $badgeName');
-          }
-        }
-
-        await FirestoreService.instance.syncStudentProgress(
-          student.firebaseUid!,
-          student.displayName,
-          updated.totalPoints,
-          allResults,
-        );
-
-        await FirestoreService.instance.updateLeaderboardEntry(
-          studentUid: student.firebaseUid!,
-          displayName: student.displayName,
-          totalPoints: updated.totalPoints,
-          gradeLevel: student.gradeLevel,
-          badgeCount: passedKeys.length,
-          classId: updated.classFirestoreId,
-        );
-
-        // Mark all results as synced
-        for (final r in allResults) {
-          if (r.id != null && !r.syncedToCloud) {
-            await DatabaseService.instance.markResultSynced(r.id!);
-          }
-        }
-        debugPrint('🔥 Sync complete: ${allResults.length} results synced');
-      } catch (e) {
-        debugPrint('🔥 Sync failed (will retry): $e');
-      }
-    }
-
-    if (!mounted) return;
-
-    // Pick a random comment for this star tier
     final stars = _totalQuestions == 0
         ? 0
         : ((_score / _totalQuestions) * 5).round();
     final comments = _commentsByStars[stars] ?? _commentsByStars[3]!;
-    final pickedComment = comments[Random().nextInt(comments.length)];
+    final rng = Random();
+    final picked = comments[rng.nextInt(comments.length)];
 
     setState(() {
-      _isPassing = result.isPassing;
-      _pointsEarned = pointsEarned;
       _starsEarned = stars;
-      _encouragementComment = pickedComment;
+      _comment = picked;
     });
   }
 
-  // ─────────────────────────────────────────────────────────
-  // Yse asset + fallback per star tier
-  // ─────────────────────────────────────────────────────────
+  bool get _isPassing =>
+      _totalQuestions > 0 && (_score / _totalQuestions) >= 0.70;
 
   String get _yseAsset {
     if (_starsEarned >= 5) return 'assets/images/mascot/yse_celebrate.png';
@@ -245,32 +114,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
     return AppColors.accentCoral;
   }
 
-  // ─────────────────────────────────────────────────────────
-  // Badge popup
-  // ─────────────────────────────────────────────────────────
-
-  String get _badgeName {
-    if (_starsEarned >= 5) return 'Perfect Score';
-    if (_difficulty == 'easy') return 'Easy Reader';
-    if (_difficulty == 'medium') return 'Medium Master';
-    if (_difficulty == 'hard') return 'Hard Hero';
-    return 'Grade $_gradeLevel ${_capitalize(_difficulty)}';
-  }
-
-  String get _badgeDescription {
-    if (_starsEarned >= 5) {
-      return 'Perfect score in Grade $_gradeLevel ${_capitalize(_difficulty)}!';
-    }
-    return 'You passed Grade $_gradeLevel ${_capitalize(_difficulty)} with '
-        '$_score out of $_totalQuestions.';
-  }
-
-  String _capitalize(String s) =>
-      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
-
   void _showBadgeDialog() {
-    final earnedAt = DateTime.now();
-    final dateStr = '${earnedAt.day}/${earnedAt.month}/${earnedAt.year}';
+    final badgeName = AchievementBadge.nameFor(_gradeLevel, _difficulty);
+    final imagePath =
+        AchievementBadge.imagePathFor(_gradeLevel, _difficulty);
 
     showDialog(
       context: context,
@@ -315,18 +162,18 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   ),
                 ),
               ),
-              // Real badge image
               SizedBox(
                 width: 160,
                 height: 160,
                 child: Image.asset(
-                  AchievementBadge.imagePathFor(_gradeLevel, _difficulty),
+                  imagePath,
                   fit: BoxFit.contain,
                   errorBuilder: (_, _, _) => Container(
                     width: 120,
                     height: 120,
                     decoration: BoxDecoration(
-                      color: AppColors.accentYellow.withValues(alpha: 0.15),
+                      color:
+                          AppColors.accentYellow.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: AppColors.accentYellow,
@@ -343,43 +190,30 @@ class _ResultsScreenState extends State<ResultsScreen> {
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(
-                _badgeName,
+                badgeName,
                 textAlign: TextAlign.center,
                 style: AppText.h1.copyWith(color: AppColors.textYellow),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                _badgeDescription,
-                textAlign: TextAlign.center,
-                style: AppText.body,
+                'Grade $_gradeLevel — ${_difficulty[0].toUpperCase()}${_difficulty.substring(1)}',
+                style: AppText.caption,
               ),
               const SizedBox(height: AppSpacing.md),
               Container(height: 1, color: AppColors.border),
               const SizedBox(height: AppSpacing.md),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Column(
-                    children: [
-                      const Icon(
-                        Icons.calendar_today_rounded,
-                        size: 18,
-                        color: AppColors.textMuted,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(dateStr, style: AppText.caption),
-                    ],
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    color: AppColors.accentTeal,
+                    size: 18,
                   ),
-                  Column(
-                    children: [
-                      const Icon(
-                        Icons.star_rounded,
-                        size: 18,
-                        color: AppColors.accentYellow,
-                      ),
-                      const SizedBox(height: 4),
-                      Text('$_score/$_totalQuestions', style: AppText.caption),
-                    ],
+                  const SizedBox(width: 6),
+                  Text(
+                    _isNewBadge ? 'Earned today!' : 'Already earned',
+                    style: AppText.caption,
                   ),
                 ],
               ),
@@ -393,7 +227,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     backgroundColor: AppColors.accentTeal,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.medium),
+                      borderRadius:
+                          BorderRadius.circular(AppRadius.medium),
                     ),
                   ),
                   child: const Text(
@@ -412,10 +247,6 @@ class _ResultsScreenState extends State<ResultsScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────
-  // Build
-  // ─────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -431,28 +262,48 @@ class _ResultsScreenState extends State<ResultsScreen> {
             children: [
               const SizedBox(height: AppSpacing.md),
 
-              // Yse — star-tiered pose
+              // Yse — star-tiered
               Center(
-                child: _YseImage(
-                  assetPath: _yseAsset,
-                  size: 180,
-                  fallbackIcon: _yseFallbackIcon,
-                  fallbackColor: _yseFallbackColor,
+                child: SizedBox(
+                  width: 180,
+                  height: 180,
+                  child: Image.asset(
+                    _yseAsset,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 180,
+                      height: 180,
+                      decoration: BoxDecoration(
+                        color:
+                            _yseFallbackColor.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: _yseFallbackColor,
+                          width: 3,
+                        ),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          _yseFallbackIcon,
+                          size: 90,
+                          color: _yseFallbackColor,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
 
               const SizedBox(height: AppSpacing.lg),
 
-              // Random encouragement comment
               Text(
-                _encouragementComment,
+                _comment,
                 textAlign: TextAlign.center,
                 style: AppText.h2,
               ),
 
               const SizedBox(height: AppSpacing.xl),
 
-              // Score
               Text(
                 '$_score / $_totalQuestions',
                 textAlign: TextAlign.center,
@@ -465,14 +316,13 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
               const SizedBox(height: AppSpacing.sm),
 
-              // Stars
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (index) {
+                children: List.generate(5, (i) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Icon(
-                      index < _starsEarned
+                      i < _starsEarned
                           ? Icons.star_rounded
                           : Icons.star_border_rounded,
                       color: AppColors.accentYellow,
@@ -484,8 +334,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
               const SizedBox(height: AppSpacing.xl),
 
-              // Best-score chip (only on non-improving retake)
-              if (_pointsEarned == 0 && _score > 0) ...[
+              // Best score chip (on non-improving retake)
+              if (_pointsDelta == 0 && _score > 0) ...[
                 Center(
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -494,14 +344,16 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.accentTeal.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppRadius.medium),
+                      borderRadius:
+                          BorderRadius.circular(AppRadius.medium),
                       border: Border.all(
-                        color: AppColors.accentTeal.withValues(alpha: 0.3),
+                        color: AppColors.accentTeal
+                            .withValues(alpha: 0.3),
                       ),
                     ),
-                    child: Row(
+                    child: const Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
+                      children: [
                         Icon(
                           Icons.emoji_events_rounded,
                           size: 16,
@@ -537,7 +389,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
                       ),
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(AppRadius.xl),
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.xl),
                         border: Border.all(
                           color: AppColors.accentYellow,
                           width: 2,
@@ -553,8 +406,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
                           ),
                           const SizedBox(width: AppSpacing.sm),
                           Text(
-                            'Badge Unlocked!',
-                            style: TextStyle(
+                            _isNewBadge
+                                ? 'NEW Badge Unlocked!'
+                                : 'Badge Unlocked!',
+                            style: const TextStyle(
                               fontFamily: 'Nunito',
                               fontWeight: FontWeight.w800,
                               fontSize: 15,
@@ -575,11 +430,11 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
               const SizedBox(height: AppSpacing.lg),
 
-              // Points earned (only if > 0)
-              if (_pointsEarned > 0)
+              // Points chip
+              if (_pointsDelta > 0)
                 Center(
                   child: Text(
-                    '+$_pointsEarned points',
+                    '+$_pointsDelta points',
                     style: const TextStyle(
                       fontFamily: 'Nunito',
                       fontWeight: FontWeight.w700,
@@ -633,7 +488,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                         onPressed: () {
                           Navigator.of(context).pushNamedAndRemoveUntil(
                             '/student-home',
-                            ModalRoute.withName('/role-selection'), 
+                            ModalRoute.withName('/role-selection'),
                           );
                         },
                         style: ElevatedButton.styleFrom(
@@ -662,52 +517,6 @@ class _ResultsScreenState extends State<ResultsScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────
-// Yse image with tier-aware fallback
-// ─────────────────────────────────────────────────────────
-
-class _YseImage extends StatelessWidget {
-  final String assetPath;
-  final double size;
-  final IconData fallbackIcon;
-  final Color fallbackColor;
-
-  const _YseImage({
-    required this.assetPath,
-    required this.size,
-    required this.fallbackIcon,
-    required this.fallbackColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Image.asset(
-      assetPath,
-      width: size,
-      height: size,
-      fit: BoxFit.contain,
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: fallbackColor.withValues(alpha: 0.15),
-            shape: BoxShape.circle,
-            border: Border.all(color: fallbackColor, width: 3),
-          ),
-          child: Center(
-            child: Icon(
-              fallbackIcon,
-              size: size * 0.5,
-              color: fallbackColor,
-            ),
-          ),
-        );
-      },
     );
   }
 }

@@ -5,8 +5,9 @@ import '../../models/student.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/parent_provider.dart';
 import '../../services/database_service.dart';
-import '../../utils/app_theme.dart';
 import '../../services/firestore_service.dart';
+import '../../utils/app_theme.dart';
+import '../../widgets/error_state.dart';
 
 class ParentDashboardScreen extends StatefulWidget {
   const ParentDashboardScreen({super.key});
@@ -18,6 +19,7 @@ class ParentDashboardScreen extends StatefulWidget {
 class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   List<Student> _children = [];
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -29,57 +31,80 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
     final parent = context.read<ParentProvider>().currentParent;
     final authProvider = context.read<AuthProvider>();
 
-    if (parent == null) return;
-
-    final localChildren =
-        await DatabaseService.instance.getChildrenOfParent(parent.id!);
-
-    final parentFirebaseUid = authProvider.uid;
-
-    List<Student> cloudChildren = [];
-    if (parentFirebaseUid != null) {
-      try {
-        final cloudDocs = await FirestoreService.instance
-            .getChildrenOfParent(parentFirebaseUid);
-
-        cloudChildren = cloudDocs.map((doc) {
-          return Student(
-            id: null, // cloud-only, no local ID yet
-            username: (doc['username'] ?? '') as String,
-            passwordHash: '',
-            displayName: (doc['displayName'] ?? 'Unknown') as String,
-            gradeLevel: (doc['gradeLevel'] ?? 0) as int,
-            isLinked: true,
-            parentId: parent.id,
-            totalPoints: (doc['totalPoints'] ?? 0) as int,
-            createdAt: DateTime.now().toIso8601String(),
-            firebaseUid: (doc['uid'] ?? '') as String,
-          );
-        }).toList();
-      } catch (e) {
-        debugPrint('🔥 Cloud children load failed: $e');
+    if (parent == null) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'Please sign in again.';
+        });
       }
-    }
-
-    if (!mounted) return;
-
-    // 3. Merge — dedupe by firebaseUid
-    final Map<String, Student> merged = {};
-    for (final c in localChildren) {
-      final key = c.firebaseUid ?? 'local-${c.id}';
-      merged[key] = c;
-    }
-    for (final c in cloudChildren) {
-      final key = c.firebaseUid ?? 'cloud-${c.displayName}';
-      if (!merged.containsKey(key)) {
-        merged[key] = c;
-      }
+      return;
     }
 
     setState(() {
-      _children = merged.values.toList();
-      _loading = false;
+      _loading = true;
+      _error = null;
     });
+
+    try {
+      final localChildren =
+          await DatabaseService.instance.getChildrenOfParent(parent.id!);
+
+      final parentFirebaseUid = authProvider.uid;
+
+      List<Student> cloudChildren = [];
+      if (parentFirebaseUid != null) {
+        try {
+          final cloudDocs = await FirestoreService.instance
+              .getChildrenOfParent(parentFirebaseUid);
+
+          cloudChildren = cloudDocs.map((doc) {
+            return Student(
+              id: null, // cloud-only, no local ID yet
+              username: (doc['username'] ?? '') as String,
+              passwordHash: '',
+              displayName: (doc['displayName'] ?? 'Unknown') as String,
+              gradeLevel: (doc['gradeLevel'] ?? 0) as int,
+              isLinked: true,
+              parentId: parent.id,
+              totalPoints: (doc['totalPoints'] ?? 0) as int,
+              createdAt: DateTime.now().toIso8601String(),
+              firebaseUid: (doc['uid'] ?? '') as String,
+            );
+          }).toList();
+        } catch (e) {
+          // Cloud fetch failed but local may still have data — log and continue.
+          debugPrint('🔥 Cloud children load failed: $e');
+        }
+      }
+
+      if (!mounted) return;
+
+      // Merge — dedupe by firebaseUid
+      final Map<String, Student> merged = {};
+      for (final c in localChildren) {
+        final key = c.firebaseUid ?? 'local-${c.id}';
+        merged[key] = c;
+      }
+      for (final c in cloudChildren) {
+        final key = c.firebaseUid ?? 'cloud-${c.displayName}';
+        if (!merged.containsKey(key)) {
+          merged[key] = c;
+        }
+      }
+
+      setState(() {
+        _children = merged.values.toList();
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint('👨‍👩‍👧 Load children ERROR: $e');
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'We couldn\'t load your children right now.';
+      });
+    }
   }
 
   Future<void> _handleLogout() async {
@@ -173,153 +198,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: AppSpacing.md),
-
-              // Header with Motter
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Hello, ${parent.fullName.split(' ').first}!',
-                          style: AppText.h2,
-                        ),
-                        const SizedBox(height: 2),
-                        const Text('My Children', style: AppText.caption),
-                      ],
-                    ),
-                  ),
-                  Image.asset(
-                    'assets/images/mascot/motter_base.png',
-                    width: 70,
-                    height: 70,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => Container(
-                      width: 70,
-                      height: 70,
-                      decoration: BoxDecoration(
-                        color: AppColors.accentPurple.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.accentPurple,
-                          width: 2,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.family_restroom_rounded,
-                        color: AppColors.accentPurple,
-                        size: 34,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
+              _buildHeader(parent.fullName),
               const SizedBox(height: AppSpacing.lg),
-
-              Expanded(
-                child: _loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _children.isEmpty
-                        ? _buildEmptyState()
-                        : GridView.builder(
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: AppSpacing.md,
-                              crossAxisSpacing: AppSpacing.md,
-                              childAspectRatio: 0.95,
-                            ),
-                            itemCount: _children.length,
-                            itemBuilder: (context, index) {
-                              final child = _children[index];
-                              return _ChildCard(
-                                child: child,
-                                onTap: () => Navigator.of(context).pushNamed(
-                                  '/child-progress',
-                                  arguments: {'child': child},
-                                ),
-                              );
-                            },
-                          ),
-              ),
-
-              // Generate Link Code (for kids with their own device)
-              if (_children.length < 4) ...[
-                SizedBox(
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    onPressed: () => Navigator.of(context).pushNamed('/generate-link-code'),
-                    icon: const Icon(Icons.qr_code_rounded),
-                    label: const Text(
-                      'Link Code for Your Kids',
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.accentPurple,
-                      side: const BorderSide(color: AppColors.accentPurple, width: 1.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.large),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-              ],
-
-              if (_children.length < 4) ...[
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      await Navigator.of(context).pushNamed('/add-child');
-                      _loadChildren();
-                    },
-                    icon: const Icon(Icons.add),
-                    label: const Text(
-                      'Add Child',
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentPurple,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.large),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-              ],
-
-              SizedBox(
-                height: 50,
-                child: OutlinedButton(
-                  onPressed: _handleLogout,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textCoral,
-                    side: const BorderSide(color: AppColors.accentCoral),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.large),
-                    ),
-                  ),
-                  child: const Text(
-                    'Log Out',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
+              Expanded(child: _buildBody()),
+              const SizedBox(height: AppSpacing.md),
+              _buildActions(),
               const SizedBox(height: AppSpacing.md),
             ],
           ),
@@ -328,43 +211,266 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
     );
   }
 
+  // ── Header ───────────────────────────────────────────────────────
+
+  Widget _buildHeader(String fullName) {
+    final firstName = fullName.split(' ').first;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Hello, $firstName!', style: AppText.h2),
+              const SizedBox(height: 2),
+              const Text('My Children', style: AppText.caption),
+            ],
+          ),
+        ),
+        Image.asset(
+          'assets/images/mascot/motter_base.png',
+          width: 70,
+          height: 70,
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) => Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              color: AppColors.accentPurple.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.accentPurple,
+                width: 2,
+              ),
+            ),
+            child: const Icon(
+              Icons.family_restroom_rounded,
+              color: AppColors.accentPurple,
+              size: 34,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Body: loading / error / empty / grid ─────────────────────────
+
+  Widget _buildBody() {
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.accentPurple),
+      );
+    }
+
+    if (_error != null) {
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ErrorState(
+          title: 'Can\'t load children',
+          message: _error,
+          onRetry: _loadChildren,
+        ),
+      );
+    }
+
+    if (_children.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadChildren,
+      color: AppColors.accentPurple,
+      child: GridView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        gridDelegate:
+            const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: AppSpacing.md,
+          crossAxisSpacing: AppSpacing.md,
+          childAspectRatio: 0.95,
+        ),
+        itemCount: _children.length,
+        itemBuilder: (context, index) {
+          final child = _children[index];
+          return _ChildCard(
+            child: child,
+            onTap: () => Navigator.of(context).pushNamed(
+              '/child-progress',
+              arguments: {'child': child},
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ── Bottom actions ───────────────────────────────────────────────
+
+  Widget _buildActions() {
+    final canAddMore = _children.length < 4;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (canAddMore) ...[
+          SizedBox(
+            height: 52,
+            child: OutlinedButton.icon(
+              onPressed: () =>
+                  Navigator.of(context).pushNamed('/generate-link-code'),
+              icon: const Icon(Icons.qr_code_rounded),
+              label: const Text(
+                'Link Code for Your Kids',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.accentPurple,
+                side: const BorderSide(
+                  color: AppColors.accentPurple,
+                  width: 1.5,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.large),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+
+          SizedBox(
+            height: 56,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                await Navigator.of(context).pushNamed('/add-child');
+                _loadChildren();
+              },
+              icon: const Icon(Icons.add),
+              label: const Text(
+                'Add Child',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentPurple,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.large),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+
+        SizedBox(
+          height: 50,
+          child: OutlinedButton(
+            onPressed: _handleLogout,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.textCoral,
+              side: const BorderSide(color: AppColors.accentCoral),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.large),
+              ),
+            ),
+            child: const Text(
+              'Log Out',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Empty state ──────────────────────────────────────────────────
+
   Widget _buildEmptyState() {
-    return Padding(
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const SizedBox(height: AppSpacing.xxl),
           Image.asset(
             'assets/images/mascot/motter_gentle.png',
-            width: 140,
-            height: 140,
+            width: 160,
+            height: 160,
             fit: BoxFit.contain,
             errorBuilder: (_, _, _) => Container(
-              width: 140,
-              height: 140,
+              width: 160,
+              height: 160,
               decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(AppRadius.xl),
-                border: Border.all(color: AppColors.border, width: 2),
+                color: AppColors.accentPurple.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.accentPurple,
+                  width: 2,
+                ),
               ),
               child: const Icon(
                 Icons.person_add_alt_rounded,
-                size: 64,
+                size: 72,
                 color: AppColors.accentPurple,
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.lg),
           const Text(
             'No children added yet',
             style: AppText.h2,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.xs),
-          const Text(
-            'Tap "Add Child" below to create\nyour first child profile.',
-            style: AppText.caption,
-            textAlign: TextAlign.center,
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Text(
+              'Add your first child profile to start '
+              'tracking their reading progress.',
+              style: AppText.caption,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          SizedBox(
+            height: 52,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                await Navigator.of(context).pushNamed('/add-child');
+                _loadChildren();
+              },
+              icon: const Icon(Icons.add, size: 20),
+              label: const Text(
+                'Add Your First Child',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentPurple,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.large),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -373,7 +479,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
 }
 
 // ─────────────────────────────────────────────────────────
-// Private widgets
+// _ChildCard
 // ─────────────────────────────────────────────────────────
 
 class _ChildCard extends StatelessWidget {
