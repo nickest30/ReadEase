@@ -53,8 +53,10 @@ class ContentImporter {
         final frame = OpeningFrame(
           gradeLevel: gradeLevel,
           difficulty: frameData['difficulty'] as String,
-          visualAsset: frameData['visual_asset'] as String,
-          audioAsset: frameData['audio_asset'] as String,
+          visualAsset:
+              'assets/images/words/${frameData['visual_asset']}',
+          audioAsset:
+              'assets/audio/yse/${frameData['audio_asset']}',
           displayText: frameData['display_text'] as String,
           triggerType: (frameData['trigger_type'] as String?) ??
               'first_visit_only',
@@ -101,6 +103,8 @@ class ContentImporter {
           int questionOrder = 0;
 
           for (final wordData in words) {
+            final cueAudioField = wordData['lesson_cue_audio'] as String?;
+
             final word = Word(
               text: wordData['text'] as String,
               gradeLevel: gradeLevel,
@@ -111,6 +115,9 @@ class ContentImporter {
                   'assets/images/words/${wordData['image']}',
               audioAsset:
                   'assets/audio/words/${wordData['audio']}',
+              lessonCueAudio: cueAudioField != null
+                  ? 'assets/audio/cues/$cueAudioField'
+                  : null,
               lessonCue: (wordData['lesson_cue'] as String?) ?? '',
               definition: (wordData['definition'] as String?) ?? '',
               sampleSentence:

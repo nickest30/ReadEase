@@ -5,17 +5,20 @@ import '../providers/connectivity_provider.dart';
 import 'database_service.dart';
 import 'firestore_service.dart';
 
-/// Handles retrying cloud sync operations when the app opens.
-/// Call `SyncService.instance.retryPendingSyncs(...)` after login.
+/// Orchestrates cloud push of local data (quiz attempts, badges, mastery,
+/// encounters, starred words, leaderboard).
+///
+/// Call `syncAll()` after login, on offline→online transition, and after
+/// any local write that needs cloud persistence.
 class SyncService {
   static final SyncService instance = SyncService._internal();
   SyncService._internal();
 
   bool _running = false;
 
-  /// Retry any pending quiz result syncs for this student.
-  /// Safe to call multiple times — guards against concurrent runs.
-  Future<void> retryPendingSyncs({
+  /// Push everything pending for this student to Firestore.
+  /// Safe to call multiple times — guarded against concurrent runs.
+  Future<void> syncAll({
     required Student student,
     required ConnectivityProvider connectivity,
   }) async {
@@ -24,8 +27,10 @@ class SyncService {
       return;
     }
 
-    if (student.firebaseUid == null) {
-      debugPrint('🔄 Sync: no Firebase UID, skipping');
+    final uid = student.firebaseUid;
+    final localId = student.id;
+    if (uid == null || localId == null) {
+      debugPrint('🔄 Sync: no Firebase UID or local ID, skipping');
       return;
     }
 
@@ -36,58 +41,225 @@ class SyncService {
 
     _running = true;
     try {
-      final pending = await DatabaseService.instance
-          .getPendingSyncResults(student.id!);
+      await _pushQuizAttempts(student);
+      await _pushBadges(student);
+      await _pushMastery(student);
+      await _pushEncounters(student);
+      await _pushStarred(student);
+      await _updateLeaderboard(student);
 
-      if (pending.isEmpty) {
-        debugPrint('🔄 Sync: no pending results');
-        return;
-      }
-
-      debugPrint('🔄 Sync: retrying ${pending.length} pending results...');
-
-      // Fetch all results (both synced + pending) for full progress sync
-      final allResults = await DatabaseService.instance
-          .getResultsForStudent(student.id!);
-
-      // Recompute badge count
-      final Set<String> passedKeys = {};
-      for (final r in allResults) {
-        if (r.isPassing) {
-          passedKeys.add('${r.gradeLevel}-${r.difficulty}');
-        }
-      }
-
-      // Sync progress (writes all results, idempotent)
-      await FirestoreService.instance.syncStudentProgress(
-        student.firebaseUid!,
-        student.displayName,
-        student.totalPoints,
-        allResults,
-      );
-
-      // Update leaderboard entry
-      await FirestoreService.instance.updateLeaderboardEntry(
-        studentUid: student.firebaseUid!,
-        displayName: student.displayName,
-        totalPoints: student.totalPoints,
-        gradeLevel: student.gradeLevel,
-        badgeCount: passedKeys.length,
-        classId: student.classFirestoreId,
-      );
-
-      // Mark all pending results as synced
-      for (final r in pending) {
-        if (r.id != null) {
-          await DatabaseService.instance.markResultSynced(r.id!);
-        }
-      }
-
-      debugPrint('🔄 Sync: ${pending.length} results synced ✓');
-    } catch (e) {
+      debugPrint('🔄 Sync: complete ✓');
+    } catch (e, stack) {
       debugPrint('🔄 Sync failed (will retry next time): $e');
+      debugPrint('🔄 STACK: $stack');
     } finally {
       _running = false;
     }
   }
+
+  // ──────────────────────────────────────────────────────────────
+  // Quiz attempts
+  // ──────────────────────────────────────────────────────────────
+
+  Future<void> _pushQuizAttempts(Student student) async {
+    final uid = student.firebaseUid!;
+    final localId = student.id!;
+
+    final pending = await DatabaseService.instance
+        .getPendingSyncAttempts(localId);
+
+    if (pending.isEmpty) {
+      debugPrint('🔄 Sync: no pending quiz attempts');
+      return;
+    }
+
+    debugPrint('🔄 Sync: pushing ${pending.length} quiz attempts');
+
+    for (final attempt in pending) {
+      // Look up the batch to derive grade + difficulty
+      final batch = await DatabaseService.instance
+          .getBatchById(attempt.batchId);
+      if (batch == null) {
+        debugPrint('🔄 Sync: batch ${attempt.batchId} not found — skipping');
+        continue;
+      }
+
+      final wrongIds = _parseWrongWordIds(attempt.wrongWordIdsJson);
+
+      final ok = await FirestoreService.instance.pushQuizAttempt(
+        studentUid: uid,
+        localAttemptId: attempt.id!,
+        batchId: attempt.batchId,
+        gradeLevel: batch.gradeLevel,
+        difficulty: batch.difficulty,
+        score: attempt.score,
+        totalQuestions: attempt.totalQuestions,
+        pointsEarned: attempt.pointsEarned,
+        wrongWordIds: wrongIds,
+        completedAt: attempt.completedAt,
+      );
+
+      if (ok) {
+        await DatabaseService.instance.markAttemptSynced(attempt.id!);
+
+        // Increment cloud total points atomically
+        if (attempt.pointsEarned > 0) {
+          await FirestoreService.instance.incrementStudentPoints(
+            uid,
+            attempt.pointsEarned,
+          );
+        }
+      }
+    }
+  }
+
+  List<int> _parseWrongWordIds(String? json) {
+    if (json == null || json.isEmpty) return [];
+    try {
+      final cleaned = json.replaceAll('[', '').replaceAll(']', '');
+      if (cleaned.isEmpty) return [];
+      return cleaned
+          .split(',')
+          .map((s) => int.tryParse(s.trim()))
+          .whereType<int>()
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // Badges
+  // ──────────────────────────────────────────────────────────────
+
+  Future<void> _pushBadges(Student student) async {
+    final uid = student.firebaseUid!;
+    final localId = student.id!;
+
+    final pending = await DatabaseService.instance
+        .getPendingSyncBadges(localId);
+
+    if (pending.isEmpty) return;
+
+    debugPrint('🔄 Sync: pushing ${pending.length} badges');
+
+    for (final badge in pending) {
+      final badgeKey = '${badge.gradeLevel}-${badge.difficulty}';
+      await FirestoreService.instance.syncBadge(
+        studentUid: uid,
+        badgeKey: badgeKey,
+        gradeLevel: badge.gradeLevel,
+        difficulty: badge.difficulty,
+        badgeName: badge.badgeName,
+        pointsEarned: badge.pointsEarned,
+        earnedAt: badge.earnedAt,
+      );
+      if (badge.id != null) {
+        await DatabaseService.instance.markBadgeSynced(badge.id!);
+      }
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // Word mastery
+  // ──────────────────────────────────────────────────────────────
+
+  Future<void> _pushMastery(Student student) async {
+    final uid = student.firebaseUid!;
+    final localId = student.id!;
+
+    final masteries =
+        await DatabaseService.instance.getMasteryForStudent(localId);
+    if (masteries.isEmpty) return;
+
+    debugPrint('🔄 Sync: pushing ${masteries.length} mastery rows');
+
+    for (final m in masteries) {
+      await FirestoreService.instance.syncWordMastery(
+        studentUid: uid,
+        wordId: m.wordId,
+        correctCount: m.correctCount,
+        wrongCount: m.wrongCount,
+        masteredAt: m.masteredAt,
+      );
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // Word encounters
+  // ──────────────────────────────────────────────────────────────
+
+  Future<void> _pushEncounters(Student student) async {
+    final uid = student.firebaseUid!;
+    final localId = student.id!;
+
+    final encounters =
+        await DatabaseService.instance.getEncountersForStudent(localId);
+    if (encounters.isEmpty) return;
+
+    debugPrint('🔄 Sync: pushing ${encounters.length} encounters');
+
+    for (final e in encounters) {
+      await FirestoreService.instance.syncWordEncounter(
+        studentUid: uid,
+        wordId: e.wordId,
+        firstSeenAt: e.firstSeenAt,
+        timesSeen: e.timesSeen,
+      );
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // Starred words
+  // ──────────────────────────────────────────────────────────────
+
+  Future<void> _pushStarred(Student student) async {
+    final uid = student.firebaseUid!;
+    final localId = student.id!;
+
+    final starred =
+        await DatabaseService.instance.getStarredWordsForStudent(localId);
+    if (starred.isEmpty) return;
+
+    debugPrint('🔄 Sync: pushing ${starred.length} starred');
+
+    for (final s in starred) {
+      await FirestoreService.instance.syncStarredWord(
+        studentUid: uid,
+        wordId: s.wordId,
+        starredAt: s.starredAt,
+      );
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // Leaderboard
+  // ──────────────────────────────────────────────────────────────
+
+  Future<void> _updateLeaderboard(Student student) async {
+    final uid = student.firebaseUid!;
+
+    final badges = await DatabaseService.instance
+        .getBadgesForStudent(student.id!);
+
+    await FirestoreService.instance.updateLeaderboardEntry(
+      studentUid: uid,
+      displayName: student.displayName,
+      totalPoints: student.totalPoints,
+      gradeLevel: student.gradeLevel,
+      badgeCount: badges.length,
+      classId: student.classFirestoreId,
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // Legacy alias (keeps old callers working)
+  // ──────────────────────────────────────────────────────────────
+
+  @Deprecated('Use syncAll() instead')
+  Future<void> retryPendingSyncs({
+    required Student student,
+    required ConnectivityProvider connectivity,
+  }) =>
+      syncAll(student: student, connectivity: connectivity);
 }

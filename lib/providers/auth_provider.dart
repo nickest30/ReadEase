@@ -19,7 +19,8 @@ class AuthProvider extends ChangeNotifier {
       (user) {
         _firebaseUser = user;
         _initializing = false;
-        _sessionState = user != null ? SessionState.online : SessionState.offline;
+        _sessionState =
+            user != null ? SessionState.online : SessionState.offline;
         notifyListeners();
       },
     );
@@ -58,17 +59,47 @@ class AuthProvider extends ChangeNotifier {
     return ok;
   }
 
-   /// Attempt to restore a Firebase Auth session for a specific UID.
+  /// Send a password reset email via Firebase Auth.
+  /// Returns true if Firebase accepted the request.
+  /// Note: callers should show a success message regardless of the
+  /// return value to avoid leaking whether the email is registered.
+  Future<bool> sendPasswordResetEmail(String email) async {
+    try {
+      await AuthService.instance.sendPasswordResetEmail(
+        email.trim().toLowerCase(),
+      );
+      return true;
+    } catch (e) {
+      debugPrint('🔑 Password reset failed: $e');
+      return false;
+    }
+  }
+
+  /// Attempt to restore a Firebase Auth session for a specific UID.
   /// Called during PIN entry when we know which user should be restored.
   Future<bool> tryRestoreSessionFor({required String uid}) async {
-    if (isSignedIn) {
+    // 1. Sign out if a DIFFERENT user is currently signed in
+    if (isSignedIn && _firebaseUser?.uid != uid) {
+      debugPrint(
+        '🔑 tryRestoreSessionFor: wrong user signed in '
+        '(${_firebaseUser?.uid}) — signing out',
+      );
+      await signOut();
+    }
+
+    // 2. Already correct user — done
+    if (isSignedIn && _firebaseUser?.uid == uid) {
       debugPrint('🔑 tryRestoreSessionFor: already signed in as $uid');
       return true;
     }
 
+    // 3. Look for saved credentials
     final creds = await CredentialStorage.instance.read(uid);
     if (creds == null) {
-      debugPrint('🔑 tryRestoreSessionFor: no credentials for $uid');
+      debugPrint(
+        '🔑 tryRestoreSessionFor: NO credentials for $uid '
+        '(caller should prompt for password)',
+      );
       return false;
     }
 
@@ -90,6 +121,9 @@ class AuthProvider extends ChangeNotifier {
   /// Sign in with saved credentials for a specific UID (used after
   /// creating a child account when we need to restore the parent session).
   Future<bool> signInWithSavedCredentials(String uid) async {
+    if (isSignedIn && _firebaseUser?.uid != uid) {
+      await signOut();
+    }
     final creds = await CredentialStorage.instance.read(uid);
     if (creds == null) return false;
     return AuthService.instance.signIn(creds['email']!, creds['password']!);
@@ -116,9 +150,17 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Full sign out — clears everything including saved credentials.
-  /// Use only when the user explicitly wants to forget this device.
-@override
+  Future<void> signOutAndForget() async {
+    final currentUid = uid;
+    await AuthService.instance.signOut();
+    if (currentUid != null) {
+      await CredentialStorage.instance.clear(currentUid);
+    }
+    _sessionState = SessionState.offline;
+    notifyListeners();
+  }
+
+  @override
   void dispose() {
     _subscription?.cancel();
     super.dispose();
