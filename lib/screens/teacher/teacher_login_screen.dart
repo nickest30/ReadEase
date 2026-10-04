@@ -84,6 +84,19 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
           // Offline — proceed
         }
 
+        // Refresh classes from cloud (so classes created on other
+        // devices show up here).
+        if (localTeacher.firebaseUid != null) {
+          try {
+            await CloudSyncService.instance.downloadTeacherClasses(
+              localTeacherId: localTeacher.id!,
+              firebaseUid: localTeacher.firebaseUid!,
+            );
+          } catch (e) {
+            debugPrint('🔥 Class refresh failed (continuing): $e');
+          }
+        }
+
         if (!mounted) return;
         teacherProvider.setTeacher(localTeacher);
         Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
@@ -135,6 +148,24 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
     }
 
     if (localTeacher != null) {
+      // Password may have changed in Firebase since last local save.
+      // Refresh the local hash so offline logins still work.
+      final freshHash = BCrypt.hashpw(password, BCrypt.gensalt());
+      await DatabaseService.instance
+          .updateTeacherPasswordHash(localTeacher.id!, freshHash);
+
+      // Refresh classes from cloud.
+      if (localTeacher.firebaseUid != null) {
+        try {
+          await CloudSyncService.instance.downloadTeacherClasses(
+            localTeacherId: localTeacher.id!,
+            firebaseUid: localTeacher.firebaseUid!,
+          );
+        } catch (e) {
+          debugPrint('🔥 Class refresh failed (continuing): $e');
+        }
+      }
+
       if (!mounted) return;
       teacherProvider.setTeacher(localTeacher);
       Navigator.of(context).pushReplacementNamed('/teacher-dashboard');

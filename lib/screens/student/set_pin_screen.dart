@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/student.dart';
 import '../../services/database_service.dart';
+import '../../services/firestore_service.dart';
 import '../../providers/student_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/number_pad.dart';
@@ -96,6 +97,24 @@ class _SetPinScreenState extends State<SetPinScreen> {
     final hashedPin = BCrypt.hashpw(_pin, BCrypt.gensalt());
 
     await DatabaseService.instance.updatePin(student.id!, hashedPin);
+
+    // Push PIN hash to Firestore for new-device verification.
+    // Non-blocking: if this fails, PIN still works locally.
+    if (student.firebaseUid != null) {
+      try {
+        await FirestoreService.instance.saveStudent(
+          student.firebaseUid!,
+          student.displayName,
+          student.gradeLevel,
+          username: student.username,
+          pinHash: hashedPin,
+          includePoints: false, // don't touch cloud points from here
+        );
+        debugPrint('🔥 PIN hash synced to Firestore');
+      } catch (e) {
+        debugPrint('🔥 PIN hash sync failed (non-blocking): $e');
+      }
+    }
 
     if (!mounted) return;
     final refreshed =

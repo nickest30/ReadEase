@@ -1,3 +1,4 @@
+import 'dart:async';                                 
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:provider/provider.dart';
@@ -5,11 +6,12 @@ import 'package:provider/provider.dart';
 import '../../models/badge.dart';
 import '../../models/content_models.dart';
 import '../../models/word.dart';
+import '../../providers/connectivity_provider.dart';   
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
+import '../../services/sync_service.dart';             
 import '../../utils/app_theme.dart';
-import '../../services/firestore_service.dart';
-
+import '../../services/firestore_service.dart';        
 /// Runs a quiz for a single batch.
 ///
 /// Reads from quiz_questions table. Supports literal / inferential /
@@ -271,46 +273,43 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
       final updated =
           await DatabaseService.instance.getStudentById(_studentId!);
       if (!mounted) return;
+
       if (updated != null) {
-        context.read<StudentProvider>().updateStudent(updated);
+        context.read<StudentProvider>().setStudent(updated);
 
-        // 7b. Compute badge count once (used in two places below)
-        final badges = await DatabaseService.instance
-            .getBadgesForStudent(updated.id!);
+        // 8. Push everything to Firestore in background.
+        //    SyncService handles: quiz attempt + badge + mastery +
+        //    encounters + starred + leaderboard, all in one call.
+        final connectivity = context.read<ConnectivityProvider>();
+        unawaited(
+          SyncService.instance.syncAll(
+            student: updated,
+            connectivity: connectivity,
+          ),
+        );
 
-        // 7c. Sync student profile to Firestore (so parent sees fresh points)
-        if (updated.firebaseUid != null) {
-          try {
-            await FirestoreService.instance.saveStudent(
-              updated.firebaseUid!,
-              updated.displayName,
-              updated.gradeLevel,
-              parentId: updated.parentId?.toString(),
-              totalPoints: updated.totalPoints,
-              badgeCount: badges.length,
-            );
-            debugPrint('🔥 Student profile synced to Firestore');
-          } catch (e) {
-            debugPrint('🔥 Student profile sync failed: $e');
-          }
-        }
-
-        // 7d. If student is in a class, update their enrollment snapshot
+        // 9. Update class enrollment snapshot (if enrolled)
         if (updated.classFirestoreId != null &&
             updated.classFirestoreId!.isNotEmpty &&
             updated.firebaseUid != null) {
-          await FirestoreService.instance.updateEnrollmentSnapshot(
-            classId: updated.classFirestoreId!,
-            studentUid: updated.firebaseUid!,
-            totalPoints: updated.totalPoints,
-            badgeCount: badges.length,
-          );
+          try {
+            final badges = await DatabaseService.instance
+                .getBadgesForStudent(updated.id!);
+            await FirestoreService.instance.updateEnrollmentSnapshot(
+              classId: updated.classFirestoreId!,
+              studentUid: updated.firebaseUid!,
+              totalPoints: updated.totalPoints,
+              badgeCount: badges.length,
+            );
+          } catch (e) {
+            debugPrint('🔥 Enrollment snapshot update failed: $e');
+          }
         }
       }
 
       if (!mounted) return;
 
-      // 8. Navigate to Results screen
+      // 10. Navigate to Results screen
       Navigator.of(context).pushReplacementNamed(
         '/results',
         arguments: {
