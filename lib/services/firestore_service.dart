@@ -1220,4 +1220,26 @@ class FirestoreService {
     }
   }
 
+  /// Update a parent's or teacher's phone number + verification state.
+  /// Used by the Account Security screen when changing a phone.
+  Future<void> updatePhoneNumber({
+    required String uid,
+    required String role,
+    required String phoneNumber,
+    required bool verified,
+  }) async {
+    final collection = role == 'parent' ? 'parents' : 'teachers';
+    try {
+      await _db.collection(collection).doc(uid).set({
+        'phoneNumber': phoneNumber,
+        'phoneVerified': verified,
+        if (verified) 'phoneVerifiedAt': DateTime.now().toIso8601String(),
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      debugPrint('🔥 Firestore: updatePhoneNumber($uid, $role)');
+    } catch (e) {
+      debugPrint('🔥 updatePhoneNumber ERROR: $e');
+    }
+  }
+
 }

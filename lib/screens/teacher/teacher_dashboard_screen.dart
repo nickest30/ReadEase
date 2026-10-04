@@ -8,6 +8,8 @@ import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/email_verification_banner.dart';
+import '../shared/account_security_screen.dart';
+
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({super.key});
@@ -266,24 +268,32 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
                           ),
               ),
 
+                            const SizedBox(height: AppSpacing.sm),
+
               SizedBox(
-                height: 56,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    await Navigator.of(context).pushNamed('/create-class');
-                    _loadClasses();
+                height: 46,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AccountSecurityScreen(
+                          role: 'teacher',
+                        ),
+                      ),
+                    );
                   },
-                  icon: const Icon(Icons.add),
+                  icon: const Icon(Icons.shield_outlined, size: 18),
                   label: const Text(
-                    'Create Class',
+                    'Account & Security',
                     style: TextStyle(
                       fontFamily: 'Nunito',
                       fontWeight: FontWeight.w700,
+                      fontSize: 13,
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentYellow,
-                    foregroundColor: AppColors.textPrimary,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textYellow,
+                    side: const BorderSide(color: AppColors.accentYellow),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.large),
                     ),

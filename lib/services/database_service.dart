@@ -1282,6 +1282,24 @@ class DatabaseService {
     return rows > 0;
   }
 
+  Future<bool> updateParentPhone(
+    int parentId,
+    String? phoneNumber,
+    bool phoneVerified,
+  ) async {
+    final db = await database;
+    final rows = await db.update(
+      'parents',
+      {
+        'phone_number': phoneNumber,
+        'phone_verified': phoneVerified ? 1 : 0,
+      },
+      where: 'id = ?',
+      whereArgs: [parentId],
+    );
+    return rows > 0;
+  }
+
   // ---------- Teacher methods ----------
 
   Future<int> insertTeacher(Teacher teacher) async {
@@ -1329,6 +1347,24 @@ class DatabaseService {
     final rows = await db.update(
       'teachers',
       {'email_verified': 1},
+      where: 'id = ?',
+      whereArgs: [teacherId],
+    );
+    return rows > 0;
+  }
+
+  Future<bool> updateTeacherPhone(
+    int teacherId,
+    String? phoneNumber,
+    bool phoneVerified,
+  ) async {
+    final db = await database;
+    final rows = await db.update(
+      'teachers',
+      {
+        'phone_number': phoneNumber,
+        'phone_verified': phoneVerified ? 1 : 0,
+      },
       where: 'id = ?',
       whereArgs: [teacherId],
     );

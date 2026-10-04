@@ -9,6 +9,7 @@ import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/email_verification_banner.dart';
+import '../shared/account_security_screen.dart';
 
 class ParentDashboardScreen extends StatefulWidget {
   const ParentDashboardScreen({super.key});
@@ -415,8 +416,42 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: AppSpacing.sm),
         ],
+
+        // Account & Security
+        SizedBox(
+          height: 46,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const AccountSecurityScreen(
+                    role: 'parent',
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.shield_outlined, size: 18),
+            label: const Text(
+              'Account & Security',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.accentPurple,
+              side: const BorderSide(color: AppColors.accentPurple),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.large),
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: AppSpacing.sm),
 
         SizedBox(
           height: 50,
