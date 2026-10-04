@@ -109,7 +109,6 @@ class _ReadEaseAppState extends State<ReadEaseApp> {
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settings, _) {
-          // Wire onWentOnline once, after providers are mounted
           if (!_syncWired) {
             _wireConnectivitySync(context);
             _syncWired = true;
@@ -192,6 +191,7 @@ class _ReadEaseAppState extends State<ReadEaseApp> {
   void _wireConnectivitySync(BuildContext context) {
     final connectivity = context.read<ConnectivityProvider>();
     final studentProvider = context.read<StudentProvider>();
+    final authProvider = context.read<AuthProvider>();
 
     connectivity.onWentOnline = () {
       final student = studentProvider.currentStudent;
@@ -200,6 +200,7 @@ class _ReadEaseAppState extends State<ReadEaseApp> {
       SyncService.instance.syncAll(
         student: student,
         connectivity: connectivity,
+        authProvider: authProvider,
       );
     };
   }

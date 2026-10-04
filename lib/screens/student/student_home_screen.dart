@@ -9,6 +9,8 @@ import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
+import '../../providers/auth_provider.dart';
+
 
 class StudentHomeScreen extends StatefulWidget {
   const StudentHomeScreen({super.key});
@@ -45,9 +47,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     final connectivity = context.read<ConnectivityProvider>();
     if (student == null) return;
 
-    await SyncService.instance.retryPendingSyncs(
+    SyncService.instance.syncAll(
       student: student,
       connectivity: connectivity,
+      authProvider: context.read<AuthProvider>(),   // ← ADD THIS
     );
 
     // Load Word of the Day

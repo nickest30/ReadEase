@@ -102,6 +102,13 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
                   const Expanded(
                     child: Text('Class Overview', style: AppText.h2),
                   ),
+                  IconButton(
+                    onPressed: _loading ? null : _loadStudents,
+                    icon: const Icon(Icons.refresh_rounded,
+                        color: AppColors.textPrimary),
+                    padding: EdgeInsets.zero,
+                    tooltip: 'Refresh',
+                  ),
                 ],
               ),
             ),
@@ -226,7 +233,10 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
                                       return _StudentRow(
                                         student: student,
                                         onTap: () {
-                                          // Navigate to student progress (Phase 2)
+                                          Navigator.of(context).pushNamed(
+                                            '/teacher-student-progress',
+                                            arguments: {'student': student},
+                                          );
                                         },
                                       );
                                     }),

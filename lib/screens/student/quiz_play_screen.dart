@@ -11,7 +11,8 @@ import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/sync_service.dart';             
 import '../../utils/app_theme.dart';
-import '../../services/firestore_service.dart';        
+import '../../services/firestore_service.dart';      
+import '../../providers/auth_provider.dart';
 /// Runs a quiz for a single batch.
 ///
 /// Reads from quiz_questions table. Supports literal / inferential /
@@ -281,10 +282,12 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
         //    SyncService handles: quiz attempt + badge + mastery +
         //    encounters + starred + leaderboard, all in one call.
         final connectivity = context.read<ConnectivityProvider>();
+        final authProvider = context.read<AuthProvider>();
         unawaited(
           SyncService.instance.syncAll(
             student: updated,
             connectivity: connectivity,
+            authProvider: authProvider,
           ),
         );
 

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/student.dart';
+import '../providers/auth_provider.dart';
 import '../providers/connectivity_provider.dart';
 import 'database_service.dart';
 import 'firestore_service.dart';
@@ -18,9 +19,13 @@ class SyncService {
 
   /// Push everything pending for this student to Firestore.
   /// Safe to call multiple times — guarded against concurrent runs.
+  ///
+  /// Ensures the Firebase Auth session is active for this student before
+  /// writing — without it, all Firestore writes fail with PERMISSION_DENIED.
   Future<void> syncAll({
     required Student student,
     required ConnectivityProvider connectivity,
+    required AuthProvider authProvider,
   }) async {
     if (_running) {
       debugPrint('🔄 Sync: already running, skipping');
@@ -37,6 +42,17 @@ class SyncService {
     if (!connectivity.isOnline) {
       debugPrint('🔄 Sync: offline, skipping');
       return;
+    }
+
+    // ── Ensure Firebase Auth session is active for this student ──
+    // Without this, all Firestore writes below fail with PERMISSION_DENIED.
+    if (authProvider.uid != uid) {
+      debugPrint('🔄 Sync: restoring session for $uid');
+      final restored = await authProvider.tryRestoreSessionFor(uid: uid);
+      if (!restored) {
+        debugPrint('🔄 Sync: could not restore session — aborting');
+        return;
+      }
     }
 
     _running = true;
@@ -260,6 +276,11 @@ class SyncService {
   Future<void> retryPendingSyncs({
     required Student student,
     required ConnectivityProvider connectivity,
+    required AuthProvider authProvider,
   }) =>
-      syncAll(student: student, connectivity: connectivity);
+      syncAll(
+        student: student,
+        connectivity: connectivity,
+        authProvider: authProvider,
+      );
 }
