@@ -2102,6 +2102,56 @@ class DatabaseService {
     return wordRows.map((m) => Word.fromMap(m)).toList();
   }
 
+  /// Question-type breakdown: accuracy per type (literal / inferential / critical).
+  /// Returns { "literal": {"total": 20, "correct": 18}, ... }
+  Future<Map<String, Map<String, int>>> getQuestionTypeStats(
+      int studentId) async {
+    final db = await database;
+    final rows = await db.rawQuery('''
+      SELECT
+        qq.question_type AS type,
+        COUNT(*) AS total,
+        SUM(CASE WHEN qqr.is_correct = 1 THEN 1 ELSE 0 END) AS correct
+      FROM quiz_question_responses qqr
+      INNER JOIN quiz_questions qq ON qq.id = qqr.question_id
+      INNER JOIN quiz_attempts qa ON qa.id = qqr.attempt_id
+      WHERE qa.student_id = ?
+      GROUP BY qq.question_type
+    ''', [studentId]);
+
+    final result = <String, Map<String, int>>{};
+    for (final r in rows) {
+      result[r['type'] as String] = {
+        'total': (r['total'] as int?) ?? 0,
+        'correct': (r['correct'] as int?) ?? 0,
+      };
+    }
+    return result;
+  }
+
+  /// Mastery breakdown: how many words are mastered / struggling / learning.
+  Future<Map<String, int>> getMasteryBreakdown(int studentId) async {
+    final db = await database;
+    final rows = await db.rawQuery('''
+      SELECT
+        SUM(CASE WHEN mastered_at IS NOT NULL THEN 1 ELSE 0 END) AS mastered,
+        SUM(CASE WHEN mastered_at IS NULL AND wrong_count > 0 THEN 1 ELSE 0 END) AS struggling,
+        SUM(CASE WHEN mastered_at IS NULL AND wrong_count = 0 AND correct_count > 0 THEN 1 ELSE 0 END) AS learning
+      FROM word_mastery
+      WHERE student_id = ?
+    ''', [studentId]);
+
+    if (rows.isEmpty) {
+      return {'mastered': 0, 'struggling': 0, 'learning': 0};
+    }
+    final r = rows.first;
+    return {
+      'mastered': (r['mastered'] as int?) ?? 0,
+      'struggling': (r['struggling'] as int?) ?? 0,
+      'learning': (r['learning'] as int?) ?? 0,
+    };
+  }
+
   // ============================================================
   // M5.3 — MY DICTIONARY (Pokédex)
   // ============================================================

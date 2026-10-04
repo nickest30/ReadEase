@@ -6,6 +6,7 @@ import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/error_state.dart';
+import '../../widgets/analytics_widgets.dart';
 
 class ProgressDashboardScreen extends StatefulWidget {
   const ProgressDashboardScreen({super.key});
@@ -23,6 +24,8 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
   int _completedLevels = 0;
   int _badgeCount = 0;
   double _accuracy = 0.0;
+  Map<String, Map<String, int>> _questionTypeStats = {};
+  Map<String, int> _masteryBreakdown = {'mastered': 0, 'learning': 0, 'struggling': 0};
 
   @override
   void initState() {
@@ -58,6 +61,10 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
           .getWeakWordsFromAttempts(student.id!);
       final badges = await DatabaseService.instance
           .getBadgesForStudent(student.id!);
+      final qStats = await DatabaseService.instance
+          .getQuestionTypeStats(student.id!);
+      final mastery =
+          await DatabaseService.instance.getMasteryBreakdown(student.id!);
 
       if (!mounted) return;
       setState(() {
@@ -66,6 +73,8 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
         _accuracy = (stats['accuracy'] as double?) ?? 0.0;
         _weakWords = weak;
         _badgeCount = badges.length;
+        _questionTypeStats = qStats;
+        _masteryBreakdown = mastery;
         _loading = false;
       });
     } catch (e) {
@@ -303,7 +312,26 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.lg),
+
+            // ── Question-type breakdown ──
+            if (_questionTypeStats.isNotEmpty) ...[
+              QuestionTypeBreakdown(stats: _questionTypeStats),
+              const SizedBox(height: AppSpacing.lg),
+            ],
+
+            // ── Word mastery donut ──
+            if ((_masteryBreakdown['mastered'] ?? 0) +
+                    (_masteryBreakdown['learning'] ?? 0) +
+                    (_masteryBreakdown['struggling'] ?? 0) >
+                0) ...[
+              MasteryDonut(
+                mastered: _masteryBreakdown['mastered'] ?? 0,
+                learning: _masteryBreakdown['learning'] ?? 0,
+                struggling: _masteryBreakdown['struggling'] ?? 0,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+            ],
 
             const Text('OVERALL COMPLETION', style: AppText.caption),
             const SizedBox(height: AppSpacing.xs),
