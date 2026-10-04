@@ -40,6 +40,8 @@ flutter:
     - assets/audio/
     - assets/audio/sfx/
     - assets/audio/words/ 
+    - assets/audio/cues/
+    - assets/audio/yse/
     - assets/data/
 
   fonts:
