@@ -4,6 +4,7 @@ import '../../models/student.dart';
 import '../../models/word.dart';
 import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
+import '../../widgets/analytics_widgets.dart';
 
 class TeacherStudentProgressScreen extends StatefulWidget {
   const TeacherStudentProgressScreen({super.key});
@@ -21,6 +22,12 @@ class _TeacherStudentProgressScreenState
   int _completedLevels = 0;
   int _badgeCount = 0;
   double _accuracy = 0.0;
+  Map<String, Map<String, int>> _questionTypeStats = {};
+  Map<String, int> _masteryBreakdown = {
+    'mastered': 0,
+    'learning': 0,
+    'struggling': 0,
+  };
 
   @override
   void initState() {
@@ -48,6 +55,10 @@ class _TeacherStudentProgressScreenState
           .getWeakWordsFromAttempts(student.id!);
       final badges = await DatabaseService.instance
           .getBadgesForStudent(student.id!);
+      final qStats = await DatabaseService.instance
+          .getQuestionTypeStats(student.id!);
+      final mastery =
+          await DatabaseService.instance.getMasteryBreakdown(student.id!);
 
       if (!mounted) return;
       setState(() {
@@ -56,6 +67,8 @@ class _TeacherStudentProgressScreenState
         _accuracy = (stats['accuracy'] as double?) ?? 0.0;
         _weakWords = weak;
         _badgeCount = badges.length;
+        _questionTypeStats = qStats;
+        _masteryBreakdown = mastery;
         _loading = false;
       });
     } catch (e) {
@@ -177,6 +190,10 @@ class _TeacherStudentProgressScreenState
             .compareTo(b.value['difficulty'] as String);
       });
 
+    final masteryTotal = (_masteryBreakdown['mastered'] ?? 0) +
+        (_masteryBreakdown['learning'] ?? 0) +
+        (_masteryBreakdown['struggling'] ?? 0);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       child: Column(
@@ -209,6 +226,22 @@ class _TeacherStudentProgressScreenState
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
+
+          // ── Question-type breakdown ──
+          if (_questionTypeStats.isNotEmpty) ...[
+            QuestionTypeBreakdown(stats: _questionTypeStats),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+
+          // ── Word mastery donut ──
+          if (masteryTotal > 0) ...[
+            MasteryDonut(
+              mastered: _masteryBreakdown['mastered'] ?? 0,
+              learning: _masteryBreakdown['learning'] ?? 0,
+              struggling: _masteryBreakdown['struggling'] ?? 0,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
 
           const Text('OVERALL COMPLETION', style: AppText.caption),
           const SizedBox(height: AppSpacing.xs),
