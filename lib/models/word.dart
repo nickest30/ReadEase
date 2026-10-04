@@ -8,6 +8,7 @@ class Word {
   final String category;
   final String imageAsset;
   final String audioAsset;
+  final String? lessonCueAudio;
   final String lessonCue;
   final String definition;
   final String sampleSentence;
@@ -29,6 +30,7 @@ class Word {
     this.category = 'general',
     required this.imageAsset,
     required this.audioAsset,
+    this.lessonCueAudio,
     this.lessonCue = '',
     this.definition = '',
     this.sampleSentence = '',
@@ -49,6 +51,7 @@ class Word {
       'category': category,
       'image_asset': imageAsset,
       'audio_asset': audioAsset,
+      'lesson_cue_audio': lessonCueAudio,
       'lesson_cue': lessonCue,
       'definition': definition,
       'sample_sentence': sampleSentence,
@@ -71,6 +74,7 @@ class Word {
       category: (map['category'] as String?) ?? 'general',
       imageAsset: map['image_asset'] as String,
       audioAsset: map['audio_asset'] as String,
+      lessonCueAudio: map['lesson_cue_audio'] as String?,
       lessonCue: (map['lesson_cue'] as String?) ?? '',
       definition: (map['definition'] as String?) ?? '',
       sampleSentence: (map['sample_sentence'] as String?) ?? '',
