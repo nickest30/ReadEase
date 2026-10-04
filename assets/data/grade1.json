@@ -1,25 +1,25 @@
 {
-  "content_version": "1.0.0",
+  "content_version": "1.0.1",
   "grade": 1,
   "opening_frames": [
     {
       "difficulty": "easy",
       "visual_asset": "yse_opening_g1_easy.png",
-      "audio_asset": "yse_opening_g1_easy.mp3",
+      "audio_asset": "yse_opening_g1_easy.wav",
       "display_text": "Hi! I'm Yse! Ready to learn some new words? Let's go!",
       "trigger_type": "first_visit_only"
     },
     {
       "difficulty": "medium",
       "visual_asset": "yse_opening_g1_medium.png",
-      "audio_asset": "yse_opening_g1_medium.mp3",
+      "audio_asset": "yse_opening_g1_medium.wav",
       "display_text": "Hi! I'm Yse! Ready to learn some new words? Let's go!",
       "trigger_type": "first_visit_only"
     },
     {
       "difficulty": "hard",
       "visual_asset": "yse_opening_g1_hard.png",
-      "audio_asset": "yse_opening_g1_hard.mp3",
+      "audio_asset": "yse_opening_g1_hard.wav",
       "display_text": "Hi! I'm Yse! Ready to learn some new words? Let's go!",
       "trigger_type": "first_visit_only"
     }
@@ -39,11 +39,12 @@
           "batch_index": 1,
           "words": [
             {
-              "text": "cat",
+              "text": "Cat",
               "category": "animal",
               "image": "grade1_easy_cat.png",
-              "audio": "grade1_easy_cat.mp3",
-              "lesson_cue": "This is a cat. C-A-T. Cat.",
+              "audio": "grade1_easy_cat.wav",
+              "lesson_cue": "This is a cat... C, A, T... Cat!",
+              "lesson_cue_audio": "grade1_easy_cat_cue.wav",
               "definition": "A small furry pet animal.",
               "sample_sentence": "The cat sleeps on the bench.",
               "source": "Dolch Pre-Primer",
@@ -53,18 +54,19 @@
                 {
                   "stem": "Which word matches this picture?",
                   "type": "literal",
-                  "correct": "cat",
-                  "distractors": ["bed", "cup", "box"],
+                  "correct": "Cat",
+                  "distractors": ["Bed", "Cup", "Box"],
                   "show_image": true
                 }
               ]
             },
             {
-              "text": "dog",
+              "text": "Dog",
               "category": "animal",
               "image": "grade1_easy_dog.png",
-              "audio": "grade1_easy_dog.mp3",
-              "lesson_cue": "This is a dog. D-O-G. Dog.",
+              "audio": "grade1_easy_dog.wav",
+              "lesson_cue": "This is a dog... D, O, G... Dog!",
+              "lesson_cue_audio": "grade1_easy_dog_cue.wav",
               "definition": "A furry pet animal that barks.",
               "sample_sentence": "The dog runs in the yard.",
               "source": "Dolch Pre-Primer",
@@ -74,18 +76,19 @@
                 {
                   "stem": "What animal is this?",
                   "type": "literal",
-                  "correct": "dog",
-                  "distractors": ["mat", "hat", "jar"],
+                  "correct": "Dog",
+                  "distractors": ["Mat", "Hat", "Jar"],
                   "show_image": true
                 }
               ]
             },
             {
-              "text": "pig",
+              "text": "Pig",
               "category": "animal",
               "image": "grade1_easy_pig.png",
-              "audio": "grade1_easy_pig.mp3",
-              "lesson_cue": "This is a pig. P-I-G. Pig.",
+              "audio": "grade1_easy_pig.wav",
+              "lesson_cue": "This is a pig... P, I, G... Pig!",
+              "lesson_cue_audio": "grade1_easy_pig_cue.wav",
               "definition": "A pink farm animal with a flat nose.",
               "sample_sentence": "The pig is in the pen.",
               "source": "Dolch Primer",
@@ -95,18 +98,19 @@
                 {
                   "stem": "Which word is this?",
                   "type": "literal",
-                  "correct": "pig",
-                  "distractors": ["top", "bag", "pen"],
+                  "correct": "Pig",
+                  "distractors": ["Top", "Bag", "Pen"],
                   "show_image": true
                 }
               ]
             },
             {
-              "text": "hen",
+              "text": "Hen",
               "category": "animal",
               "image": "grade1_easy_hen.png",
-              "audio": "grade1_easy_hen.mp3",
-              "lesson_cue": "This is a hen. H-E-N. Hen.",
+              "audio": "grade1_easy_hen.wav",
+              "lesson_cue": "This is a hen... H, E, N... Hen!",
+              "lesson_cue_audio": "grade1_easy_hen_cue.wav",
               "definition": "A female chicken that lays eggs.",
               "sample_sentence": "The hen pecks at the ground.",
               "source": "Dolch Primer",
@@ -116,18 +120,19 @@
                 {
                   "stem": "What is this animal called?",
                   "type": "literal",
-                  "correct": "hen",
-                  "distractors": ["fan", "pan", "pin"],
+                  "correct": "Hen",
+                  "distractors": ["Fan", "Pan", "Pin"],
                   "show_image": true
                 }
               ]
             },
             {
-              "text": "bug",
+              "text": "Bug",
               "category": "animal",
               "image": "grade1_easy_bug.png",
-              "audio": "grade1_easy_bug.mp3",
-              "lesson_cue": "This is a bug. B-U-G. Bug.",
+              "audio": "grade1_easy_bug.wav",
+              "lesson_cue": "This is a bug... B, U, G... Bug!",
+              "lesson_cue_audio": "grade1_easy_bug_cue.wav",
               "definition": "A small insect.",
               "sample_sentence": "The bug sits on a leaf.",
               "source": "Dolch Primer",
@@ -137,8 +142,8 @@
                 {
                   "stem": "Which word matches this picture?",
                   "type": "literal",
-                  "correct": "bug",
-                  "distractors": ["log", "net", "pot"],
+                  "correct": "Bug",
+                  "distractors": ["Log", "Net", "Pot"],
                   "show_image": true
                 }
               ]
@@ -161,11 +166,12 @@
           "batch_index": 1,
           "words": [
             {
-              "text": "duck",
+              "text": "Duck",
               "category": "animal",
               "image": "grade1_medium_duck.png",
-              "audio": "grade1_medium_duck.mp3",
-              "lesson_cue": "This is a duck. D-U-C-K. Duck.",
+              "audio": "grade1_medium_duck.wav",
+              "lesson_cue": "This is a duck... D, U, C, K... Duck!",
+              "lesson_cue_audio": "grade1_medium_duck_cue.wav",
               "definition": "A bird that swims in water.",
               "sample_sentence": "The duck paddles on the pond.",
               "source": "Dolch Primer",
@@ -175,18 +181,19 @@
                 {
                   "stem": "Which word matches this picture?",
                   "type": "literal",
-                  "correct": "duck",
-                  "distractors": ["frog", "goat", "cow"],
+                  "correct": "Duck",
+                  "distractors": ["Frog", "Goat", "Cow"],
                   "show_image": true
                 }
               ]
             },
             {
-              "text": "frog",
+              "text": "Frog",
               "category": "animal",
               "image": "grade1_medium_frog.png",
-              "audio": "grade1_medium_frog.mp3",
-              "lesson_cue": "This is a frog. F-R-O-G. Frog.",
+              "audio": "grade1_medium_frog.wav",
+              "lesson_cue": "This is a frog... F, R, O, G... Frog!",
+              "lesson_cue_audio": "grade1_medium_frog_cue.wav",
               "definition": "A green animal that jumps and lives near water.",
               "sample_sentence": "The frog sits on a lily pad.",
               "source": "Dolch Primer",
@@ -196,18 +203,19 @@
                 {
                   "stem": "What animal is this?",
                   "type": "literal",
-                  "correct": "frog",
-                  "distractors": ["bird", "fish", "owl"],
+                  "correct": "Frog",
+                  "distractors": ["Bird", "Fish", "Owl"],
                   "show_image": true
                 }
               ]
             },
             {
-              "text": "bird",
+              "text": "Bird",
               "category": "animal",
               "image": "grade1_medium_bird.png",
-              "audio": "grade1_medium_bird.mp3",
-              "lesson_cue": "This is a bird. B-I-R-D. Bird.",
+              "audio": "grade1_medium_bird.wav",
+              "lesson_cue": "This is a bird... B, I, R, D... Bird!",
+              "lesson_cue_audio": "grade1_medium_bird_cue.wav",
               "definition": "An animal with wings that can fly.",
               "sample_sentence": "The bird sits on the fence.",
               "source": "Dolch Primer",
@@ -217,18 +225,19 @@
                 {
                   "stem": "Which word is this?",
                   "type": "literal",
-                  "correct": "bird",
-                  "distractors": ["duck", "goat", "cow"],
+                  "correct": "Bird",
+                  "distractors": ["Duck", "Goat", "Cow"],
                   "show_image": true
                 }
               ]
             },
             {
-              "text": "fish",
+              "text": "Fish",
               "category": "animal",
               "image": "grade1_medium_fish.png",
-              "audio": "grade1_medium_fish.mp3",
-              "lesson_cue": "This is a fish. F-I-S-H. Fish.",
+              "audio": "grade1_medium_fish.wav",
+              "lesson_cue": "This is a fish... F, I, S, H... Fish!",
+              "lesson_cue_audio": "grade1_medium_fish_cue.wav",
               "definition": "An animal that lives and swims in water.",
               "sample_sentence": "The fish swims in the pond.",
               "source": "Dolch Primer",
@@ -238,18 +247,19 @@
                 {
                   "stem": "What is this animal called?",
                   "type": "literal",
-                  "correct": "fish",
-                  "distractors": ["frog", "owl", "duck"],
+                  "correct": "Fish",
+                  "distractors": ["Frog", "Owl", "Duck"],
                   "show_image": true
                 }
               ]
             },
             {
-              "text": "goat",
+              "text": "Goat",
               "category": "animal",
               "image": "grade1_medium_goat.png",
-              "audio": "grade1_medium_goat.mp3",
-              "lesson_cue": "This is a goat. G-O-A-T. Goat.",
+              "audio": "grade1_medium_goat.wav",
+              "lesson_cue": "This is a goat... G, O, A, T... Goat!",
+              "lesson_cue_audio": "grade1_medium_goat_cue.wav",
               "definition": "A farm animal with horns that eats grass.",
               "sample_sentence": "The goat eats grass in the garden.",
               "source": "Dolch Primer",
@@ -259,18 +269,19 @@
                 {
                   "stem": "Which word matches this picture?",
                   "type": "literal",
-                  "correct": "goat",
-                  "distractors": ["bird", "fish", "cow"],
+                  "correct": "Goat",
+                  "distractors": ["Bird", "Fish", "Cow"],
                   "show_image": true
                 }
               ]
             },
             {
-              "text": "cow",
+              "text": "Cow",
               "category": "animal",
               "image": "grade1_medium_cow.png",
-              "audio": "grade1_medium_cow.mp3",
-              "lesson_cue": "This is a cow. C-O-W. Cow.",
+              "audio": "grade1_medium_cow.wav",
+              "lesson_cue": "This is a cow... C, O, W... Cow!",
+              "lesson_cue_audio": "grade1_medium_cow_cue.wav",
               "definition": "A large farm animal that gives milk.",
               "sample_sentence": "The cow stands behind the fence.",
               "source": "Dolch Primer",
@@ -280,18 +291,19 @@
                 {
                   "stem": "Which animal says \"moo\"?",
                   "type": "inferential",
-                  "correct": "cow",
-                  "distractors": ["duck", "frog", "owl"],
+                  "correct": "Cow",
+                  "distractors": ["Duck", "Frog", "Owl"],
                   "show_image": false
                 }
               ]
             },
             {
-              "text": "owl",
+              "text": "Owl",
               "category": "animal",
               "image": "grade1_medium_owl.png",
-              "audio": "grade1_medium_owl.mp3",
-              "lesson_cue": "This is an owl. O-W-L. Owl.",
+              "audio": "grade1_medium_owl.wav",
+              "lesson_cue": "This is an owl... O, W, L... Owl!",
+              "lesson_cue_audio": "grade1_medium_owl_cue.wav",
               "definition": "A bird with big eyes that stays awake at night.",
               "sample_sentence": "The owl sits on the window sill.",
               "source": "Dolch Primer",
@@ -299,10 +311,10 @@
               "sensitivity_notes": "Reviewed — no issues.",
               "quiz_questions": [
                 {
-                  "stem": "Which animal can fly?",
+                  "stem": "Which animal stays awake at night?",
                   "type": "inferential",
-                  "correct": "bird",
-                  "distractors": ["fish", "goat", "cow"],
+                  "correct": "Owl",
+                  "distractors": ["Fish", "Goat", "Cow"],
                   "show_image": false
                 }
               ]
@@ -325,13 +337,14 @@
           "batch_index": 1,
           "words": [
             {
-              "text": "big",
+              "text": "Big",
               "category": "sight_word",
               "image": "grade1_hard_big.png",
-              "audio": "grade1_hard_big.mp3",
-              "lesson_cue": "This is big. B-I-G. Big.",
+              "audio": "grade1_hard_big.wav",
+              "lesson_cue": "This is big... B, I, G... Big!",
+              "lesson_cue_audio": "grade1_hard_big_cue.wav",
               "definition": "Large in size.",
-              "sample_sentence": "The balloon is big.",
+              "sample_sentence": "The elephant is big.",
               "source": "Dolch Pre-Primer",
               "sensitivity_reviewed": 1,
               "sensitivity_notes": "Reviewed — no issues.",
@@ -339,18 +352,19 @@
                 {
                   "stem": "Which word means \"the opposite of small\"?",
                   "type": "inferential",
-                  "correct": "big",
-                  "distractors": ["bag", "bin", "bit"],
+                  "correct": "Big",
+                  "distractors": ["Bag", "Bin", "Bit"],
                   "show_image": false
                 }
               ]
             },
             {
-              "text": "saw",
+              "text": "Saw",
               "category": "sight_word",
               "image": "grade1_hard_saw.png",
-              "audio": "grade1_hard_saw.mp3",
-              "lesson_cue": "This is saw. S-A-W. Saw.",
+              "audio": "grade1_hard_saw.wav",
+              "lesson_cue": "This is saw... S, A, W... Saw!",
+              "lesson_cue_audio": "grade1_hard_saw_cue.wav",
               "definition": "A tool used to cut wood.",
               "sample_sentence": "The saw is on the bench.",
               "source": "Dolch Primer",
@@ -360,18 +374,19 @@
                 {
                   "stem": "Which word matches this picture?",
                   "type": "literal",
-                  "correct": "saw",
-                  "distractors": ["was", "has", "wad"],
+                  "correct": "Saw",
+                  "distractors": ["Was", "Has", "Wad"],
                   "show_image": true
                 }
               ]
             },
             {
-              "text": "on",
+              "text": "On",
               "category": "sight_word",
               "image": "grade1_hard_on.png",
-              "audio": "grade1_hard_on.mp3",
-              "lesson_cue": "This is on. O-N. On.",
+              "audio": "grade1_hard_on.wav",
+              "lesson_cue": "This is on... O, N... On!",
+              "lesson_cue_audio": "grade1_hard_on_cue.wav",
               "definition": "Resting on top of something.",
               "sample_sentence": "The ball is on the box.",
               "source": "Dolch Pre-Primer",
@@ -381,20 +396,21 @@
                 {
                   "stem": "Which word means \"not off\"?",
                   "type": "inferential",
-                  "correct": "on",
-                  "distractors": ["no", "in", "up"],
+                  "correct": "On",
+                  "distractors": ["No", "In", "Up"],
                   "show_image": false
                 }
               ]
             },
             {
-              "text": "run",
+              "text": "Run",
               "category": "sight_word",
               "image": "grade1_hard_run.png",
-              "audio": "grade1_hard_run.mp3",
-              "lesson_cue": "This is run. R-U-N. Run.",
+              "audio": "grade1_hard_run.wav",
+              "lesson_cue": "This is run... R, U, N... Run!",
+              "lesson_cue_audio": "grade1_hard_run_cue.wav",
               "definition": "To move fast with your legs.",
-              "sample_sentence": "The children run on the grass.",
+              "sample_sentence": "The boy runs on the grass.",
               "source": "Dolch Pre-Primer",
               "sensitivity_reviewed": 1,
               "sensitivity_notes": "Reviewed — no issues.",
@@ -402,18 +418,19 @@
                 {
                   "stem": "Which word matches this picture?",
                   "type": "literal",
-                  "correct": "run",
-                  "distractors": ["ran", "sun", "fun"],
+                  "correct": "Run",
+                  "distractors": ["Ran", "Sun", "Fun"],
                   "show_image": true
                 }
               ]
             },
             {
-              "text": "pin",
+              "text": "Pin",
               "category": "sight_word",
               "image": "grade1_hard_pin.png",
-              "audio": "grade1_hard_pin.mp3",
-              "lesson_cue": "This is pin. P-I-N. Pin.",
+              "audio": "grade1_hard_pin.wav",
+              "lesson_cue": "This is pin... P, I, N... Pin!",
+              "lesson_cue_audio": "grade1_hard_pin_cue.wav",
               "definition": "A small sharp object used to hold cloth.",
               "sample_sentence": "The pin is on the cloth.",
               "source": "Dolch Primer",
@@ -423,18 +440,19 @@
                 {
                   "stem": "Which word matches this picture?",
                   "type": "literal",
-                  "correct": "pin",
-                  "distractors": ["pen", "pan", "tin"],
+                  "correct": "Pin",
+                  "distractors": ["Pen", "Pan", "Tin"],
                   "show_image": true
                 }
               ]
             },
             {
-              "text": "pen",
+              "text": "Pen",
               "category": "sight_word",
               "image": "grade1_hard_pen.png",
-              "audio": "grade1_hard_pen.mp3",
-              "lesson_cue": "This is pen. P-E-N. Pen.",
+              "audio": "grade1_hard_pen.wav",
+              "lesson_cue": "This is pen... P, E, N... Pen!",
+              "lesson_cue_audio": "grade1_hard_pen_cue.wav",
               "definition": "A tool used for writing.",
               "sample_sentence": "The pen is on the notebook.",
               "source": "Dolch Primer",
@@ -444,18 +462,19 @@
                 {
                   "stem": "I use a ___ to write.",
                   "type": "inferential",
-                  "correct": "pen",
-                  "distractors": ["pin", "pan", "ten"],
+                  "correct": "Pen",
+                  "distractors": ["Pin", "Pan", "Ten"],
                   "show_image": false
                 }
               ]
             },
             {
-              "text": "cup",
+              "text": "Cup",
               "category": "sight_word",
               "image": "grade1_hard_cup.png",
-              "audio": "grade1_hard_cup.mp3",
-              "lesson_cue": "This is cup. C-U-P. Cup.",
+              "audio": "grade1_hard_cup.wav",
+              "lesson_cue": "This is a cup... C, U, P... Cup!",
+              "lesson_cue_audio": "grade1_hard_cup_cue.wav",
               "definition": "A small container for drinking.",
               "sample_sentence": "The cup is on the table.",
               "source": "Dolch Primer",
@@ -465,18 +484,19 @@
                 {
                   "stem": "Which word matches this picture?",
                   "type": "literal",
-                  "correct": "cup",
-                  "distractors": ["cap", "cop", "cut"],
+                  "correct": "Cup",
+                  "distractors": ["Cap", "Cop", "Cut"],
                   "show_image": true
                 }
               ]
             },
             {
-              "text": "map",
+              "text": "Map",
               "category": "sight_word",
               "image": "grade1_hard_map.png",
-              "audio": "grade1_hard_map.mp3",
-              "lesson_cue": "This is map. M-A-P. Map.",
+              "audio": "grade1_hard_map.wav",
+              "lesson_cue": "This is a map... M, A, P... Map!",
+              "lesson_cue_audio": "grade1_hard_map_cue.wav",
               "definition": "A picture that shows where places are.",
               "sample_sentence": "The map is on the wall.",
               "source": "Dolch Primer",
@@ -486,18 +506,19 @@
                 {
                   "stem": "Which word matches this picture?",
                   "type": "literal",
-                  "correct": "map",
-                  "distractors": ["mop", "mat", "man"],
+                  "correct": "Map",
+                  "distractors": ["Mop", "Mat", "Man"],
                   "show_image": true
                 }
               ]
             },
             {
-              "text": "cap",
+              "text": "Cap",
               "category": "sight_word",
               "image": "grade1_hard_cap.png",
-              "audio": "grade1_hard_cap.mp3",
-              "lesson_cue": "This is cap. C-A-P. Cap.",
+              "audio": "grade1_hard_cap.wav",
+              "lesson_cue": "This is a cap... C, A, P... Cap!",
+              "lesson_cue_audio": "grade1_hard_cap_cue.wav",
               "definition": "A soft hat you wear on your head.",
               "sample_sentence": "The cap is on the boy's head.",
               "source": "Dolch Primer",
@@ -507,29 +528,30 @@
                 {
                   "stem": "Which word matches this picture?",
                   "type": "literal",
-                  "correct": "cap",
-                  "distractors": ["cup", "cop", "cat"],
+                  "correct": "Cap",
+                  "distractors": ["Cup", "Cop", "Cat"],
                   "show_image": true
                 }
               ]
             },
             {
-              "text": "ran",
+              "text": "Ran",
               "category": "sight_word",
               "image": "grade1_hard_ran.png",
-              "audio": "grade1_hard_ran.mp3",
-              "lesson_cue": "This is ran. R-A-N. Ran.",
+              "audio": "grade1_hard_ran.wav",
+              "lesson_cue": "This is ran... R, A, N... Ran!",
+              "lesson_cue_audio": "grade1_hard_ran_cue.wav",
               "definition": "Moved fast with your legs (past tense).",
-              "sample_sentence": "The boy ran to the store.",
+              "sample_sentence": "The girl ran to the store.",
               "source": "Dolch Primer",
               "sensitivity_reviewed": 1,
               "sensitivity_notes": "Reviewed — no issues.",
               "quiz_questions": [
                 {
-                  "stem": "The boy ___ to the store.",
+                  "stem": "The girl ___ to the store.",
                   "type": "inferential",
-                  "correct": "ran",
-                  "distractors": ["run", "sun", "fun"],
+                  "correct": "Ran",
+                  "distractors": ["Run", "Sun", "Fun"],
                   "show_image": false
                 }
               ]
