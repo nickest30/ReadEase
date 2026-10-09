@@ -1,5 +1,5 @@
 {
-  "content_version": "1.0.2",
+  "content_version": "1.0.3",
   "grade": 1,
   "opening_frames": [
     {
@@ -36,7 +36,7 @@
       },
       "game_config": {
         "game_type": "memory_match",
-        "rounds": 5,
+        "rounds": 6,
         "points_per_correct": 5,
         "pass_threshold": 70
       },
@@ -188,6 +188,13 @@
         "buffer_size": 0,
         "randomized": 0,
         "passing_threshold": 70
+      },
+      "game_config": {
+        "game_type": "bubble_pop",
+        "rounds": 7,
+        "points_per_correct": 5,
+        "max_points": 35,
+        "pass_threshold": 70
       },
       "batches": [
         {
