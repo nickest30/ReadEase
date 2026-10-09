@@ -62,6 +62,7 @@ import 'screens/teacher/class_analytics_screen.dart';
 import 'screens/teacher/class_leaderboard_screen.dart';
 import 'screens/games/memory_match_screen.dart';
 import 'screens/games/bubble_pop_screen.dart';
+import 'screens/games/drag_drop_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -183,6 +184,7 @@ class _ReadEaseAppState extends State<ReadEaseApp> {
               '/my-dictionary': (context) => const MyDictionaryScreen(),
               '/memory-match': (context) => const MemoryMatchScreen(),
               '/bubble-pop': (context) => const BubblePopScreen(),
+              '/drag-drop': (context) => const DragDropScreen(),
             },
           );
         },
