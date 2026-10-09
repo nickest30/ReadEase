@@ -446,17 +446,21 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
               const SizedBox(height: AppSpacing.xl),
 
-              // Buttons
+                            // Buttons — row 1: retry / back to levels
               Row(
                 children: [
+                  // Try Again — re-launch the same level
                   Expanded(
                     child: SizedBox(
                       height: 52,
                       child: OutlinedButton(
                         onPressed: () {
                           Navigator.of(context).pushReplacementNamed(
-                            '/difficulty-selection',
-                            arguments: {'gradeLevel': _gradeLevel},
+                            '/lesson-play',
+                            arguments: {
+                              'gradeLevel': _gradeLevel,
+                              'difficulty': _difficulty,
+                            },
                           );
                         },
                         style: OutlinedButton.styleFrom(
@@ -481,14 +485,16 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
+
+                  // Back to Levels — difficulty picker for same grade
                   Expanded(
                     child: SizedBox(
                       height: 52,
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.of(context).pushNamedAndRemoveUntil(
-                            '/student-home',
-                            ModalRoute.withName('/role-selection'),
+                          Navigator.of(context).pushReplacementNamed(
+                            '/difficulty-selection',
+                            arguments: {'gradeLevel': _gradeLevel},
                           );
                         },
                         style: ElevatedButton.styleFrom(
@@ -510,6 +516,38 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     ),
                   ),
                 ],
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
+              // Home button — full-width, muted
+              SizedBox(
+                height: 50,
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      '/student-home',
+                      ModalRoute.withName('/role-selection'),
+                    );
+                  },
+                  icon: const Icon(Icons.home_rounded, size: 20),
+                  label: const Text(
+                    'Home',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textMuted,
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppRadius.large),
+                    ),
+                  ),
+                ),
               ),
 
               const SizedBox(height: AppSpacing.lg),

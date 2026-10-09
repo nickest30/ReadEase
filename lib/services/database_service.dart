@@ -1147,14 +1147,23 @@ class DatabaseService {
     return maps.map((map) => QuizResult.fromMap(map)).toList();
   }
 
-  Future<bool> hasPassedDifficulty(int studentId, int gradeLevel, String difficulty) async {
+  Future<bool> hasPassedDifficulty(
+    int studentId,
+    int gradeLevel,
+    String difficulty,
+  ) async {
     final db = await database;
-    final maps = await db.query(
-      'quiz_results',
-      where: 'student_id = ? AND grade_level = ? AND difficulty = ? AND (score * 1.0 / total_questions) >= 0.70',
-      whereArgs: [studentId, gradeLevel, difficulty],
-    );
-    return maps.isNotEmpty;
+    final rows = await db.rawQuery('''
+      SELECT COUNT(*) as count
+      FROM quiz_attempts qa
+      INNER JOIN batches b ON b.id = qa.batch_id
+      WHERE qa.student_id = ?
+        AND b.grade_level = ?
+        AND b.difficulty = ?
+        AND (qa.score * 1.0 / qa.total_questions) >= 0.70
+    ''', [studentId, gradeLevel, difficulty]);
+    final count = Sqflite.firstIntValue(rows) ?? 0;
+    return count > 0;
   }
 
   /// Mark a quiz result as synced to cloud.
