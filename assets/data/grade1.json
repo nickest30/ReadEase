@@ -29,7 +29,7 @@
       "difficulty": "easy",
       "theme": "Lola's Courtyard",
       "quiz_config": {
-        "quiz_size": 5,
+        "quiz_size": 6,
         "buffer_size": 0,
         "randomized": 0,
         "passing_threshold": 70
@@ -150,6 +150,28 @@
                   "type": "literal",
                   "correct": "Bug",
                   "distractors": ["Log", "Net", "Pot"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Ant",
+              "category": "animal",
+              "image": "grade1_easy_ant.png",
+              "audio": "grade1_easy_ant.wav",
+              "lesson_cue": "This is an ant... A, N, T... Ant!",
+              "lesson_cue_audio": "grade1_easy_ant_cue.wav",
+              "definition": "A small insect that lives in groups.",
+              "sample_sentence": "The ant walks on the ground.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Ant",
+                  "distractors": ["Nut", "Can", "Mop"],
                   "show_image": true
                 }
               ]

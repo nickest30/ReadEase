@@ -47,9 +47,9 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
   bool _locked = false;
 
   // ── [GAME-LAYER] Yse reaction + SFX ──
+    // ── [GAME-LAYER] Yse reaction + SFX ──
   final YseReactionController _reaction = YseReactionController();
   int _currentStreak = 0;
-  bool _hasShownFirstNice = false;
 
   // ── Audio ──
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -96,7 +96,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
         return;
       }
 
-      final limited = words.take(5).toList();
+      final limited = words.take(6).toList();
 
       final questions =
           await DatabaseService.instance.getQuestionsForBatch(batchId);
@@ -139,10 +139,11 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
         _loading = false;
       });
 
-      // [GAME-LAYER] Show LET'S GO! once cards are visible
+      // [GAME-LAYER] Show LET'S GO! once cards are visible.
+      // Persistent — stays until the user's first pair attempt.
       await Future.delayed(const Duration(milliseconds: 400));
       if (!mounted) return;
-      _reaction.show(YseReaction.letsGo);
+      _reaction.show(YseReaction.letsGo, persistent: true);
     } catch (e) {
       debugPrint('🧠 MemoryMatch load ERROR: $e');
       if (!mounted) return;
@@ -196,19 +197,18 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
         }
       });
 
-      // [GAME-LAYER] SFX + Yse reactions
+            // [GAME-LAYER] SFX + Yse reactions
       GameSfx.instance.playCorrect();
 
       if (isFirstAttempt) {
         _currentStreak++;
 
-        if (!_hasShownFirstNice) {
-          // First correct answer of the game
-          _hasShownFirstNice = true;
-          _reaction.show(YseReaction.nice);
-        } else if (_currentStreak >= 3) {
+        if (_currentStreak >= 3) {
           // Streak of 3+ correct in a row
-          _reaction.show(YseReaction.hwaiting);
+          _reaction.show(YseReaction.hwaiting, persistent: true);
+        } else {
+          // Streak of 1–2 correct
+          _reaction.show(YseReaction.nice, persistent: true);
         }
       }
 
@@ -220,9 +220,9 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
       _failedCombos.add(_comboKey(a.id, b.id));
       _currentStreak = 0;
 
-      // [GAME-LAYER] Wrong answer → whoosh + TRY AGAIN pose
+       // [GAME-LAYER] Wrong answer → whoosh + TRY AGAIN pose
       GameSfx.instance.playWrong();
-      _reaction.show(YseReaction.tryAgain);
+      _reaction.show(YseReaction.tryAgain, persistent: true);
 
       await Future.delayed(const Duration(milliseconds: 1200));
       if (!mounted) return;
@@ -264,7 +264,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
 
     try {
       // [GAME-LAYER] Show YOU DID IT! before transitioning
-      _reaction.show(YseReaction.youDidIt);
+      _reaction.show(YseReaction.youDidIt, persistent: true);
       GameSfx.instance.playCelebration();
       await Future.delayed(const Duration(milliseconds: 1200));
       if (!mounted) return;
@@ -439,31 +439,23 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
     );
   }
 
-  Widget _buildGame() {
+    Widget _buildGame() {
     final matchedPairs = _cards.where((c) => c.isMatched).length ~/ 2;
     final totalPairs = _allPairIds.length;
 
-    // Stack lets the Yse reaction float above the header without
-    // taking layout space (so cards stay as big as possible).
-    return Stack(
+    // Layout: header / grid / Yse bottom bar
+    return Column(
       children: [
-        Column(
-          children: [
-            _buildHeader(matchedPairs, totalPairs),
-            const SizedBox(height: AppSpacing.sm),
-            Expanded(child: _buildGrid()),
-            const SizedBox(height: AppSpacing.md),
-          ],
-        ),
-
-        // [GAME-LAYER] Yse reaction overlay — top-center, floats,
-        // IgnorePointer ensures taps pass through.
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: YseReactionOverlay(controller: _reaction, size: 180),
+        _buildHeader(matchedPairs, totalPairs),
+        const SizedBox(height: AppSpacing.sm),
+        Expanded(child: _buildGrid()),
+        // Yse bottom bar — reserved space, cards are sized to fit above
+        Container(
+          height: 130,
+          alignment: Alignment.center,
+          child: YseReactionOverlay(
+            controller: _reaction,
+            size: 120,
           ),
         ),
       ],
@@ -523,23 +515,24 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
           ),
           // Note: Yse slot removed from header — she now floats
           // top-center via the overlay above. Header right side blank.
-          const SizedBox(width: 8),
         ],
       ),
     );
   }
 
-  Widget _buildGrid() {
+    Widget _buildGrid() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth < 360 ? 4 : 5;
+        // Fixed 3-column layout for the 12-card grid.
+        // 6 pairs = 12 cards = perfect 3×4 grid.
+        const columns = 3;
         final rows = (_cards.length / columns).ceil();
 
-        const spacing = 8.0;
-        const outerPadding = 12.0;
+        const spacing = 10.0;
+        const outerPadding = 16.0;
 
         final availableHeight =
-            constraints.maxHeight - (rows - 1) * spacing - outerPadding * 2;
+            constraints.maxHeight - (rows - 1) * spacing;
         final cardHeight = availableHeight / rows;
 
         return Padding(

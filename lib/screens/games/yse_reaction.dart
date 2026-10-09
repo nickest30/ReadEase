@@ -29,18 +29,23 @@ class YseReactionController extends ChangeNotifier {
 
   YseReaction? get current => _current;
 
-  void show(
+    void show(
     YseReaction reaction, {
     Duration duration = defaultDuration,
+    bool persistent = false,
   }) {
     _current = reaction;
     notifyListeners();
 
     _timer?.cancel();
-    _timer = Timer(duration, () {
-      _current = null;
-      notifyListeners();
-    });
+
+    // If persistent, the pose stays until replaced — no auto-clear timer.
+    if (!persistent) {
+      _timer = Timer(duration, () {
+        _current = null;
+        notifyListeners();
+      });
+    }
   }
 
   void clear() {
