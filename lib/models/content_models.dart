@@ -9,6 +9,7 @@ class LessonBatch {
   final int batchIndex;
   final String theme;
   final String? culturalElementsJson;
+  final String? gameType;          // NEW — 'memory_match' | 'bubble_pop' | 'drag_drop' | null
 
   LessonBatch({
     this.id,
@@ -17,6 +18,7 @@ class LessonBatch {
     required this.batchIndex,
     required this.theme,
     this.culturalElementsJson,
+    this.gameType,
   });
 
   Map<String, dynamic> toMap() => {
@@ -26,6 +28,7 @@ class LessonBatch {
         'batch_index': batchIndex,
         'theme': theme,
         'cultural_elements_json': culturalElementsJson,
+        'game_type': gameType,
       };
 
   factory LessonBatch.fromMap(Map<String, dynamic> m) => LessonBatch(
@@ -35,6 +38,7 @@ class LessonBatch {
         batchIndex: m['batch_index'] as int,
         theme: m['theme'] as String,
         culturalElementsJson: m['cultural_elements_json'] as String?,
+        gameType: m['game_type'] as String?,
       );
 
   String get lessonKey => 'grade${gradeLevel}_$difficulty';

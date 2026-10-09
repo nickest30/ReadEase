@@ -85,6 +85,10 @@ class ContentImporter {
         await DatabaseService.instance.insertQuizConfig(config);
 
         // 2b. Batches
+        // Read game_config if present (new field for game layer).
+        final gameConfig = lessonData['game_config'] as Map<String, dynamic>?;
+        final gameType = gameConfig?['game_type'] as String?;
+
         final batches = (lessonData['batches'] as List<dynamic>?) ?? [];
         for (final batchData in batches) {
           final batchIndex = batchData['batch_index'] as int;
@@ -94,6 +98,7 @@ class ContentImporter {
             difficulty: difficulty,
             batchIndex: batchIndex,
             theme: theme,
+            gameType: gameType,
           );
           final batchId =
               await DatabaseService.instance.insertBatch(batch);

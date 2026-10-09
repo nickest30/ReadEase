@@ -155,12 +155,25 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
     if (_currentWordIndex < _words.length - 1) {
       setState(() => _currentWordIndex++);
     } else {
-      if (_batch?.id != null) {
-        Navigator.of(context).pushReplacementNamed(
-          '/quiz-play',
-          arguments: {'batchId': _batch!.id},
-        );
-      }
+      if (_batch?.id == null) return;
+
+      final args = {
+        'batchId': _batch!.id,
+        'gradeLevel': _batch!.gradeLevel,
+        'difficulty': _batch!.difficulty,
+      };
+
+      // Route to the game assigned to this lesson's difficulty.
+      // Falls back to the MCQ quiz when no game is configured.
+      final gameType = _batch!.gameType;
+      final route = switch (gameType) {
+        'memory_match' => '/memory-match',
+        'bubble_pop' => '/bubble-pop',
+        'drag_drop' => '/drag-drop',
+        _ => '/quiz-play',
+      };
+
+      Navigator.of(context).pushReplacementNamed(route, arguments: args);
     }
   }
 

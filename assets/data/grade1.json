@@ -1,5 +1,5 @@
 {
-  "content_version": "1.0.1",
+  "content_version": "1.0.2",
   "grade": 1,
   "opening_frames": [
     {
@@ -33,6 +33,12 @@
         "buffer_size": 0,
         "randomized": 0,
         "passing_threshold": 70
+      },
+      "game_config": {
+        "game_type": "memory_match",
+        "rounds": 5,
+        "points_per_correct": 5,
+        "pass_threshold": 70
       },
       "batches": [
         {

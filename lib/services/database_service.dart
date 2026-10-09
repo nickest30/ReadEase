@@ -28,7 +28,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 11,
+      version: 12,
       onCreate: _createTables,
       onUpgrade: _upgradeTables,
     );
@@ -190,7 +190,8 @@ class DatabaseService {
         difficulty TEXT NOT NULL,
         batch_index INTEGER NOT NULL,
         theme TEXT NOT NULL,
-        cultural_elements_json TEXT
+        cultural_elements_json TEXT,
+        game_type TEXT
       )
     ''');
 
@@ -797,6 +798,15 @@ class DatabaseService {
       )
     ''');
   }
+
+    if (oldVersion < 12) {
+      // Add game_type column to batches (for the game layer)
+      try {
+        await db.execute('ALTER TABLE batches ADD COLUMN game_type TEXT');
+      } catch (_) {
+        // Column may already exist
+      }
+    }
 
 
 
