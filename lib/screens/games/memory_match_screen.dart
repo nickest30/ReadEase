@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 
 import '../../models/badge.dart';
 import '../../models/content_models.dart';
-import '../../models/word.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../providers/student_provider.dart';
