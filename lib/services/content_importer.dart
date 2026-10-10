@@ -141,6 +141,9 @@ class ContentImporter {
               definition: (wordData['definition'] as String?) ?? '',
               sampleSentence:
                   (wordData['sample_sentence'] as String?) ?? '',
+              sampleSentenceAudio: wordData['sample_sentence_audio'] != null
+                  ? 'assets/audio/sentences/${wordData['sample_sentence_audio']}'
+                  : null,
               source: (wordData['source'] as String?) ?? '',
               sensitivityReviewed:
                   ((wordData['sensitivity_reviewed'] as int?) ?? 0) ==

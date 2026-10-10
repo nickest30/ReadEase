@@ -12,6 +12,7 @@ class Word {
   final String lessonCue;
   final String definition;
   final String sampleSentence;
+  final String? sampleSentenceAudio;
   final String source;
   final bool sensitivityReviewed;
   final String? sensitivityNotes;
@@ -34,6 +35,7 @@ class Word {
     this.lessonCue = '',
     this.definition = '',
     this.sampleSentence = '',
+    this.sampleSentenceAudio,
     this.source = '',
     this.sensitivityReviewed = false,
     this.sensitivityNotes,
@@ -55,6 +57,7 @@ class Word {
       'lesson_cue': lessonCue,
       'definition': definition,
       'sample_sentence': sampleSentence,
+      'sample_sentence_audio': sampleSentenceAudio,
       'source': source,
       'sensitivity_reviewed': sensitivityReviewed ? 1 : 0,
       'sensitivity_notes': sensitivityNotes,
@@ -78,6 +81,7 @@ class Word {
       lessonCue: (map['lesson_cue'] as String?) ?? '',
       definition: (map['definition'] as String?) ?? '',
       sampleSentence: (map['sample_sentence'] as String?) ?? '',
+      sampleSentenceAudio: map['sample_sentence_audio'] as String?,
       source: (map['source'] as String?) ?? '',
       sensitivityReviewed:
           ((map['sensitivity_reviewed'] as int?) ?? 0) == 1,
