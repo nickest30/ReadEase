@@ -107,7 +107,7 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
       }
 
       // Cap at 7 rounds (Medium quiz size)
-      final gameWords = words.take(7).toList();
+      final gameWords = words.toList();
 
       final questions =
           await DatabaseService.instance.getQuestionsForBatch(batchId);

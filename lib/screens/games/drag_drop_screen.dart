@@ -110,7 +110,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
       }
 
       // Cap at 10 rounds (Hard quiz size)
-      final gameWords = words.take(10).toList();
+      final gameWords = words.toList();
 
       final questions =
           await DatabaseService.instance.getQuestionsForBatch(batchId);

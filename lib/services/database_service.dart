@@ -28,7 +28,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 12,
+      version: 13,
       onCreate: _createTables,
       onUpgrade: _upgradeTables,
     );
@@ -723,6 +723,33 @@ class DatabaseService {
         imported_at TEXT NOT NULL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE lesson_intros (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        grade INTEGER NOT NULL,
+        difficulty TEXT NOT NULL,
+        header TEXT NOT NULL,
+        body TEXT NOT NULL,
+        button_label TEXT NOT NULL,
+        pose_asset TEXT NOT NULL,
+        audio_asset TEXT NOT NULL,
+        UNIQUE(grade, difficulty)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE game_intros (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        game_type TEXT NOT NULL UNIQUE,
+        header TEXT NOT NULL,
+        body TEXT NOT NULL,
+        button_label TEXT NOT NULL,
+        pose_asset TEXT NOT NULL,
+        audio_asset TEXT NOT NULL
+      )
+    ''');
+
   }
   
   if (oldVersion < 10) {
@@ -808,7 +835,37 @@ class DatabaseService {
       }
     }
 
+        if (oldVersion < 13) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS lesson_intros (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            grade INTEGER NOT NULL,
+            difficulty TEXT NOT NULL,
+            header TEXT NOT NULL,
+            body TEXT NOT NULL,
+            button_label TEXT NOT NULL,
+            pose_asset TEXT NOT NULL,
+            audio_asset TEXT NOT NULL,
+            UNIQUE(grade, difficulty)
+          )
+        ''');
+      } catch (_) {}
 
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS game_intros (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_type TEXT NOT NULL UNIQUE,
+            header TEXT NOT NULL,
+            body TEXT NOT NULL,
+            button_label TEXT NOT NULL,
+            pose_asset TEXT NOT NULL,
+            audio_asset TEXT NOT NULL
+          )
+        ''');
+      } catch (_) {}
+    }
 
   }
 
@@ -2673,5 +2730,70 @@ class DatabaseService {
     );
     return rows > 0;
   }
+
+    // ============================================================
+  // Intro Screens
+  // ============================================================
+
+  /// Get the lesson intro for a (grade, difficulty).
+  /// Returns null if none exists — caller should skip the screen.
+  Future<LessonIntro?> getLessonIntro(int grade, String difficulty) async {
+    final db = await database;
+    final maps = await db.query(
+      'lesson_intros',
+      where: 'grade = ? AND difficulty = ?',
+      whereArgs: [grade, difficulty],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return LessonIntro.fromMap(maps.first);
+  }
+
+  /// Get the game intro for a game_type.
+  /// Returns null if none exists — caller should skip the screen.
+  Future<GameIntro?> getGameIntro(String gameType) async {
+    final db = await database;
+    final maps = await db.query(
+      'game_intros',
+      where: 'game_type = ?',
+      whereArgs: [gameType],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return GameIntro.fromMap(maps.first);
+  }
+
+  /// Insert or replace a lesson intro (used by importer).
+  Future<int> upsertLessonIntro(LessonIntro intro) async {
+    final db = await database;
+    return await db.insert(
+      'lesson_intros',
+      intro.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Insert or replace a game intro (used by importer).
+  Future<int> upsertGameIntro(GameIntro intro) async {
+    final db = await database;
+    return await db.insert(
+      'game_intros',
+      intro.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Clear all intros for a grade (used during re-import).
+  Future<void> clearIntrosForGrade(int grade) async {
+    final db = await database;
+    await db.delete(
+      'lesson_intros',
+      where: 'grade = ?',
+      whereArgs: [grade],
+    );
+    // game_intros are shared across grades — don't delete on grade re-import
+  }
+
+  
 
 }

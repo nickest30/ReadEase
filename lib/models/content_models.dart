@@ -622,3 +622,88 @@ class ContentVersion {
         importedAt: m['imported_at'] as String,
       );
 }
+
+class LessonIntro {
+  final int? id;
+  final int grade;
+  final String difficulty;
+  final String header;
+  final String body;
+  final String buttonLabel;
+  final String poseAsset;
+  final String audioAsset;
+
+  LessonIntro({
+    this.id,
+    required this.grade,
+    required this.difficulty,
+    required this.header,
+    required this.body,
+    required this.buttonLabel,
+    required this.poseAsset,
+    required this.audioAsset,
+  });
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'grade': grade,
+        'difficulty': difficulty,
+        'header': header,
+        'body': body,
+        'button_label': buttonLabel,
+        'pose_asset': poseAsset,
+        'audio_asset': audioAsset,
+      };
+
+  factory LessonIntro.fromMap(Map<String, dynamic> m) => LessonIntro(
+        id: m['id'] as int?,
+        grade: m['grade'] as int,
+        difficulty: m['difficulty'] as String,
+        header: m['header'] as String,
+        body: m['body'] as String,
+        buttonLabel: m['button_label'] as String,
+        poseAsset: m['pose_asset'] as String,
+        audioAsset: m['audio_asset'] as String,
+      );
+}
+
+/// Game Intro — shown before each game session.
+class GameIntro {
+  final int? id;
+  final String gameType;
+  final String header;
+  final String body;
+  final String buttonLabel;
+  final String poseAsset;
+  final String audioAsset;
+
+  GameIntro({
+    this.id,
+    required this.gameType,
+    required this.header,
+    required this.body,
+    required this.buttonLabel,
+    required this.poseAsset,
+    required this.audioAsset,
+  });
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'game_type': gameType,
+        'header': header,
+        'body': body,
+        'button_label': buttonLabel,
+        'pose_asset': poseAsset,
+        'audio_asset': audioAsset,
+      };
+
+  factory GameIntro.fromMap(Map<String, dynamic> m) => GameIntro(
+        id: m['id'] as int?,
+        gameType: m['game_type'] as String,
+        header: m['header'] as String,
+        body: m['body'] as String,
+        buttonLabel: m['button_label'] as String,
+        poseAsset: m['pose_asset'] as String,
+        audioAsset: m['audio_asset'] as String,
+      );
+}

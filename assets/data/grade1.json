@@ -1,27 +1,115 @@
 {
-  "content_version": "1.0.5",
+  "content_version": "1.0.7",
   "grade": 1,
-  "opening_frames": [
+  "lesson_intros": [
     {
+      "grade": 1,
       "difficulty": "easy",
-      "visual_asset": "yse_opening_g1_easy.png",
-      "audio_asset": "yse_opening_g1_easy.wav",
-      "display_text": "Hi! I'm Yse! Ready to learn some new words? Let's go!",
-      "trigger_type": "first_visit_only"
+      "header": "Welcome to Easy Level!",
+      "body": "Let's learn about animals in Lola's courtyard. You can do this!",
+      "button_label": "LET'S GO!",
+      "pose_asset": "yse_nerd.png",
+      "audio_asset": "lesson_intro_g1_easy.wav"
     },
     {
+      "grade": 1,
       "difficulty": "medium",
-      "visual_asset": "yse_opening_g1_medium.png",
-      "audio_asset": "yse_opening_g1_medium.wav",
-      "display_text": "Hi! I'm Yse! Ready to learn some new words? Let's go!",
-      "trigger_type": "first_visit_only"
+      "header": "Welcome to Medium Level!",
+      "body": "More animal friends are waiting for you. Let's take our time!",
+      "button_label": "LET'S GO!",
+      "pose_asset": "yse_nerd.png",
+      "audio_asset": "lesson_intro_g1_medium.wav"
     },
     {
+      "grade": 1,
       "difficulty": "hard",
-      "visual_asset": "yse_opening_g1_hard.png",
-      "audio_asset": "yse_opening_g1_hard.wav",
-      "display_text": "Hi! I'm Yse! Ready to learn some new words? Let's go!",
-      "trigger_type": "first_visit_only"
+      "header": "Welcome to Hard Level!",
+      "body": "Let's practice tricky words together. I believe in you!",
+      "button_label": "LET'S GO!",
+      "pose_asset": "yse_nerd.png",
+      "audio_asset": "lesson_intro_g1_hard.wav"
+    }
+  ],
+  "game_intros": [
+    {
+      "game_type": "memory_match",
+      "header": "Match the Pairs!",
+      "body": "Tap two cards to find the matching pairs.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_memory_match.wav"
+    },
+    {
+      "game_type": "bubble_pop",
+      "header": "Pop the Picture!",
+      "body": "Tap the bubble with the correct picture.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_bubble_pop.wav"
+    },
+    {
+      "game_type": "drag_drop",
+      "header": "Drag the Word!",
+      "body": "Drag the word to the matching picture.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_drag_drop.wav"
+    },
+    {
+      "game_type": "word_scramble",
+      "header": "Spell the Word!",
+      "body": "Rearrange the letters to spell the word.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_word_scramble.wav"
+    },
+    {
+      "game_type": "sentence_builder",
+      "header": "Build a Sentence!",
+      "body": "Put the words in order to make a sentence.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_sentence_builder.wav"
+    },
+    {
+      "game_type": "hangman",
+      "header": "Guess the Word!",
+      "body": "Guess the word letter by letter.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_hangman.wav"
+    },
+    {
+      "game_type": "word_hunt",
+      "header": "Find the Words!",
+      "body": "Find the hidden words in the letter grid.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_word_hunt.wav"
+    },
+    {
+      "game_type": "category_sort",
+      "header": "Sort the Words!",
+      "body": "Drag each word into the correct group.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_category_sort.wav"
+    },
+    {
+      "game_type": "crossword_lite",
+      "header": "Fill the Boxes!",
+      "body": "Fill the boxes with the correct words.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_crossword_lite.wav"
+    },
+    {
+      "game_type": "timed_blitz",
+      "header": "Beat the Clock!",
+      "body": "Answer as fast as you can before time runs out.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_timed_blitz.wav"
     }
   ],
   "lessons": [
@@ -386,7 +474,7 @@
               "lesson_cue": "This is big... B, I, G... Big!",
               "lesson_cue_audio": "grade1_hard_big_cue.wav",
               "definition": "Large in size.",
-              "sample_sentence": "The elephant is big.",
+              "sample_sentence": "The bear is big.",
               "source": "Dolch Pre-Primer",
               "sensitivity_reviewed": 1,
               "sensitivity_notes": "Reviewed — no issues.",
@@ -401,14 +489,14 @@
               ]
             },
             {
-              "text": "Saw",
+              "text": "Ball",
               "category": "sight_word",
-              "image": "grade1_hard_saw.png",
-              "audio": "grade1_hard_saw.wav",
-              "lesson_cue": "This is saw... S, A, W... Saw!",
-              "lesson_cue_audio": "grade1_hard_saw_cue.wav",
-              "definition": "A tool used to cut wood.",
-              "sample_sentence": "The saw is on the bench.",
+              "image": "grade1_hard_ball.png",
+              "audio": "grade1_hard_ball.wav",
+              "lesson_cue": "This is a ball... B, A, L, L... Ball!",
+              "lesson_cue_audio": "grade1_hard_ball_cue.wav",
+              "definition": "A round toy you can bounce or throw.",
+              "sample_sentence": "The ball rolls on the ground.",
               "source": "Dolch Primer",
               "sensitivity_reviewed": 1,
               "sensitivity_notes": "Reviewed — no issues.",
@@ -416,30 +504,30 @@
                 {
                   "stem": "Which word matches this picture?",
                   "type": "literal",
-                  "correct": "Saw",
-                  "distractors": ["Was", "Has", "Wad"],
+                  "correct": "Ball",
+                  "distractors": ["Bell", "Fall", "Wall"],
                   "show_image": true
                 }
               ]
             },
             {
-              "text": "On",
+              "text": "Bag",
               "category": "sight_word",
-              "image": "grade1_hard_on.png",
-              "audio": "grade1_hard_on.wav",
-              "lesson_cue": "This is on... O, N... On!",
-              "lesson_cue_audio": "grade1_hard_on_cue.wav",
-              "definition": "Resting on top of something.",
-              "sample_sentence": "The ball is on the box.",
-              "source": "Dolch Pre-Primer",
+              "image": "grade1_hard_bag.png",
+              "audio": "grade1_hard_bag.wav",
+              "lesson_cue": "This is a bag... B, A, G... Bag!",
+              "lesson_cue_audio": "grade1_hard_bag_cue.wav",
+              "definition": "A soft container you carry things in.",
+              "sample_sentence": "The bag is on the bench.",
+              "source": "Dolch Primer",
               "sensitivity_reviewed": 1,
               "sensitivity_notes": "Reviewed — no issues.",
               "quiz_questions": [
                 {
-                  "stem": "Which word means \"not off\"?",
+                  "stem": "I carry my things in a ___.",
                   "type": "inferential",
-                  "correct": "On",
-                  "distractors": ["No", "In", "Up"],
+                  "correct": "Bag",
+                  "distractors": ["Beg", "Big", "Bug"],
                   "show_image": false
                 }
               ]
@@ -577,24 +665,24 @@
               ]
             },
             {
-              "text": "Ran",
+              "text": "Box",
               "category": "sight_word",
-              "image": "grade1_hard_ran.png",
-              "audio": "grade1_hard_ran.wav",
-              "lesson_cue": "This is ran... R, A, N... Ran!",
-              "lesson_cue_audio": "grade1_hard_ran_cue.wav",
-              "definition": "Moved fast with your legs (past tense).",
-              "sample_sentence": "The girl ran to the store.",
+              "image": "grade1_hard_box.png",
+              "audio": "grade1_hard_box.wav",
+              "lesson_cue": "This is a box... B, O, X... Box!",
+              "lesson_cue_audio": "grade1_hard_box_cue.wav",
+              "definition": "A container with flat sides.",
+              "sample_sentence": "The toy is in the box.",
               "source": "Dolch Primer",
               "sensitivity_reviewed": 1,
               "sensitivity_notes": "Reviewed — no issues.",
               "quiz_questions": [
                 {
-                  "stem": "The girl ___ to the store.",
-                  "type": "inferential",
-                  "correct": "Ran",
-                  "distractors": ["Run", "Sun", "Fun"],
-                  "show_image": false
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Box",
+                  "distractors": ["Fox", "Ox", "Mix"],
+                  "show_image": true
                 }
               ]
             }

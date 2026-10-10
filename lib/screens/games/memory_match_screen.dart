@@ -96,7 +96,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
         return;
       }
 
-      final limited = words.take(6).toList();
+      final limited = words.toList();
 
       final questions =
           await DatabaseService.instance.getQuestionsForBatch(batchId);
@@ -525,7 +525,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
       builder: (context, constraints) {
         // Fixed 3-column layout for the 12-card grid.
         // 6 pairs = 12 cards = perfect 3×4 grid.
-        const columns = 3;
+        final columns = _cards.length <= 12 ? 3 : (_cards.length <= 20 ? 4 : 5);
         final rows = (_cards.length / columns).ceil();
 
         const spacing = 10.0;

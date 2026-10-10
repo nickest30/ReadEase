@@ -43,6 +43,9 @@ flutter:
     - assets/audio/cues/
     - assets/audio/yse/
     - assets/data/
+    - assets/audio/intros/
+    - assets/data/grade1.json
+    - assets/data/grade2.json
 
   fonts:
     - family: Nunito

@@ -1,0 +1,981 @@
+{
+  "content_version": "1.0.1",
+  "grade": 2,
+  "lesson_intros": [
+    {
+      "grade": 2,
+      "difficulty": "easy",
+      "header": "Welcome to Easy Level!",
+      "body": "Let's learn words from the market. Ready to start?",
+      "button_label": "LET'S GO!",
+      "pose_asset": "yse_nerd.png",
+      "audio_asset": "lesson_intro_g2_easy.wav"
+    },
+    {
+      "grade": 2,
+      "difficulty": "medium",
+      "header": "Welcome to Medium Level!",
+      "body": "Time to explore the family kitchen. Let's cook up some words!",
+      "button_label": "LET'S GO!",
+      "pose_asset": "yse_nerd.png",
+      "audio_asset": "lesson_intro_g2_medium.wav"
+    },
+    {
+      "grade": 2,
+      "difficulty": "hard",
+      "header": "Welcome to Hard Level!",
+      "body": "Let's visit places in our community. You've got this!",
+      "button_label": "LET'S GO!",
+      "pose_asset": "yse_nerd.png",
+      "audio_asset": "lesson_intro_g2_hard.wav"
+    }
+  ],
+  "game_intros": [
+    {
+      "game_type": "memory_match",
+      "header": "Match the Pairs!",
+      "body": "Tap two cards to find the matching pairs.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_memory_match.wav"
+    },
+    {
+      "game_type": "bubble_pop",
+      "header": "Pop the Picture!",
+      "body": "Tap the bubble with the correct picture.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_bubble_pop.wav"
+    },
+    {
+      "game_type": "drag_drop",
+      "header": "Drag the Word!",
+      "body": "Drag the word to the matching picture.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_drag_drop.wav"
+    },
+    {
+      "game_type": "word_scramble",
+      "header": "Spell the Word!",
+      "body": "Rearrange the letters to spell the word.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_word_scramble.wav"
+    },
+    {
+      "game_type": "sentence_builder",
+      "header": "Build a Sentence!",
+      "body": "Put the words in order to make a sentence.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_sentence_builder.wav"
+    },
+    {
+      "game_type": "hangman",
+      "header": "Guess the Word!",
+      "body": "Guess the word letter by letter.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_hangman.wav"
+    },
+    {
+      "game_type": "word_hunt",
+      "header": "Find the Words!",
+      "body": "Find the hidden words in the letter grid.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_word_hunt.wav"
+    },
+    {
+      "game_type": "category_sort",
+      "header": "Sort the Words!",
+      "body": "Drag each word into the correct group.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_category_sort.wav"
+    },
+    {
+      "game_type": "crossword_lite",
+      "header": "Fill the Boxes!",
+      "body": "Fill the boxes with the correct words.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_crossword_lite.wav"
+    },
+    {
+      "game_type": "timed_blitz",
+      "header": "Beat the Clock!",
+      "body": "Answer as fast as you can before time runs out.",
+      "button_label": "I'M READY!",
+      "pose_asset": "yse_um_actually.png",
+      "audio_asset": "game_intro_timed_blitz.wav"
+    }
+  ],
+  "lessons": [
+    {
+      "difficulty": "easy",
+      "theme": "Market Day",
+      "quiz_config": {
+        "quiz_size": 8,
+        "buffer_size": 0,
+        "randomized": 0,
+        "passing_threshold": 70
+      },
+      "game_config": {
+        "game_type": "memory_match",
+        "rounds": 8,
+        "points_per_correct": 5,
+        "max_points": 40,
+        "pass_threshold": 70
+      },
+      "batches": [
+        {
+          "batch_index": 1,
+          "words": [
+            {
+              "text": "Egg",
+              "category": "food",
+              "image": "grade2_easy_egg.png",
+              "audio": "grade2_easy_egg.wav",
+              "lesson_cue": "This is an egg... E, G, G... Egg!",
+              "lesson_cue_audio": "grade2_easy_egg_cue.wav",
+              "definition": "A food that comes from a hen.",
+              "sample_sentence": "Nanay buys eggs at the market.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Egg",
+                  "distractors": ["Bed", "Cup", "Mat"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Milk",
+              "category": "food",
+              "image": "grade2_easy_milk.png",
+              "audio": "grade2_easy_milk.wav",
+              "lesson_cue": "This is milk... M, I, L, K... Milk!",
+              "lesson_cue_audio": "grade2_easy_milk_cue.wav",
+              "definition": "A white drink that comes from cows.",
+              "sample_sentence": "The boy drinks milk in the morning.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What drink is this?",
+                  "type": "literal",
+                  "correct": "Milk",
+                  "distractors": ["Dish", "Lamp", "Ring"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Corn",
+              "category": "food",
+              "image": "grade2_easy_corn.png",
+              "audio": "grade2_easy_corn.wav",
+              "lesson_cue": "This is corn... C, O, R, N... Corn!",
+              "lesson_cue_audio": "grade2_easy_corn_cue.wav",
+              "definition": "A yellow food that grows on a tall plant.",
+              "sample_sentence": "The corn is yellow and sweet.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Corn",
+                  "distractors": ["Sock", "Leaf", "Note"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Meat",
+              "category": "food",
+              "image": "grade2_easy_meat.png",
+              "audio": "grade2_easy_meat.wav",
+              "lesson_cue": "This is meat... M, E, A, T... Meat!",
+              "lesson_cue_audio": "grade2_easy_meat_cue.wav",
+              "definition": "Food that comes from animals.",
+              "sample_sentence": "Tatay cooks meat for lunch.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Meat",
+                  "distractors": ["Fork", "Bell", "Rock"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Rice",
+              "category": "food",
+              "image": "grade2_easy_rice.png",
+              "audio": "grade2_easy_rice.wav",
+              "lesson_cue": "This is rice... R, I, C, E... Rice!",
+              "lesson_cue_audio": "grade2_easy_rice_cue.wav",
+              "definition": "A white food that we eat every day.",
+              "sample_sentence": "The family eats rice for dinner.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What food is this?",
+                  "type": "literal",
+                  "correct": "Rice",
+                  "distractors": ["Door", "Page", "Gate"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Nut",
+              "category": "food",
+              "image": "grade2_easy_nut.png",
+              "audio": "grade2_easy_nut.wav",
+              "lesson_cue": "This is a nut... N, U, T... Nut!",
+              "lesson_cue_audio": "grade2_easy_nut_cue.wav",
+              "definition": "A small hard food that grows on trees.",
+              "sample_sentence": "The squirrel eats a nut.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Nut",
+                  "distractors": ["Jar", "Mop", "Pot"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Cake",
+              "category": "food",
+              "image": "grade2_easy_cake.png",
+              "audio": "grade2_easy_cake.wav",
+              "lesson_cue": "This is a cake... C, A, K, E... Cake!",
+              "lesson_cue_audio": "grade2_easy_cake_cue.wav",
+              "definition": "A sweet food we eat on birthdays.",
+              "sample_sentence": "The cake is on the table.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which one do we eat on a birthday?",
+                  "type": "inferential",
+                  "correct": "Cake",
+                  "distractors": ["Tree", "Book", "Sand"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Salt",
+              "category": "food",
+              "image": "grade2_easy_salt.png",
+              "audio": "grade2_easy_salt.wav",
+              "lesson_cue": "This is salt... S, A, L, T... Salt!",
+              "lesson_cue_audio": "grade2_easy_salt_cue.wav",
+              "definition": "A white powder that makes food taste better.",
+              "sample_sentence": "Lola adds salt to the soup.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which one makes food taste salty?",
+                  "type": "inferential",
+                  "correct": "Salt",
+                  "distractors": ["Wood", "Coin", "Wall"],
+                  "show_image": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "difficulty": "medium",
+      "theme": "Family Kitchen",
+      "quiz_config": {
+        "quiz_size": 12,
+        "buffer_size": 0,
+        "randomized": 0,
+        "passing_threshold": 70
+      },
+      "game_config": {
+        "game_type": "drag_drop",
+        "rounds": 12,
+        "points_per_correct": 5,
+        "max_points": 60,
+        "pass_threshold": 70
+      },
+      "batches": [
+        {
+          "batch_index": 1,
+          "words": [
+            {
+              "text": "Mango",
+              "category": "fruit",
+              "image": "grade2_medium_mango.png",
+              "audio": "grade2_medium_mango.wav",
+              "lesson_cue": "This is a mango... MAN... GO... Mango!",
+              "lesson_cue_audio": "grade2_medium_mango_cue.wav",
+              "definition": "A sweet yellow fruit.",
+              "sample_sentence": "Ana eats a ripe mango.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Mango",
+                  "distractors": ["Papaya", "Guava", "Melon"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Water",
+              "category": "drink",
+              "image": "grade2_medium_water.png",
+              "audio": "grade2_medium_water.wav",
+              "lesson_cue": "This is water... WA... TER... Water!",
+              "lesson_cue_audio": "grade2_medium_water_cue.wav",
+              "definition": "A clear drink that comes from the tap.",
+              "sample_sentence": "Drink water after you play.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What do we drink every day?",
+                  "type": "literal",
+                  "correct": "Water",
+                  "distractors": ["Juice", "Soda", "Tea"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Sugar",
+              "category": "food",
+              "image": "grade2_medium_sugar.png",
+              "audio": "grade2_medium_sugar.wav",
+              "lesson_cue": "This is sugar... SU... GAR... Sugar!",
+              "lesson_cue_audio": "grade2_medium_sugar_cue.wav",
+              "definition": "A sweet white powder added to food.",
+              "sample_sentence": "Lola puts sugar in the cake.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Sugar",
+                  "distractors": ["Pepper", "Spice", "Syrup"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Apple",
+              "category": "fruit",
+              "image": "grade2_medium_apple.png",
+              "audio": "grade2_medium_apple.wav",
+              "lesson_cue": "This is an apple... AP... PLE... Apple!",
+              "lesson_cue_audio": "grade2_medium_apple_cue.wav",
+              "definition": "A round fruit with red or green skin.",
+              "sample_sentence": "She eats an apple for recess.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What fruit is this?",
+                  "type": "literal",
+                  "correct": "Apple",
+                  "distractors": ["Orange", "Grape", "Pear"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Table",
+              "category": "furniture",
+              "image": "grade2_medium_table.png",
+              "audio": "grade2_medium_table.wav",
+              "lesson_cue": "This is a table... TA... BLE... Table!",
+              "lesson_cue_audio": "grade2_medium_table_cue.wav",
+              "definition": "A flat piece of furniture with legs.",
+              "sample_sentence": "The food is on the table.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Table",
+                  "distractors": ["Chair", "Desk", "Stool"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Spoon",
+              "category": "utensil",
+              "image": "grade2_medium_spoon.png",
+              "audio": "grade2_medium_spoon.wav",
+              "lesson_cue": "This is a spoon... S, P, O, O, N... Spoon!",
+              "lesson_cue_audio": "grade2_medium_spoon_cue.wav",
+              "definition": "A tool with a small bowl for eating.",
+              "sample_sentence": "I use a spoon to eat rice.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which one do we use to eat?",
+                  "type": "inferential",
+                  "correct": "Spoon",
+                  "distractors": ["Fork", "Knife", "Ladle"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Plate",
+              "category": "utensil",
+              "image": "grade2_medium_plate.png",
+              "audio": "grade2_medium_plate.wav",
+              "lesson_cue": "This is a plate... P, L, A, T, E... Plate!",
+              "lesson_cue_audio": "grade2_medium_plate_cue.wav",
+              "definition": "A flat dish where we put food.",
+              "sample_sentence": "The plate is on the table.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Plate",
+                  "distractors": ["Bowl", "Saucer", "Tray"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Honey",
+              "category": "food",
+              "image": "grade2_medium_honey.png",
+              "audio": "grade2_medium_honey.wav",
+              "lesson_cue": "This is honey... HO... NEY... Honey!",
+              "lesson_cue_audio": "grade2_medium_honey_cue.wav",
+              "definition": "A sweet food made by bees.",
+              "sample_sentence": "The bear likes honey.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which one is very sweet?",
+                  "type": "inferential",
+                  "correct": "Honey",
+                  "distractors": ["Jam", "Butter", "Cream"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Basket",
+              "category": "container",
+              "image": "grade2_medium_basket.png",
+              "audio": "grade2_medium_basket.wav",
+              "lesson_cue": "This is a basket... BAS... KET... Basket!",
+              "lesson_cue_audio": "grade2_medium_basket_cue.wav",
+              "definition": "A container made of woven strips.",
+              "sample_sentence": "The basket is full of fruits.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Basket",
+                  "distractors": ["Bucket", "Bin", "Crate"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Dinner",
+              "category": "meal",
+              "image": "grade2_medium_dinner.png",
+              "audio": "grade2_medium_dinner.wav",
+              "lesson_cue": "This is dinner... DIN... NER... Dinner!",
+              "lesson_cue_audio": "grade2_medium_dinner_cue.wav",
+              "definition": "The meal we eat at night.",
+              "sample_sentence": "The family eats dinner together.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which meal do we eat at night?",
+                  "type": "inferential",
+                  "correct": "Dinner",
+                  "distractors": ["Lunch", "Breakfast", "Snack"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Bottle",
+              "category": "container",
+              "image": "grade2_medium_bottle.png",
+              "audio": "grade2_medium_bottle.wav",
+              "lesson_cue": "This is a bottle... BOT... TLE... Bottle!",
+              "lesson_cue_audio": "grade2_medium_bottle_cue.wav",
+              "definition": "A tall container for holding drinks.",
+              "sample_sentence": "The bottle is full of water.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Bottle",
+                  "distractors": ["Jar", "Can", "Flask"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Kitchen",
+              "category": "room",
+              "image": "grade2_medium_kitchen.png",
+              "audio": "grade2_medium_kitchen.wav",
+              "lesson_cue": "This is a kitchen... KITCH... EN... Kitchen!",
+              "lesson_cue_audio": "grade2_medium_kitchen_cue.wav",
+              "definition": "The room where we cook food.",
+              "sample_sentence": "Nanay cooks in the kitchen.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Where do we cook food?",
+                  "type": "inferential",
+                  "correct": "Kitchen",
+                  "distractors": ["Bedroom", "Bathroom", "Hallway"],
+                  "show_image": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "difficulty": "hard",
+      "theme": "Community Places",
+      "quiz_config": {
+        "quiz_size": 16,
+        "buffer_size": 0,
+        "randomized": 0,
+        "passing_threshold": 70
+      },
+      "game_config": {
+        "game_type": "word_scramble",
+        "rounds": 16,
+        "points_per_correct": 5,
+        "max_points": 80,
+        "pass_threshold": 70
+      },
+      "batches": [
+        {
+          "batch_index": 1,
+          "words": [
+            {
+              "text": "Market",
+              "category": "place",
+              "image": "grade2_hard_market.png",
+              "audio": "grade2_hard_market.wav",
+              "lesson_cue": "This is a market... MAR... KET... Market!",
+              "lesson_cue_audio": "grade2_hard_market_cue.wav",
+              "definition": "A place where people buy and sell food.",
+              "sample_sentence": "Nanay buys fish at the market.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Market",
+                  "distractors": ["Packet", "Target", "Ticket"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Garden",
+              "category": "place",
+              "image": "grade2_hard_garden.png",
+              "audio": "grade2_hard_garden.wav",
+              "lesson_cue": "This is a garden... GAR... DEN... Garden!",
+              "lesson_cue_audio": "grade2_hard_garden_cue.wav",
+              "definition": "A place where plants and flowers grow.",
+              "sample_sentence": "Lola waters the plants in the garden.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Garden",
+                  "distractors": ["Pardon", "Warden", "Harden"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Office",
+              "category": "place",
+              "image": "grade2_hard_office.png",
+              "audio": "grade2_hard_office.wav",
+              "lesson_cue": "This is an office... OF... FICE... Office!",
+              "lesson_cue_audio": "grade2_hard_office_cue.wav",
+              "definition": "A place where people work at desks.",
+              "sample_sentence": "Tatay works in an office.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Office",
+                  "distractors": ["Police", "Notice", "Choice"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Library",
+              "category": "place",
+              "image": "grade2_hard_library.png",
+              "audio": "grade2_hard_library.wav",
+              "lesson_cue": "This is a library... LI... BRA... RY... Library!",
+              "lesson_cue_audio": "grade2_hard_library_cue.wav",
+              "definition": "A place where we borrow books.",
+              "sample_sentence": "The library is full of books.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Where do we borrow books?",
+                  "type": "inferential",
+                  "correct": "Library",
+                  "distractors": ["Theory", "Mystery", "History"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Hospital",
+              "category": "place",
+              "image": "grade2_hard_hospital.png",
+              "audio": "grade2_hard_hospital.wav",
+              "lesson_cue": "This is a hospital... HOS... PI... TAL... Hospital!",
+              "lesson_cue_audio": "grade2_hard_hospital_cue.wav",
+              "definition": "A place where doctors help sick people.",
+              "sample_sentence": "The doctor works in the hospital.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Where do we go when we are very sick?",
+                  "type": "inferential",
+                  "correct": "Hospital",
+                  "distractors": ["Festival", "Capital", "Practical"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Chapel",
+              "category": "place",
+              "image": "grade2_hard_chapel.png",
+              "audio": "grade2_hard_chapel.wav",
+              "lesson_cue": "This is a chapel... CHAP... EL... Chapel!",
+              "lesson_cue_audio": "grade2_hard_chapel_cue.wav",
+              "definition": "A small place for prayer.",
+              "sample_sentence": "Lola prays at the chapel.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Chapel",
+                  "distractors": ["Apple", "Ample", "Maple"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Bakery",
+              "category": "place",
+              "image": "grade2_hard_bakery.png",
+              "audio": "grade2_hard_bakery.wav",
+              "lesson_cue": "This is a bakery... BAK... ER... Y... Bakery!",
+              "lesson_cue_audio": "grade2_hard_bakery_cue.wav",
+              "definition": "A place where bread is made and sold.",
+              "sample_sentence": "The bakery smells so good.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Where do we buy bread?",
+                  "type": "inferential",
+                  "correct": "Bakery",
+                  "distractors": ["Grocery", "Creamery", "Delivery"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Station",
+              "category": "place",
+              "image": "grade2_hard_station.png",
+              "audio": "grade2_hard_station.wav",
+              "lesson_cue": "This is a station... STA... TION... Station!",
+              "lesson_cue_audio": "grade2_hard_station_cue.wav",
+              "definition": "A place where buses or trains stop.",
+              "sample_sentence": "We wait at the bus station.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Station",
+                  "distractors": ["Nation", "Vacation", "Caution"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Museum",
+              "category": "place",
+              "image": "grade2_hard_museum.png",
+              "audio": "grade2_hard_museum.wav",
+              "lesson_cue": "This is a museum... MU... SE... UM... Museum!",
+              "lesson_cue_audio": "grade2_hard_museum_cue.wav",
+              "definition": "A place where we look at old and special things.",
+              "sample_sentence": "The class visits the museum.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Museum",
+                  "distractors": ["Stadium", "Podium", "Medium"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Village",
+              "category": "place",
+              "image": "grade2_hard_village.png",
+              "audio": "grade2_hard_village.wav",
+              "lesson_cue": "This is a village... VIL... LAGE... Village!",
+              "lesson_cue_audio": "grade2_hard_village_cue.wav",
+              "definition": "A small town in the countryside.",
+              "sample_sentence": "Lolo lives in a quiet village.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Village",
+                  "distractors": ["College", "Message", "Package"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Factory",
+              "category": "place",
+              "image": "grade2_hard_factory.png",
+              "audio": "grade2_hard_factory.wav",
+              "lesson_cue": "This is a factory... FAC... TO... RY... Factory!",
+              "lesson_cue_audio": "grade2_hard_factory_cue.wav",
+              "definition": "A place where workers make things.",
+              "sample_sentence": "Tatay works in a factory.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Where do workers make things?",
+                  "type": "inferential",
+                  "correct": "Factory",
+                  "distractors": ["Faculty", "Battery", "Pottery"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Hotel",
+              "category": "place",
+              "image": "grade2_hard_hotel.png",
+              "audio": "grade2_hard_hotel.wav",
+              "lesson_cue": "This is a hotel... HO... TEL... Hotel!",
+              "lesson_cue_audio": "grade2_hard_hotel_cue.wav",
+              "definition": "A place where travelers sleep.",
+              "sample_sentence": "We stay in a hotel on trips.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Where do travelers sleep?",
+                  "type": "inferential",
+                  "correct": "Hotel",
+                  "distractors": ["Motel", "Model", "Novel"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Clinic",
+              "category": "place",
+              "image": "grade2_hard_clinic.png",
+              "audio": "grade2_hard_clinic.wav",
+              "lesson_cue": "This is a clinic... CLIN... IC... Clinic!",
+              "lesson_cue_audio": "grade2_hard_clinic_cue.wav",
+              "definition": "A small place where we see a doctor.",
+              "sample_sentence": "The baby goes to the clinic.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Clinic",
+                  "distractors": ["Picnic", "Mimic", "Tactic"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Playground",
+              "category": "place",
+              "image": "grade2_hard_playground.png",
+              "audio": "grade2_hard_playground.wav",
+              "lesson_cue": "This is a playground... PLAY... GROUND... Playground!",
+              "lesson_cue_audio": "grade2_hard_playground_cue.wav",
+              "definition": "A place where children play.",
+              "sample_sentence": "The kids run in the playground.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Playground",
+                  "distractors": ["Background", "Campground", "Foreground"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Restaurant",
+              "category": "place",
+              "image": "grade2_hard_restaurant.png",
+              "audio": "grade2_hard_restaurant.wav",
+              "lesson_cue": "This is a restaurant... RES... TAU... RANT... Restaurant!",
+              "lesson_cue_audio": "grade2_hard_restaurant_cue.wav",
+              "definition": "A place where people pay to eat.",
+              "sample_sentence": "The family eats at the restaurant.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Why do families go to a restaurant?",
+                  "type": "critical",
+                  "correct": "Restaurant",
+                  "distractors": ["Instrument", "Tournament", "Monument"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Plaza",
+              "category": "place",
+              "image": "grade2_hard_plaza.png",
+              "audio": "grade2_hard_plaza.wav",
+              "lesson_cue": "This is a plaza... PLA... ZA... Plaza!",
+              "lesson_cue_audio": "grade2_hard_plaza_cue.wav",
+              "definition": "An open public space in a town.",
+              "sample_sentence": "The town holds a fiesta at the plaza.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which place is best for a town celebration?",
+                  "type": "critical",
+                  "correct": "Plaza",
+                  "distractors": ["Pizza", "Llama", "Comma"],
+                  "show_image": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
