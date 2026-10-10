@@ -65,6 +65,7 @@ import 'screens/games/bubble_pop_screen.dart';
 import 'screens/games/drag_drop_screen.dart';
 import 'screens/student/lesson_intro_screen.dart';
 import 'screens/student/game_intro_screen.dart';
+import 'screens/games/word_scramble_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -189,6 +190,7 @@ class _ReadEaseAppState extends State<ReadEaseApp> {
               '/drag-drop': (context) => const DragDropScreen(),
               '/lesson-intro': (context) => const LessonIntroScreen(),
               '/game-intro': (context) => const GameIntroScreen(),
+              '/word-scramble': (context) => const WordScrambleScreen(),
             },
           );
         },
