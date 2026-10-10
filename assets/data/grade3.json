@@ -1,5 +1,5 @@
 {
-  "content_version": "1.0.0",
+  "content_version": "1.0.1",
   "grade": 3,
   "lesson_intros": [
     {
@@ -285,19 +285,292 @@
         {
           "batch_index": 1,
           "words": [
-            {"text": "Rabbit", "category": "animal", "image": "grade3_medium_rabbit.png", "audio": "grade3_medium_rabbit.wav", "lesson_cue": "This is a rabbit... R, A, B, B, I, T... Rabbit!", "lesson_cue_audio": "grade3_medium_rabbit_cue.wav", "definition": "A small animal with long ears.", "sample_sentence": "The rabbit hops in the garden.", "source": "Dolch Grade 2", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word matches this picture?", "type": "literal", "correct": "Rabbit", "distractors": ["Racket", "Ribbon", "Rocket"], "show_image": true}]},
-            {"text": "Flower", "category": "nature", "image": "grade3_medium_flower.png", "audio": "grade3_medium_flower.wav", "lesson_cue": "This is a flower... F, L, O, W, E, R... Flower!", "lesson_cue_audio": "grade3_medium_flower_cue.wav", "definition": "The colorful part of a plant.", "sample_sentence": "The flower smells sweet.", "source": "Dolch Grade 2", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word matches this picture?", "type": "literal", "correct": "Flower", "distractors": ["Flour", "Floor", "Float"], "show_image": true}]},
-            {"text": "Forest", "category": "nature", "image": "grade3_medium_forest.png", "audio": "grade3_medium_forest.wav", "lesson_cue": "This is a forest... F, O, R, E, S, T... Forest!", "lesson_cue_audio": "grade3_medium_forest_cue.wav", "definition": "A large area with many trees.", "sample_sentence": "The forest is home to many animals.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word is this?", "type": "literal", "correct": "Forest", "distractors": ["Forgot", "Forget", "Fortune"], "show_image": true}]},
-            {"text": "River", "category": "nature", "image": "grade3_medium_river.png", "audio": "grade3_medium_river.wav", "lesson_cue": "This is a river... R, I, V, E, R... River!", "lesson_cue_audio": "grade3_medium_river_cue.wav", "definition": "A long stream of water.", "sample_sentence": "The river flows to the sea.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word matches this picture?", "type": "literal", "correct": "River", "distractors": ["Rider", "Rifle", "Ripple"], "show_image": true}]},
-            {"text": "Mountain", "category": "nature", "image": "grade3_medium_mountain.png", "audio": "grade3_medium_mountain.wav", "lesson_cue": "This is a mountain... M, O, U, N, T, A, I, N... Mountain!", "lesson_cue_audio": "grade3_medium_mountain_cue.wav", "definition": "A very high land with rocks.", "sample_sentence": "The mountain is tall and green.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "What is this called?", "type": "literal", "correct": "Mountain", "distractors": ["Mound", "Monitor", "Mouth"], "show_image": true}]},
-            {"text": "Rainbow", "category": "nature", "image": "grade3_medium_rainbow.png", "audio": "grade3_medium_rainbow.wav", "lesson_cue": "This is a rainbow... R, A, I, N, B, O, W... Rainbow!", "lesson_cue_audio": "grade3_medium_rainbow_cue.wav", "definition": "Colorful arch in the sky after rain.", "sample_sentence": "Look at the rainbow in the sky!", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word matches this picture?", "type": "literal", "correct": "Rainbow", "distractors": ["Railroad", "Rainfall", "Rainy"], "show_image": true}]},
-            {"text": "Thunder", "category": "nature", "image": "grade3_medium_thunder.png", "audio": "grade3_medium_thunder.wav", "lesson_cue": "This is thunder... T, H, U, N, D, E, R... Thunder!", "lesson_cue_audio": "grade3_medium_thunder_cue.wav", "definition": "The loud sound during a storm.", "sample_sentence": "The thunder scared the dog.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "What do we hear during a storm?", "type": "inferential", "correct": "Thunder", "distractors": ["Rainbow", "Sunrise", "Cloud"], "show_image": false}]},
-            {"text": "Butterfly", "category": "animal", "image": "grade3_medium_butterfly.png", "audio": "grade3_medium_butterfly.wav", "lesson_cue": "This is a butterfly... B, U, T, T, E, R, F, L, Y... Butterfly!", "lesson_cue_audio": "grade3_medium_butterfly_cue.wav", "definition": "An insect with colorful wings.", "sample_sentence": "The butterfly lands on the flower.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word matches this picture?", "type": "literal", "correct": "Butterfly", "distractors": ["Butternut", "Button", "Buttery"], "show_image": true}]},
-            {"text": "Sunrise", "category": "nature", "image": "grade3_medium_sunrise.png", "audio": "grade3_medium_sunrise.wav", "lesson_cue": "This is a sunrise... S, U, N, R, I, S, E... Sunrise!", "lesson_cue_audio": "grade3_medium_sunrise_cue.wav", "definition": "When the sun comes up in the morning.", "sample_sentence": "We watch the sunrise at the beach.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "What happens when the sun comes up in the morning?", "type": "inferential", "correct": "Sunrise", "distractors": ["Sunset", "Thunder", "Rainbow"], "show_image": false}]},
-            {"text": "Nest", "category": "object", "image": "grade3_medium_nest.png", "audio": "grade3_medium_nest.wav", "lesson_cue": "This is a nest... N, E, S, T... Nest!", "lesson_cue_audio": "grade3_medium_nest_cue.wav", "definition": "A home that a bird builds.", "sample_sentence": "The bird sits on its nest.", "source": "Dolch Grade 2", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Where does a bird lay its eggs?", "type": "inferential", "correct": "Nest", "distractors": ["Forest", "River", "Mountain"], "show_image": false}]},
-            {"text": "Wood", "category": "material", "image": "grade3_medium_wood.png", "audio": "grade3_medium_wood.wav", "lesson_cue": "This is wood... W, O, O, D... Wood!", "lesson_cue_audio": "grade3_medium_wood_cue.wav", "definition": "The hard material from a tree.", "sample_sentence": "The table is made of wood.", "source": "Dolch Grade 2", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word is this?", "type": "literal", "correct": "Wood", "distractors": ["Food", "Good", "Mood"], "show_image": true}]},
-            {"text": "Cloud", "category": "nature", "image": "grade3_medium_cloud.png", "audio": "grade3_medium_cloud.wav", "lesson_cue": "This is a cloud... C, L, O, U, D... Cloud!", "lesson_cue_audio": "grade3_medium_cloud_cue.wav", "definition": "A white shape in the sky.", "sample_sentence": "The cloud looks like a sheep.", "source": "Dolch Grade 2", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word matches this picture?", "type": "literal", "correct": "Cloud", "distractors": ["Loud", "Proud", "Crowd"], "show_image": true}]},
-            {"text": "Leaf", "category": "nature", "image": "grade3_medium_leaf.png", "audio": "grade3_medium_leaf.wav", "lesson_cue": "This is a leaf... L, E, A, F... Leaf!", "lesson_cue_audio": "grade3_medium_leaf_cue.wav", "definition": "The flat green part of a plant.", "sample_sentence": "The leaf falls from the tree.", "source": "Dolch Grade 2", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "What part of a plant can fall from a tree?", "type": "inferential", "correct": "Leaf", "distractors": ["Flower", "Nest", "Cloud"], "show_image": false}]}
+            {
+              "text": "Rabbit",
+              "category": "animal",
+              "image": "grade3_medium_rabbit.png",
+              "audio": "grade3_medium_rabbit.wav",
+              "lesson_cue": "This is a rabbit... R, A, B, B, I, T... Rabbit!",
+              "lesson_cue_audio": "grade3_medium_rabbit_cue.wav",
+              "definition": "A small animal with long ears.",
+              "sample_sentence": "The rabbit hops in the garden.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Rabbit",
+                  "distractors": ["Racket", "Ribbon", "Rocket"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Flower",
+              "category": "nature",
+              "image": "grade3_medium_flower.png",
+              "audio": "grade3_medium_flower.wav",
+              "lesson_cue": "This is a flower... F, L, O, W, E, R... Flower!",
+              "lesson_cue_audio": "grade3_medium_flower_cue.wav",
+              "definition": "The colorful part of a plant.",
+              "sample_sentence": "The flower smells sweet.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Flower",
+                  "distractors": ["Flour", "Floor", "Float"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Forest",
+              "category": "nature",
+              "image": "grade3_medium_forest.png",
+              "audio": "grade3_medium_forest.wav",
+              "lesson_cue": "This is a forest... F, O, R, E, S, T... Forest!",
+              "lesson_cue_audio": "grade3_medium_forest_cue.wav",
+              "definition": "A large area with many trees.",
+              "sample_sentence": "The forest is home to many animals.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Forest",
+                  "distractors": ["Forgot", "Forget", "Fortune"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "River",
+              "category": "nature",
+              "image": "grade3_medium_river.png",
+              "audio": "grade3_medium_river.wav",
+              "lesson_cue": "This is a river... R, I, V, E, R... River!",
+              "lesson_cue_audio": "grade3_medium_river_cue.wav",
+              "definition": "A long stream of water.",
+              "sample_sentence": "The river flows to the sea.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "River",
+                  "distractors": ["Rider", "Rifle", "Ripple"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Mountain",
+              "category": "nature",
+              "image": "grade3_medium_mountain.png",
+              "audio": "grade3_medium_mountain.wav",
+              "lesson_cue": "This is a mountain... M, O, U, N, T, A, I, N... Mountain!",
+              "lesson_cue_audio": "grade3_medium_mountain_cue.wav",
+              "definition": "A very high land with rocks.",
+              "sample_sentence": "The mountain is tall and green.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What is this called?",
+                  "type": "literal",
+                  "correct": "Mountain",
+                  "distractors": ["Mound", "Monitor", "Mouth"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Rainbow",
+              "category": "nature",
+              "image": "grade3_medium_rainbow.png",
+              "audio": "grade3_medium_rainbow.wav",
+              "lesson_cue": "This is a rainbow... R, A, I, N, B, O, W... Rainbow!",
+              "lesson_cue_audio": "grade3_medium_rainbow_cue.wav",
+              "definition": "Colorful arch in the sky after rain.",
+              "sample_sentence": "Look at the rainbow in the sky!",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Rainbow",
+                  "distractors": ["Railroad", "Rainfall", "Rainy"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Thunder",
+              "category": "nature",
+              "image": "grade3_medium_thunder.png",
+              "audio": "grade3_medium_thunder.wav",
+              "lesson_cue": "This is thunder... T, H, U, N, D, E, R... Thunder!",
+              "lesson_cue_audio": "grade3_medium_thunder_cue.wav",
+              "definition": "The loud sound during a storm.",
+              "sample_sentence": "The thunder scared the dog.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What do we hear during a storm?",
+                  "type": "inferential",
+                  "correct": "Thunder",
+                  "distractors": ["Rainbow", "Sunrise", "Cloud"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Butterfly",
+              "category": "animal",
+              "image": "grade3_medium_butterfly.png",
+              "audio": "grade3_medium_butterfly.wav",
+              "lesson_cue": "This is a butterfly... B, U, T, T, E, R, F, L, Y... Butterfly!",
+              "lesson_cue_audio": "grade3_medium_butterfly_cue.wav",
+              "definition": "An insect with colorful wings.",
+              "sample_sentence": "The butterfly lands on the flower.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Butterfly",
+                  "distractors": ["Butternut", "Button", "Buttery"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Sunrise",
+              "category": "nature",
+              "image": "grade3_medium_sunrise.png",
+              "audio": "grade3_medium_sunrise.wav",
+              "lesson_cue": "This is a sunrise... S, U, N, R, I, S, E... Sunrise!",
+              "lesson_cue_audio": "grade3_medium_sunrise_cue.wav",
+              "definition": "When the sun comes up in the morning.",
+              "sample_sentence": "We watch the sunrise at the beach.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What happens when the sun comes up in the morning?",
+                  "type": "inferential",
+                  "correct": "Sunrise",
+                  "distractors": ["Sunset", "Thunder", "Rainbow"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Nest",
+              "category": "object",
+              "image": "grade3_medium_nest.png",
+              "audio": "grade3_medium_nest.wav",
+              "lesson_cue": "This is a nest... N, E, S, T... Nest!",
+              "lesson_cue_audio": "grade3_medium_nest_cue.wav",
+              "definition": "A home that a bird builds.",
+              "sample_sentence": "The bird sits on its nest.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Where does a bird lay its eggs?",
+                  "type": "inferential",
+                  "correct": "Nest",
+                  "distractors": ["Forest", "River", "Mountain"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Wood",
+              "category": "material",
+              "image": "grade3_medium_wood.png",
+              "audio": "grade3_medium_wood.wav",
+              "lesson_cue": "This is wood... W, O, O, D... Wood!",
+              "lesson_cue_audio": "grade3_medium_wood_cue.wav",
+              "definition": "The hard material from a tree.",
+              "sample_sentence": "The table is made of wood.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Wood",
+                  "distractors": ["Food", "Good", "Mood"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Cloud",
+              "category": "nature",
+              "image": "grade3_medium_cloud.png",
+              "audio": "grade3_medium_cloud.wav",
+              "lesson_cue": "This is a cloud... C, L, O, U, D... Cloud!",
+              "lesson_cue_audio": "grade3_medium_cloud_cue.wav",
+              "definition": "A white shape in the sky.",
+              "sample_sentence": "The cloud looks like a sheep.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Cloud",
+                  "distractors": ["Loud", "Proud", "Crowd"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Leaf",
+              "category": "nature",
+              "image": "grade3_medium_leaf.png",
+              "audio": "grade3_medium_leaf.wav",
+              "lesson_cue": "This is a leaf... L, E, A, F... Leaf!",
+              "lesson_cue_audio": "grade3_medium_leaf_cue.wav",
+              "definition": "The flat green part of a plant.",
+              "sample_sentence": "The leaf falls from the tree.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What part of a plant can fall from a tree?",
+                  "type": "inferential",
+                  "correct": "Leaf",
+                  "distractors": ["Flower", "Nest", "Cloud"],
+                  "show_image": false
+                }
+              ]
+            }
           ]
         }
       ]
@@ -322,23 +595,397 @@
         {
           "batch_index": 1,
           "words": [
-            {"text": "Teacher", "category": "helper", "image": "grade3_hard_teacher.png", "audio": "grade3_hard_teacher.wav", "lesson_cue": "This is a teacher... T, E, A, C, H, E, R... Teacher!", "lesson_cue_audio": "grade3_hard_teacher_cue.wav", "definition": "A person who helps children learn.", "sample_sentence": "The teacher reads to the class.", "source": "Dolch Grade 2", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word matches this picture?", "type": "literal", "correct": "Teacher", "distractors": ["Cheater", "Teaches", "Bleacher"], "show_image": true}]},
-            {"text": "Doctor", "category": "helper", "image": "grade3_hard_doctor.png", "audio": "grade3_hard_doctor.wav", "lesson_cue": "This is a doctor... D, O, C, T, O, R... Doctor!", "lesson_cue_audio": "grade3_hard_doctor_cue.wav", "definition": "A person who helps sick people.", "sample_sentence": "The doctor checks my heart.", "source": "Dolch Grade 2", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Who helps us when we are sick?", "type": "inferential", "correct": "Doctor", "distractors": ["Teacher", "Baker", "Driver"], "show_image": false}]},
-            {"text": "Nurse", "category": "helper", "image": "grade3_hard_nurse.png", "audio": "grade3_hard_nurse.wav", "lesson_cue": "This is a nurse... N, U, R, S, E... Nurse!", "lesson_cue_audio": "grade3_hard_nurse_cue.wav", "definition": "A person who cares for sick people.", "sample_sentence": "The nurse gives me medicine.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word matches this picture?", "type": "literal", "correct": "Nurse", "distractors": ["Purse", "Curse", "Horse"], "show_image": true}]},
-            {"text": "Farmer", "category": "helper", "image": "grade3_hard_farmer.png", "audio": "grade3_hard_farmer.wav", "lesson_cue": "This is a farmer... F, A, R, M, E, R... Farmer!", "lesson_cue_audio": "grade3_hard_farmer_cue.wav", "definition": "A person who grows plants and raises animals.", "sample_sentence": "The farmer plants rice in the field.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word is this?", "type": "literal", "correct": "Farmer", "distractors": ["Former", "Farther", "Feather"], "show_image": true}]},
-            {"text": "Driver", "category": "helper", "image": "grade3_hard_driver.png", "audio": "grade3_hard_driver.wav", "lesson_cue": "This is a driver... D, R, I, V, E, R... Driver!", "lesson_cue_audio": "grade3_hard_driver_cue.wav", "definition": "A person who drives a vehicle.", "sample_sentence": "The driver takes us to school.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word matches this picture?", "type": "literal", "correct": "Driver", "distractors": ["Diver", "Drifter", "Drover"], "show_image": true}]},
-            {"text": "Baker", "category": "helper", "image": "grade3_hard_baker.png", "audio": "grade3_hard_baker.wav", "lesson_cue": "This is a baker... B, A, K, E, R... Baker!", "lesson_cue_audio": "grade3_hard_baker_cue.wav", "definition": "A person who makes bread and cakes.", "sample_sentence": "The baker makes fresh bread.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word is this?", "type": "literal", "correct": "Baker", "distractors": ["Bakery", "Bare", "Bumper"], "show_image": true}]},
-            {"text": "Police", "category": "helper", "image": "grade3_hard_police.png", "audio": "grade3_hard_police.wav", "lesson_cue": "This is a police... P, O, L, I, C, E... Police!", "lesson_cue_audio": "grade3_hard_police_cue.wav", "definition": "A person who keeps people safe.", "sample_sentence": "The police keep our streets safe.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Who keeps our community safe?", "type": "inferential", "correct": "Police", "distractors": ["Chef", "Baker", "Painter"], "show_image": false}]},
-            {"text": "Fireman", "category": "helper", "image": "grade3_hard_fireman.png", "audio": "grade3_hard_fireman.wav", "lesson_cue": "This is a fireman... F, I, R, E, M, A, N... Fireman!", "lesson_cue_audio": "grade3_hard_fireman_cue.wav", "definition": "A person who stops fires.", "sample_sentence": "The fireman puts out the fire.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Who helps when there is a fire?", "type": "inferential", "correct": "Fireman", "distractors": ["Teacher", "Doctor", "Farmer"], "show_image": false}]},
-            {"text": "Soldier", "category": "helper", "image": "grade3_hard_soldier.png", "audio": "grade3_hard_soldier.wav", "lesson_cue": "This is a soldier... S, O, L, D, I, E, R... Soldier!", "lesson_cue_audio": "grade3_hard_soldier_cue.wav", "definition": "A person who protects our country.", "sample_sentence": "The soldier protects our land.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word is this?", "type": "literal", "correct": "Soldier", "distractors": ["Shoulder", "Boulder", "Folder"], "show_image": true}]},
-            {"text": "Vendor", "category": "helper", "image": "grade3_hard_vendor.png", "audio": "grade3_hard_vendor.wav", "lesson_cue": "This is a vendor... V, E, N, D, O, R... Vendor!", "lesson_cue_audio": "grade3_hard_vendor_cue.wav", "definition": "A person who sells things.", "sample_sentence": "The vendor sells fruits at the market.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word matches this picture?", "type": "literal", "correct": "Vendor", "distractors": ["Vender", "Fender", "Tender"], "show_image": true}]},
-            {"text": "Barber", "category": "helper", "image": "grade3_hard_barber.png", "audio": "grade3_hard_barber.wav", "lesson_cue": "This is a barber... B, A, R, B, E, R... Barber!", "lesson_cue_audio": "grade3_hard_barber_cue.wav", "definition": "A person who cuts hair.", "sample_sentence": "The barber cuts my hair short.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Who cuts our hair?", "type": "inferential", "correct": "Barber", "distractors": ["Baker", "Painter", "Vendor"], "show_image": false}]},
-            {"text": "Guard", "category": "helper", "image": "grade3_hard_guard.png", "audio": "grade3_hard_guard.wav", "lesson_cue": "This is a guard... G, U, A, R, D... Guard!", "lesson_cue_audio": "grade3_hard_guard_cue.wav", "definition": "A person who watches over a place.", "sample_sentence": "The guard watches the gate.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word matches this picture?", "type": "literal", "correct": "Guard", "distractors": ["Card", "Hard", "Yard"], "show_image": true}]},
-            {"text": "Fisherman", "category": "helper", "image": "grade3_hard_fisherman.png", "audio": "grade3_hard_fisherman.wav", "lesson_cue": "This is a fisherman... F, I, S, H, E, R, M, A, N... Fisherman!", "lesson_cue_audio": "grade3_hard_fisherman_cue.wav", "definition": "A person who catches fish.", "sample_sentence": "The fisherman sails early in the morning.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word is this?", "type": "literal", "correct": "Fisherman", "distractors": ["Freshman", "Fishery", "Wisher"], "show_image": true}]},
-            {"text": "Plumber", "category": "helper", "image": "grade3_hard_plumber.png", "audio": "grade3_hard_plumber.wav", "lesson_cue": "This is a plumber... P, L, U, M, B, E, R... Plumber!", "lesson_cue_audio": "grade3_hard_plumber_cue.wav", "definition": "A person who fixes water pipes.", "sample_sentence": "The plumber fixes the leaking pipe.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word matches this picture?", "type": "literal", "correct": "Plumber", "distractors": ["Plum", "Plumper", "Plunder"], "show_image": true}]},
-            {"text": "Carpenter", "category": "helper", "image": "grade3_hard_carpenter.png", "audio": "grade3_hard_carpenter.wav", "lesson_cue": "This is a carpenter... C, A, R, P, E, N, T, E, R... Carpenter!", "lesson_cue_audio": "grade3_hard_carpenter_cue.wav", "definition": "A person who builds things with wood.", "sample_sentence": "The carpenter made our table.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which word is this?", "type": "literal", "correct": "Carpenter", "distractors": ["Carpet", "Career", "Cartoon"], "show_image": true}]},
-            {"text": "Painter", "category": "helper", "image": "grade3_hard_painter.png", "audio": "grade3_hard_painter.wav", "lesson_cue": "This is a painter... P, A, I, N, T, E, R... Painter!", "lesson_cue_audio": "grade3_hard_painter_cue.wav", "definition": "A person who paints houses or pictures.", "sample_sentence": "The painter painted our wall.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Who paints houses and buildings?", "type": "inferential", "correct": "Painter", "distractors": ["Carpenter", "Plumber", "Chef"], "show_image": false}]},
-            {"text": "Chef", "category": "helper", "image": "grade3_hard_chef.png", "audio": "grade3_hard_chef.wav", "lesson_cue": "This is a chef... C, H, E, F... Chef!", "lesson_cue_audio": "grade3_hard_chef_cue.wav", "definition": "A person who cooks food in a restaurant.", "sample_sentence": "The chef cooks delicious food.", "source": "Dolch Grade 3", "sensitivity_reviewed": 1, "sensitivity_notes": "Reviewed — no issues.", "quiz_questions": [{"stem": "Which helper cooks food for us at a restaurant?", "type": "critical", "correct": "Chef", "distractors": ["Baker", "Farmer", "Vendor"], "show_image": false}]}
+            {
+              "text": "Teacher",
+              "category": "helper",
+              "image": "grade3_hard_teacher.png",
+              "audio": "grade3_hard_teacher.wav",
+              "lesson_cue": "This is a teacher... T, E, A, C, H, E, R... Teacher!",
+              "lesson_cue_audio": "grade3_hard_teacher_cue.wav",
+              "definition": "A person who helps children learn.",
+              "sample_sentence": "The teacher reads to the class.",
+              "sample_sentence_audio": "grade3_hard_teacher_sentence.wav",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Teacher",
+                  "distractors": ["Cheater", "Teaches", "Bleacher"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Doctor",
+              "category": "helper",
+              "image": "grade3_hard_doctor.png",
+              "audio": "grade3_hard_doctor.wav",
+              "lesson_cue": "This is a doctor... D, O, C, T, O, R... Doctor!",
+              "lesson_cue_audio": "grade3_hard_doctor_cue.wav",
+              "definition": "A person who helps sick people.",
+              "sample_sentence": "The doctor checks my heart.",
+              "sample_sentence_audio": "grade3_hard_doctor_sentence.wav",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Who helps us when we are sick?",
+                  "type": "inferential",
+                  "correct": "Doctor",
+                  "distractors": ["Teacher", "Baker", "Driver"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Nurse",
+              "category": "helper",
+              "image": "grade3_hard_nurse.png",
+              "audio": "grade3_hard_nurse.wav",
+              "lesson_cue": "This is a nurse... N, U, R, S, E... Nurse!",
+              "lesson_cue_audio": "grade3_hard_nurse_cue.wav",
+              "definition": "A person who cares for sick people.",
+              "sample_sentence": "The nurse gives me medicine.",
+              "sample_sentence_audio": "grade3_hard_nurse_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Nurse",
+                  "distractors": ["Purse", "Curse", "Horse"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Farmer",
+              "category": "helper",
+              "image": "grade3_hard_farmer.png",
+              "audio": "grade3_hard_farmer.wav",
+              "lesson_cue": "This is a farmer... F, A, R, M, E, R... Farmer!",
+              "lesson_cue_audio": "grade3_hard_farmer_cue.wav",
+              "definition": "A person who grows plants and raises animals.",
+              "sample_sentence": "The farmer plants rice in the field.",
+              "sample_sentence_audio": "grade3_hard_farmer_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Farmer",
+                  "distractors": ["Former", "Farther", "Feather"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Driver",
+              "category": "helper",
+              "image": "grade3_hard_driver.png",
+              "audio": "grade3_hard_driver.wav",
+              "lesson_cue": "This is a driver... D, R, I, V, E, R... Driver!",
+              "lesson_cue_audio": "grade3_hard_driver_cue.wav",
+              "definition": "A person who drives a vehicle.",
+              "sample_sentence": "The driver takes us to school.",
+              "sample_sentence_audio": "grade3_hard_driver_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Driver",
+                  "distractors": ["Diver", "Drifter", "Drover"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Baker",
+              "category": "helper",
+              "image": "grade3_hard_baker.png",
+              "audio": "grade3_hard_baker.wav",
+              "lesson_cue": "This is a baker... B, A, K, E, R... Baker!",
+              "lesson_cue_audio": "grade3_hard_baker_cue.wav",
+              "definition": "A person who makes bread and cakes.",
+              "sample_sentence": "The baker makes fresh bread.",
+              "sample_sentence_audio": "grade3_hard_baker_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Baker",
+                  "distractors": ["Bakery", "Bare", "Bumper"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Police",
+              "category": "helper",
+              "image": "grade3_hard_police.png",
+              "audio": "grade3_hard_police.wav",
+              "lesson_cue": "This is a police... P, O, L, I, C, E... Police!",
+              "lesson_cue_audio": "grade3_hard_police_cue.wav",
+              "definition": "A person who keeps people safe.",
+              "sample_sentence": "The police keep our streets safe.",
+              "sample_sentence_audio": "grade3_hard_police_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Who keeps our community safe?",
+                  "type": "inferential",
+                  "correct": "Police",
+                  "distractors": ["Chef", "Baker", "Painter"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Fireman",
+              "category": "helper",
+              "image": "grade3_hard_fireman.png",
+              "audio": "grade3_hard_fireman.wav",
+              "lesson_cue": "This is a fireman... F, I, R, E, M, A, N... Fireman!",
+              "lesson_cue_audio": "grade3_hard_fireman_cue.wav",
+              "definition": "A person who stops fires.",
+              "sample_sentence": "The fireman puts out the fire.",
+              "sample_sentence_audio": "grade3_hard_fireman_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Who helps when there is a fire?",
+                  "type": "inferential",
+                  "correct": "Fireman",
+                  "distractors": ["Teacher", "Doctor", "Farmer"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Soldier",
+              "category": "helper",
+              "image": "grade3_hard_soldier.png",
+              "audio": "grade3_hard_soldier.wav",
+              "lesson_cue": "This is a soldier... S, O, L, D, I, E, R... Soldier!",
+              "lesson_cue_audio": "grade3_hard_soldier_cue.wav",
+              "definition": "A person who protects our country.",
+              "sample_sentence": "The soldier protects our land.",
+              "sample_sentence_audio": "grade3_hard_soldier_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Soldier",
+                  "distractors": ["Shoulder", "Boulder", "Folder"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Vendor",
+              "category": "helper",
+              "image": "grade3_hard_vendor.png",
+              "audio": "grade3_hard_vendor.wav",
+              "lesson_cue": "This is a vendor... V, E, N, D, O, R... Vendor!",
+              "lesson_cue_audio": "grade3_hard_vendor_cue.wav",
+              "definition": "A person who sells things.",
+              "sample_sentence": "The vendor sells fruits at the market.",
+              "sample_sentence_audio": "grade3_hard_vendor_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Vendor",
+                  "distractors": ["Vender", "Fender", "Tender"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Barber",
+              "category": "helper",
+              "image": "grade3_hard_barber.png",
+              "audio": "grade3_hard_barber.wav",
+              "lesson_cue": "This is a barber... B, A, R, B, E, R... Barber!",
+              "lesson_cue_audio": "grade3_hard_barber_cue.wav",
+              "definition": "A person who cuts hair.",
+              "sample_sentence": "The barber cuts my hair short.",
+              "sample_sentence_audio": "grade3_hard_barber_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Who cuts our hair?",
+                  "type": "inferential",
+                  "correct": "Barber",
+                  "distractors": ["Baker", "Painter", "Vendor"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Guard",
+              "category": "helper",
+              "image": "grade3_hard_guard.png",
+              "audio": "grade3_hard_guard.wav",
+              "lesson_cue": "This is a guard... G, U, A, R, D... Guard!",
+              "lesson_cue_audio": "grade3_hard_guard_cue.wav",
+              "definition": "A person who watches over a place.",
+              "sample_sentence": "The guard watches the gate.",
+              "sample_sentence_audio": "grade3_hard_guard_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Guard",
+                  "distractors": ["Card", "Hard", "Yard"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Fisherman",
+              "category": "helper",
+              "image": "grade3_hard_fisherman.png",
+              "audio": "grade3_hard_fisherman.wav",
+              "lesson_cue": "This is a fisherman... F, I, S, H, E, R, M, A, N... Fisherman!",
+              "lesson_cue_audio": "grade3_hard_fisherman_cue.wav",
+              "definition": "A person who catches fish.",
+              "sample_sentence": "The fisherman sails early in the morning.",
+              "sample_sentence_audio": "grade3_hard_fisherman_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Fisherman",
+                  "distractors": ["Freshman", "Fishery", "Wisher"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Plumber",
+              "category": "helper",
+              "image": "grade3_hard_plumber.png",
+              "audio": "grade3_hard_plumber.wav",
+              "lesson_cue": "This is a plumber... P, L, U, M, B, E, R... Plumber!",
+              "lesson_cue_audio": "grade3_hard_plumber_cue.wav",
+              "definition": "A person who fixes water pipes.",
+              "sample_sentence": "The plumber fixes the leaking pipe.",
+              "sample_sentence_audio": "grade3_hard_plumber_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Plumber",
+                  "distractors": ["Plum", "Plumper", "Plunder"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Carpenter",
+              "category": "helper",
+              "image": "grade3_hard_carpenter.png",
+              "audio": "grade3_hard_carpenter.wav",
+              "lesson_cue": "This is a carpenter... C, A, R, P, E, N, T, E, R... Carpenter!",
+              "lesson_cue_audio": "grade3_hard_carpenter_cue.wav",
+              "definition": "A person who builds things with wood.",
+              "sample_sentence": "The carpenter made our table.",
+              "sample_sentence_audio": "grade3_hard_carpenter_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Carpenter",
+                  "distractors": ["Carpet", "Career", "Cartoon"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Painter",
+              "category": "helper",
+              "image": "grade3_hard_painter.png",
+              "audio": "grade3_hard_painter.wav",
+              "lesson_cue": "This is a painter... P, A, I, N, T, E, R... Painter!",
+              "lesson_cue_audio": "grade3_hard_painter_cue.wav",
+              "definition": "A person who paints houses or pictures.",
+              "sample_sentence": "The painter painted our wall.",
+              "sample_sentence_audio": "grade3_hard_painter_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Who paints houses and buildings?",
+                  "type": "inferential",
+                  "correct": "Painter",
+                  "distractors": ["Carpenter", "Plumber", "Chef"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Chef",
+              "category": "helper",
+              "image": "grade3_hard_chef.png",
+              "audio": "grade3_hard_chef.wav",
+              "lesson_cue": "This is a chef... C, H, E, F... Chef!",
+              "lesson_cue_audio": "grade3_hard_chef_cue.wav",
+              "definition": "A person who cooks food in a restaurant.",
+              "sample_sentence": "The chef cooks delicious food.",
+              "sample_sentence_audio": "grade3_hard_chef_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which helper cooks food for us at a restaurant?",
+                  "type": "critical",
+                  "correct": "Chef",
+                  "distractors": ["Baker", "Farmer", "Vendor"],
+                  "show_image": false
+                }
+              ]
+            }
           ]
         }
       ]
