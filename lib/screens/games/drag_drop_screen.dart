@@ -100,7 +100,8 @@ class _DragDropScreenState extends State<DragDropScreen> {
     }
 
     try {
-      final words = await DatabaseService.instance.getWordsInBatch(batchId);
+      final words = await DatabaseService.instance
+          .getSampledWordsForBatch(batchId);
       if (words.length < 4) {
         setState(() {
           _loading = false;

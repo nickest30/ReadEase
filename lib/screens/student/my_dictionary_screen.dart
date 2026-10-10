@@ -210,7 +210,8 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          '$_discoveredCount of $_totalCount words discovered',
+                          '$_discoveredCount of $_totalCount words discovered '
+                          '(through Grade $_highestUnlocked)',
                           style: AppText.caption,
                         ),
                         const SizedBox(height: AppSpacing.xs),

@@ -16,8 +16,7 @@ class ContentImporter {
   Future<void> importAllGrades() async {
     await importGradeIfNeeded(1);
     await importGradeIfNeeded(2);
-    // await importGradeIfNeeded(3);
-    // ...
+    await importGradeIfNeeded(3); 
   }
 
   /// Import content for a single grade if not already up to date.

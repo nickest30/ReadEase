@@ -88,13 +88,19 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
         return;
       }
 
-      final words = await DatabaseService.instance.getWordsInBatch(batchId);
+      final words = await DatabaseService.instance
+          .getSampledWordsForBatch(batchId);
       final wordMap = {for (final w in words) w.id!: w};
 
       if (!mounted) return;
 
+      final sampledIds = words.map((w) => w.id).toSet();
+      final sampledQuestions = questions
+          .where((q) => sampledIds.contains(q.wordId))
+          .toList();
+
       setState(() {
-        _questions = questions;
+        _questions = sampledQuestions;
         _wordsById = wordMap;
         _batchId = batchId;
         _studentId = student.id;

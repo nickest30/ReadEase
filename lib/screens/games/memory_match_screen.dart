@@ -87,7 +87,8 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
     }
 
     try {
-      final words = await DatabaseService.instance.getWordsInBatch(batchId);
+      final words = await DatabaseService.instance
+          .getSampledWordsForBatch(batchId);
       if (words.isEmpty) {
         setState(() {
           _loading = false;

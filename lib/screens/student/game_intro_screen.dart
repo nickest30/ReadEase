@@ -91,6 +91,7 @@ class _GameIntroScreenState extends State<GameIntroScreen> {
       'bubble_pop' => '/bubble-pop',
       'drag_drop' => '/drag-drop',
       'word_scramble' => '/word-scramble',
+      'sentence_builder' => '/sentence-builder',
       _ => '/quiz-play',
     };
 

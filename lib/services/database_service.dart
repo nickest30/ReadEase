@@ -1658,6 +1658,53 @@ class DatabaseService {
     return maps.map((m) => Word.fromMap(m)).toList();
   }
 
+  Future<List<Word>> getSampledWordsForBatch(int batchId) async {
+    final db = await database;
+
+    // 1. Batch → grade + difficulty
+    final batchRows = await db.query(
+      'batches',
+      where: 'id = ?',
+      whereArgs: [batchId],
+      limit: 1,
+    );
+    if (batchRows.isEmpty) return [];
+
+    final gradeLevel = batchRows.first['grade_level'] as int;
+    final difficulty = batchRows.first['difficulty'] as String;
+
+    // 2. All words in batch
+    final wordRows = await db.query(
+      'words',
+      where: 'batch_id = ?',
+      whereArgs: [batchId],
+    );
+    if (wordRows.isEmpty) return [];
+
+    final allWords = wordRows.map((m) => Word.fromMap(m)).toList();
+
+    // 3. Quiz config
+    final cfgRows = await db.query(
+      'quiz_config',
+      where: 'grade_level = ? AND difficulty = ?',
+      whereArgs: [gradeLevel, difficulty],
+      limit: 1,
+    );
+    if (cfgRows.isEmpty) return allWords;
+
+    final randomized = ((cfgRows.first['randomized'] as int?) ?? 0) == 1;
+    final quizSize =
+        (cfgRows.first['quiz_size'] as int?) ?? allWords.length;
+
+    // 4. Sample if applicable
+    if (!randomized || allWords.length <= quizSize) {
+      return allWords;
+    }
+
+    final shuffled = List<Word>.from(allWords)..shuffle();
+    return shuffled.take(quizSize).toList();
+  }
+
   /// Get the first batch for a (grade, difficulty) combination.
   Future<LessonBatch?> getFirstBatch(int gradeLevel, String difficulty) async {
     final db = await database;
