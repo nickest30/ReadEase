@@ -115,8 +115,8 @@ class ContentImporter {
             theme: theme,
             gameType: gameType,
           );
-          final batchId =
-              await DatabaseService.instance.insertBatch(batch);
+          final batchId = await DatabaseService.instance
+              .upsertBatchByNaturalKey(batch);
 
           // 3d. Words for this batch
           final words = (batchData['words'] as List<dynamic>?) ?? [];
@@ -149,8 +149,11 @@ class ContentImporter {
               sensitivityNotes:
                   wordData['sensitivity_notes'] as String?,
             );
-            final wordId =
-                await DatabaseService.instance.insertWord(word);
+            final wordId = await DatabaseService.instance
+                .upsertWordByNaturalKey(word);
+
+            // Clear old questions for this word before re-inserting.
+            await DatabaseService.instance.deleteQuizQuestionsForWord(wordId);
 
             // 3e. Quiz questions
             final questions =

@@ -80,6 +80,20 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
         _words = words;
         _loading = false;
       });
+
+      // Record encounter for each word as the lesson loads.
+      // Ensures dictionary populates even if learner abandons before game.
+      final studentId = student.id!;
+      for (final w in words) {
+        if (w.id != null) {
+          try {
+            await DatabaseService.instance
+                .recordWordEncounter(studentId, w.id!);
+          } catch (e) {
+            debugPrint('⚠️ Encounter record failed: $e');
+          }
+        }
+      }
     } catch (e) {
       debugPrint('📚 LessonPlay load ERROR: $e');
       if (!mounted) return;

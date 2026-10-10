@@ -114,6 +114,43 @@ class _ResultsScreenState extends State<ResultsScreen> {
     return AppColors.accentCoral;
   }
 
+  String get _nextButtonLabel {
+    if (_difficulty == 'easy' || _difficulty == 'medium') {
+      return 'Next Level';
+    }
+    return 'Next Grade';
+  }
+
+  void _onNextTapped() {
+    if (_difficulty == 'easy') {
+      // Easy → Medium (same grade)
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/lesson-intro',
+        ModalRoute.withName('/grade-selection'),
+        arguments: {
+          'gradeLevel': _gradeLevel,
+          'difficulty': 'medium',
+        },
+      );
+    } else if (_difficulty == 'medium') {
+      // Medium → Hard (same grade)
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/lesson-intro',
+        ModalRoute.withName('/grade-selection'),
+        arguments: {
+          'gradeLevel': _gradeLevel,
+          'difficulty': 'hard',
+        },
+      );
+    } else {
+      // Hard → Grade Selection (to pick next grade)
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/grade-selection',
+        ModalRoute.withName('/student-home'),
+      );
+    }
+  }
+
   void _showBadgeDialog() {
     final badgeName = AchievementBadge.nameFor(_gradeLevel, _difficulty);
     final imagePath =
@@ -449,14 +486,15 @@ class _ResultsScreenState extends State<ResultsScreen> {
                             // Buttons — row 1: retry / back to levels
               Row(
                 children: [
-                  // Try Again — re-launch the same level
+                  // Try Again
                   Expanded(
                     child: SizedBox(
                       height: 52,
                       child: OutlinedButton(
                         onPressed: () {
-                          Navigator.of(context).pushReplacementNamed(
-                            '/lesson-play',
+                          Navigator.of(context).pushNamedAndRemoveUntil(
+                            '/lesson-intro',
+                            ModalRoute.withName('/grade-selection'),
                             arguments: {
                               'gradeLevel': _gradeLevel,
                               'difficulty': _difficulty,
@@ -486,17 +524,12 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   ),
                   const SizedBox(width: AppSpacing.md),
 
-                  // Back to Levels — difficulty picker for same grade
+                  // Next Level / Next Grade
                   Expanded(
                     child: SizedBox(
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pushReplacementNamed(
-                            '/difficulty-selection',
-                            arguments: {'gradeLevel': _gradeLevel},
-                          );
-                        },
+                        onPressed: _onNextTapped,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accentTeal,
                           foregroundColor: Colors.white,
@@ -505,9 +538,9 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                 BorderRadius.circular(AppRadius.large),
                           ),
                         ),
-                        child: const Text(
-                          'Back to Levels',
-                          style: TextStyle(
+                        child: Text(
+                          _nextButtonLabel,
+                          style: const TextStyle(
                             fontFamily: 'Nunito',
                             fontWeight: FontWeight.w700,
                           ),
@@ -520,7 +553,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
               const SizedBox(height: AppSpacing.md),
 
-              // Home button — full-width, muted
+              // Home button
               SizedBox(
                 height: 50,
                 width: double.infinity,
@@ -528,7 +561,9 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   onPressed: () {
                     Navigator.of(context).pushNamedAndRemoveUntil(
                       '/student-home',
-                      ModalRoute.withName('/role-selection'),
+                      ModalRoute.of(context)!.settings.name == '/student-home'
+                          ? (_) => false
+                          : ModalRoute.withName('/role-selection'),
                     );
                   },
                   icon: const Icon(Icons.home_rounded, size: 20),

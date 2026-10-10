@@ -7,11 +7,8 @@ import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
 
-/// Game Intro — shown before each game session every time.
-///
-/// Layout: Yse um_actually top-middle, header below, body, and
-/// "I'M READY!" button bottom-center. Plays game intro audio on load.
-/// Button routes to the correct game screen based on game_type.
+/// Game Intro — shown before each game session.
+/// Layout: everything centered vertically (Yse, header, body, button).
 class GameIntroScreen extends StatefulWidget {
   const GameIntroScreen({super.key});
 
@@ -40,7 +37,7 @@ class _GameIntroScreenState extends State<GameIntroScreen> {
 
   Future<void> _load() async {
     final args = ModalRoute.of(context)!.settings.arguments as Map;
-    final gameType = args['gameType'] as String;
+    final gameType = args['gameType'] as String?;
 
     final student = context.read<StudentProvider>().currentStudent;
     if (student == null) {
@@ -51,14 +48,17 @@ class _GameIntroScreenState extends State<GameIntroScreen> {
       return;
     }
 
-    final intro =
-        await DatabaseService.instance.getGameIntro(gameType);
+    if (gameType == null) {
+      // No game configured — jump straight to MCQ fallback.
+      _navigateToGame(gameType, args);
+      return;
+    }
 
+    final intro = await DatabaseService.instance.getGameIntro(gameType);
     if (!mounted) return;
 
-    // Defensive: skip straight to game if no intro configured.
     if (intro == null) {
-      _navigateToGame(gameType);
+      _navigateToGame(gameType, args);
       return;
     }
 
@@ -82,27 +82,24 @@ class _GameIntroScreenState extends State<GameIntroScreen> {
   void _onReady() {
     _audioPlayer.stop();
     final args = ModalRoute.of(context)!.settings.arguments as Map;
-    _navigateToGame(args['gameType'] as String, args: args);
+    _navigateToGame(args['gameType'] as String?, args);
   }
 
-  void _navigateToGame(String gameType, {Map? args}) {
+  void _navigateToGame(String? gameType, Map args) {
     final route = switch (gameType) {
       'memory_match' => '/memory-match',
       'bubble_pop' => '/bubble-pop',
       'drag_drop' => '/drag-drop',
-      'word_scramble' => '/word-scramble', // built in next batch
-      _ => '/quiz-play', // fallback to MCQ for unbuilt games
+      'word_scramble' => '/word-scramble',
+      _ => '/quiz-play',
     };
-
-    final navArgs = args ??
-        ModalRoute.of(context)!.settings.arguments as Map;
 
     Navigator.of(context).pushReplacementNamed(
       route,
       arguments: {
-        'batchId': navArgs['batchId'],
-        'gradeLevel': navArgs['gradeLevel'],
-        'difficulty': navArgs['difficulty'],
+        'batchId': args['batchId'],
+        'gradeLevel': args['gradeLevel'],
+        'difficulty': args['difficulty'],
       },
     );
   }
@@ -134,91 +131,74 @@ class _GameIntroScreenState extends State<GameIntroScreen> {
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: AppSpacing.lg,
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
-
-              // Yse pose (top-middle)
-              Image.asset(
-                'assets/images/mascot/${intro.poseAsset}',
-                width: 200,
-                height: 200,
-                fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => const SizedBox(
-                  width: 200,
-                  height: 200,
-                  child: Icon(
-                    Icons.auto_stories_rounded,
-                    size: 120,
-                    color: AppColors.accentTeal,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'assets/images/mascot/${intro.poseAsset}',
+                  width: 220,
+                  height: 220,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => const SizedBox(
+                    width: 220,
+                    height: 220,
+                    child: Icon(
+                      Icons.auto_stories_rounded,
+                      size: 140,
+                      color: AppColors.accentTeal,
+                    ),
                   ),
                 ),
-              ),
-
-              const SizedBox(height: AppSpacing.lg),
-
-              // Header
-              Text(
-                intro.header,
-                textAlign: TextAlign.center,
-                style: AppText.h1.copyWith(
-                  fontSize: 28,
-                  height: 1.2,
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  intro.header,
+                  textAlign: TextAlign.center,
+                  style: AppText.h1.copyWith(
+                    fontSize: 30,
+                    height: 1.2,
+                  ),
                 ),
-              ),
-
-              const SizedBox(height: AppSpacing.md),
-
-              // Body
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                ),
-                child: Text(
+                const SizedBox(height: AppSpacing.md),
+                Text(
                   intro.body,
                   textAlign: TextAlign.center,
                   style: AppText.body.copyWith(
-                    fontSize: 17,
+                    fontSize: 18,
                     height: 1.5,
                     color: AppColors.textPrimary,
                   ),
                 ),
-              ),
-
-              const Spacer(),
-
-              // Button
-              SizedBox(
-                height: 64,
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _onReady,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentTeal,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppRadius.large),
+                const SizedBox(height: AppSpacing.xxl),
+                SizedBox(
+                  height: 64,
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _onReady,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentTeal,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.large),
+                      ),
+                      elevation: 3,
                     ),
-                    elevation: 3,
-                  ),
-                  child: Text(
-                    intro.buttonLabel,
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w800,
-                      fontSize: 18,
-                      letterSpacing: 0.5,
+                    child: Text(
+                      intro.buttonLabel,
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontWeight: FontWeight.w800,
+                        fontSize: 20,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-            ],
+              ],
+            ),
           ),
         ),
       ),

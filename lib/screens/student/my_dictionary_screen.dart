@@ -22,6 +22,7 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
   Set<int> _mastered = {};
   Set<int> _starred = {};
   Set<int> _weak = {};
+  int _highestUnlocked = 1;
 
   late TabController _tabController;
   final _audioPlayer = AudioPlayer();
@@ -48,7 +49,20 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
     }
 
     try {
-      // Only load words for the student's grade and below
+      // Compute highest unlocked grade (same logic as grade selection).
+      // Walks upward from the student's registered grade — each passed
+      // Hard level unlocks the next grade.
+      int highest = student.gradeLevel;
+      for (int g = student.gradeLevel; g <= 6; g++) {
+        final passedHard = await DatabaseService.instance
+            .hasPassedDifficulty(student.id!, g, 'hard');
+        if (passedHard && g + 1 <= 6) {
+          highest = g + 1;
+        } else {
+          break;
+        }
+      }
+
       final words = await DatabaseService.instance.getAllWords();
 
       final encountered =
@@ -63,8 +77,9 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
 
       if (!mounted) return;
       setState(() {
+        _highestUnlocked = highest;
         _allWords = words
-            .where((w) => w.gradeLevel <= student.gradeLevel)
+            .where((w) => w.gradeLevel <= highest)
             .toList();
         _encountered = encountered;
         _mastered = mastered;
@@ -237,7 +252,7 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
                     ),
                     tabs: const [
                       Tab(text: 'All'),
-                      Tab(text: 'Starred'),
+                      Tab(text: 'Favorites'),
                       Tab(text: 'Weak'),
                       Tab(text: 'Mastered'),
                     ],

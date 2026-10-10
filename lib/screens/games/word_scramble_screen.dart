@@ -17,24 +17,21 @@ import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import 'yse_reaction.dart';
 
-/// Word Scramble — replaces the MCQ quiz for Grade 2 Hard.
+/// Word Scramble — Grade 2 Hard.
 ///
-/// 16 rounds. Each round: image + cue audio at start, empty target
-/// slots showing word length, scrambled letter tiles below.
-/// Tap a letter → places it in the next empty slot.
-/// Tap a filled slot → returns the letter.
-/// When all slots fill, the word is checked:
-///   - Correct on first attempt: +5 pts, advance
-///   - Correct after wrongs: +0 pts, advance
-///   - 3 wrong attempts: reveal answer, +0 pts, advance
+/// Layout: header → Yse → big image → definition → target slots →
+/// consistent-size letter pool at the bottom (thumb-reachable).
 ///
-/// Same DB writes as the other games.
+/// Slots adjust to word length. Letters are fixed and large.
+/// On wrong submission, all placed tiles glow red. On correct, green.
 class WordScrambleScreen extends StatefulWidget {
   const WordScrambleScreen({super.key});
 
   @override
   State<WordScrambleScreen> createState() => _WordScrambleScreenState();
 }
+
+enum _GlowState { none, correct, wrong }
 
 class _WordScrambleScreenState extends State<WordScrambleScreen> {
   bool _loading = true;
@@ -56,6 +53,9 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
   List<_LetterTile?> _placedLetters = [];
   List<_LetterTile> _availableLetters = [];
 
+  /// Visual feedback state while checking the answer.
+  _GlowState _glowState = _GlowState.none;
+
   DateTime? _roundStart;
   int? _lastResponseTimeMs;
 
@@ -66,6 +66,7 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   static const int _maxWrongAttempts = 3;
+  static const double _letterSize = 60.0; // Fixed, consistent, big
 
   @override
   void initState() {
@@ -126,7 +127,6 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
           tiles.add(_LetterTile(id: i, letter: correct[i]));
         }
 
-        // Shuffle until different from correct order
         final scrambled = List<_LetterTile>.from(tiles);
         int attempts = 0;
         do {
@@ -143,6 +143,7 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
           correctWord: correct,
           correctAudioPath: w.audioAsset,
           imagePath: w.imageAsset,
+          definition: w.definition,
           scrambledLetters: scrambled,
         ));
       }
@@ -180,6 +181,7 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
       _availableLetters = List.from(round.scrambledLetters);
       _wrongAttemptsThisRound = 0;
       _roundResolved = false;
+      _glowState = _GlowState.none;
       _roundStart = DateTime.now();
     });
     _playCueAudio(round.correctAudioPath);
@@ -211,7 +213,6 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
       _availableLetters.removeWhere((t) => t.id == tile.id);
     });
 
-    // Check only when all slots are full
     if (_placedLetters.every((p) => p != null)) {
       _checkWord();
     }
@@ -238,7 +239,11 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
           ? null
           : DateTime.now().difference(_roundStart!).inMilliseconds;
 
-      setState(() => _roundResolved = true);
+      // Green glow feedback
+      setState(() {
+        _roundResolved = true;
+        _glowState = _GlowState.correct;
+      });
       GameSfx.instance.playCorrect();
 
       if (_wrongAttemptsThisRound == 0) {
@@ -254,28 +259,36 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
         _reaction.show(YseReaction.nice, persistent: true);
       }
 
-      await Future.delayed(const Duration(milliseconds: 900));
+      await Future.delayed(const Duration(milliseconds: 1100));
       if (!mounted) return;
       _advanceRound();
     } else {
       _wrongAttemptsThisRound++;
       _currentStreak = 0;
+
+      // Red glow feedback
+      setState(() => _glowState = _GlowState.wrong);
       GameSfx.instance.playWrong();
       _reaction.show(YseReaction.tryAgain, persistent: true);
 
       if (_wrongAttemptsThisRound >= _maxWrongAttempts) {
-        // 3 strikes — reveal the answer
-        setState(() => _roundResolved = true);
+        // Reveal correct after 3 wrongs — glow green
         _wrongWordIds.add(round.wordId);
+        setState(() {
+          _roundResolved = true;
+          _glowState = _GlowState.none;
+        });
         _revealCorrectAnswer(round);
-        await Future.delayed(const Duration(milliseconds: 1400));
+        setState(() => _glowState = _GlowState.correct);
+        await Future.delayed(const Duration(milliseconds: 1500));
         if (!mounted) return;
         _advanceRound();
       } else {
-        // Bounce letters back for retry
-        await Future.delayed(const Duration(milliseconds: 900));
+        // Hold red glow briefly, then reset
+        await Future.delayed(const Duration(milliseconds: 1000));
         if (!mounted) return;
         setState(() {
+          _glowState = _GlowState.none;
           for (final t in _placedLetters) {
             if (t != null) _availableLetters.add(t);
           }
@@ -505,81 +518,141 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
     );
   }
 
+  /// Slot size adjusts to word length so all tiles fit on one or two rows.
+  double _slotSizeForWidth({
+    required int wordLength,
+    required double availableWidth,
+  }) {
+    const spacing = 4.0;   // was 6.0
+    const maxSize = 76.0;
+    const minSize = 30.0;  // was 36.0
+
+    if (wordLength <= 0) return maxSize;
+
+    final computed =
+        (availableWidth - (wordLength - 1) * spacing) / wordLength;
+    return computed.clamp(minSize, maxSize);
+  }
+
   Widget _buildGame() {
     final round = _rounds[_currentIndex];
+    final screenH = MediaQuery.of(context).size.height;
+    final screenW = MediaQuery.of(context).size.width;
+    final imageSize = (screenH * 0.26).clamp(170.0, 240.0);
+
+    // Available width for slots: screen minus horizontal padding (lg * 2).
+    final slotAvailableWidth = screenW - AppSpacing.lg * 2;
+    final slotSize = _slotSizeForWidth(
+      wordLength: round.correctWord.length,
+      availableWidth: slotAvailableWidth,
+    );
 
     return Column(
       children: [
         _buildHeader(),
-        const SizedBox(height: AppSpacing.sm),
-
-        // Image
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Container(
-            width: 110,
-            height: 110,
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(AppRadius.large),
-              border: Border.all(color: AppColors.border),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
             ),
-            child: Image.asset(
-              round.imagePath,
-              fit: BoxFit.contain,
-              errorBuilder: (_, _, _) => const Icon(
-                Icons.image_outlined,
-                size: 48,
-                color: AppColors.textMuted,
+            child: Column(
+              children: [
+                const SizedBox(height: 4),
+
+                // Yse — big, top
+                YseReactionOverlay(
+                  controller: _reaction,
+                  size: 150,
+                ),
+
+                const SizedBox(height: AppSpacing.sm),
+
+                // Big centered image
+                Center(
+                  child: Container(
+                    width: imageSize,
+                    height: imageSize,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius:
+                          BorderRadius.circular(AppRadius.xl),
+                      border: Border.all(color: AppColors.border, width: 2),
+                      boxShadow: AppShadows.soft,
+                    ),
+                    child: Image.asset(
+                      round.imagePath,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, _, _) => const Icon(
+                        Icons.image_outlined,
+                        size: 72,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: AppSpacing.md),
+
+                // Definition
+                if (round.definition.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                    ),
+                    child: Text(
+                      round.definition,
+                      textAlign: TextAlign.center,
+                      style: AppText.body.copyWith(
+                        fontSize: 14,
+                        fontStyle: FontStyle.italic,
+                        color: AppColors.textMuted,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: AppSpacing.md),
+
+                // Instruction
+                Text(
+                  _wrongAttemptsThisRound == 0
+                      ? 'Tap the letters to spell the word'
+                      : 'Try again — you can do this!',
+                  textAlign: TextAlign.center,
+                  style: AppText.caption.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+
+                const SizedBox(height: AppSpacing.md),
+
+                // Target slots
+                _buildSlots(round, slotSize),
+
+                const SizedBox(height: AppSpacing.xl),
+              ],
+            ),
+          ),
+        ),
+
+        // Letter pool — fixed at bottom, thumb-reachable
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.lg,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.studentBg,
+            border: Border(
+              top: BorderSide(
+                color: AppColors.border,
+                width: 1,
               ),
             ),
           ),
-        ),
-
-        const SizedBox(height: AppSpacing.md),
-
-        // Instruction
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Text(
-            _wrongAttemptsThisRound == 0
-                ? 'Tap the letters to spell the word'
-                : 'Try again — you can do this!',
-            textAlign: TextAlign.center,
-            style: AppText.caption.copyWith(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: AppSpacing.md),
-
-        // Target slots
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: _buildSlots(round),
-        ),
-
-        const Spacer(),
-
-        // Letter pool
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: _buildLetterPool(round),
-        ),
-
-        const Spacer(),
-
-        // Yse bottom bar
-        Container(
-          height: 130,
-          alignment: Alignment.center,
-          child: YseReactionOverlay(
-            controller: _reaction,
-            size: 120,
-          ),
         ),
       ],
     );
@@ -641,59 +714,82 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
     );
   }
 
-  double _tileSizeFor(int wordLength) {
-    if (wordLength <= 6) return 46;
-    if (wordLength <= 8) return 40;
-    return 34;
-  }
-
-  Widget _buildSlots(_ScrambleRound round) {
-    final size = _tileSizeFor(round.correctWord.length);
-
+  Widget _buildSlots(_ScrambleRound round, double size) {
     return Wrap(
       alignment: WrapAlignment.center,
       spacing: 4,
-      runSpacing: 6,
+      runSpacing: 8,
       children: List.generate(_placedLetters.length, (i) {
         final tile = _placedLetters[i];
         final isFilled = tile != null;
-        // Highlight during reveal
-        final isRevealed = _roundResolved &&
-            _wrongAttemptsThisRound >= _maxWrongAttempts;
+        final isGlowingCorrect = _glowState == _GlowState.correct;
+        final isGlowingWrong = _glowState == _GlowState.wrong && isFilled;
+
+        // Border + glow color
+        final Color borderColor;
+        final List<BoxShadow>? glow;
+
+        if (isGlowingCorrect && isFilled) {
+          borderColor = AppColors.accentGreen;
+          glow = [
+            BoxShadow(
+              color: AppColors.accentGreen.withValues(alpha: 0.65),
+              blurRadius: 22,
+              spreadRadius: 3,
+            ),
+          ];
+        } else if (isGlowingWrong) {
+          borderColor = AppColors.accentCoral;
+          glow = [
+            BoxShadow(
+              color: AppColors.accentCoral.withValues(alpha: 0.65),
+              blurRadius: 22,
+              spreadRadius: 3,
+            ),
+          ];
+        } else if (isFilled) {
+          borderColor = AppColors.accentTeal;
+          glow = null;
+        } else {
+          borderColor = AppColors.textMuted;
+          glow = null;
+        }
+
+        final Color fillColor;
+        if (isGlowingCorrect && isFilled) {
+          fillColor = AppColors.accentGreen.withValues(alpha: 0.12);
+        } else if (isGlowingWrong) {
+          fillColor = AppColors.accentCoral.withValues(alpha: 0.12);
+        } else if (isFilled) {
+          fillColor = AppColors.surface;
+        } else {
+          fillColor = Colors.transparent;
+        }
 
         return GestureDetector(
           onTap: () => _onSlotTap(i),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+            duration: const Duration(milliseconds: 220),
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: isFilled
-                  ? (isRevealed
-                      ? AppColors.accentGreen.withValues(alpha: 0.15)
-                      : AppColors.surface)
-                  : Colors.transparent,
+              color: fillColor,
               borderRadius: BorderRadius.circular(AppRadius.small),
-              border: Border.all(
-                color: isFilled
-                    ? (isRevealed
-                        ? AppColors.accentGreen
-                        : AppColors.accentTeal)
-                    : AppColors.textMuted,
-                width: 2,
-                style: isFilled ? BorderStyle.solid : BorderStyle.solid,
-              ),
+              border: Border.all(color: borderColor, width: 2.5),
+              boxShadow: glow,
             ),
             child: Center(
               child: Text(
                 tile?.letter ?? '',
                 style: TextStyle(
                   fontFamily: 'Nunito',
-                  fontSize: size * 0.5,
+                  fontSize: size * 0.55,
                   fontWeight: FontWeight.w800,
-                  color: isRevealed
+                  color: isGlowingCorrect && isFilled
                       ? AppColors.textGreen
-                      : AppColors.textPrimary,
+                      : isGlowingWrong
+                          ? AppColors.textCoral
+                          : AppColors.textPrimary,
                 ),
               ),
             ),
@@ -704,30 +800,28 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
   }
 
   Widget _buildLetterPool(_ScrambleRound round) {
-    final size = _tileSizeFor(round.correctWord.length);
-
     return Wrap(
       alignment: WrapAlignment.center,
-      spacing: 6,
-      runSpacing: 6,
+      spacing: 8,
+      runSpacing: 8,
       children: _availableLetters.map((tile) {
         return GestureDetector(
           onTap: () => _onLetterTap(tile),
           child: Container(
-            width: size,
-            height: size,
+            width: _letterSize,
+            height: _letterSize,
             decoration: BoxDecoration(
               color: AppColors.surface,
-              borderRadius: BorderRadius.circular(AppRadius.small),
-              border: Border.all(color: AppColors.accentTeal, width: 2),
+              borderRadius: BorderRadius.circular(AppRadius.medium),
+              border: Border.all(color: AppColors.accentTeal, width: 2.5),
               boxShadow: AppShadows.soft,
             ),
             child: Center(
               child: Text(
                 tile.letter,
-                style: TextStyle(
+                style: const TextStyle(
                   fontFamily: 'Nunito',
-                  fontSize: size * 0.5,
+                  fontSize: 32,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
                 ),
@@ -749,6 +843,7 @@ class _ScrambleRound {
   final String correctWord;
   final String correctAudioPath;
   final String imagePath;
+  final String definition;
   final List<_LetterTile> scrambledLetters;
 
   _ScrambleRound({
@@ -756,6 +851,7 @@ class _ScrambleRound {
     required this.correctWord,
     required this.correctAudioPath,
     required this.imagePath,
+    required this.definition,
     required this.scrambledLetters,
   });
 }

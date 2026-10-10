@@ -8,10 +8,8 @@ import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
 
 /// Lesson Intro — shown before the Introduce phase every session.
-///
-/// Layout: header top-center, body center, Yse pose bottom-left,
-/// "LET'S GO!" button bottom-right. Plays lesson intro audio on load.
-/// Button advances to /lesson-play (Introduce phase).
+/// Layout: header + body + button centered vertically. Yse large
+/// in the bottom-left corner.
 class LessonIntroScreen extends StatefulWidget {
   const LessonIntroScreen({super.key});
 
@@ -57,7 +55,6 @@ class _LessonIntroScreenState extends State<LessonIntroScreen> {
 
     if (!mounted) return;
 
-    // Defensive: if no intro configured, skip straight to lesson.
     if (intro == null) {
       Navigator.of(context).pushReplacementNamed(
         '/lesson-play',
@@ -80,11 +77,8 @@ class _LessonIntroScreenState extends State<LessonIntroScreen> {
   Future<void> _playAudio(String filename) async {
     try {
       await _audioPlayer.stop();
-      await _audioPlayer.play(
-        AssetSource('audio/intros/$filename'),
-      );
+      await _audioPlayer.play(AssetSource('audio/intros/$filename'));
     } catch (e) {
-      // Silent fallback — file may not have arrived yet.
       debugPrint('🔊 Lesson intro audio missing: $e');
     }
   }
@@ -127,104 +121,95 @@ class _LessonIntroScreenState extends State<LessonIntroScreen> {
     return Scaffold(
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: AppSpacing.lg,
-          ),
-          child: Stack(
-            children: [
-              // Header (top-center)
-              Align(
-                alignment: Alignment.topCenter,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 40),
-                  child: Text(
-                    intro.header,
-                    textAlign: TextAlign.center,
-                    style: AppText.h1.copyWith(
-                      fontSize: 28,
-                      height: 1.2,
-                    ),
+        child: Stack(
+          children: [
+            // Yse bottom-left (big)
+            Positioned(
+              left: -20,
+              bottom: -20,
+              child: Image.asset(
+                'assets/images/mascot/${intro.poseAsset}',
+                width: 260,
+                height: 260,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => const SizedBox(
+                  width: 260,
+                  height: 260,
+                  child: Icon(
+                    Icons.auto_stories_rounded,
+                    size: 160,
+                    color: AppColors.accentTeal,
                   ),
                 ),
               ),
+            ),
 
-              // Body (vertical center)
-              Align(
-                alignment: const Alignment(0, -0.15),
+            // Center: header + body + button
+            Positioned.fill(
+              child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
+                  padding: EdgeInsets.only(
+                    left: AppSpacing.xl,
+                    right: AppSpacing.xl,
+                    // Reserve space so content doesn't sit under Yse
+                    bottom: 200,
                   ),
-                  child: Text(
-                    intro.body,
-                    textAlign: TextAlign.center,
-                    style: AppText.body.copyWith(
-                      fontSize: 17,
-                      height: 1.5,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-              ),
-
-              // Yse pose (bottom-left)
-              Align(
-                alignment: Alignment.bottomLeft,
-                child: Image.asset(
-                  'assets/images/mascot/${intro.poseAsset}',
-                  width: 160,
-                  height: 160,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => const SizedBox(
-                    width: 160,
-                    height: 160,
-                    child: Icon(
-                      Icons.auto_stories_rounded,
-                      size: 100,
-                      color: AppColors.accentTeal,
-                    ),
-                  ),
-                ),
-              ),
-
-              // Button (bottom-right)
-              Align(
-                alignment: Alignment.bottomRight,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 40),
-                  child: SizedBox(
-                    height: 64,
-                    child: ElevatedButton(
-                      onPressed: _onLetsGo,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accentTeal,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.xl,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        intro.header,
+                        textAlign: TextAlign.center,
+                        style: AppText.h1.copyWith(
+                          fontSize: 30,
+                          height: 1.2,
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.large),
-                        ),
-                        elevation: 3,
                       ),
-                      child: Text(
-                        intro.buttonLabel,
-                        style: const TextStyle(
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w800,
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        intro.body,
+                        textAlign: TextAlign.center,
+                        style: AppText.body.copyWith(
                           fontSize: 18,
-                          letterSpacing: 0.5,
+                          height: 1.5,
+                          color: AppColors.textPrimary,
                         ),
                       ),
-                    ),
+                      const SizedBox(height: AppSpacing.xxl),
+                      SizedBox(
+                        height: 64,
+                        child: ElevatedButton(
+                          onPressed: _onLetsGo,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accentTeal,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.xxl,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.large),
+                            ),
+                            elevation: 3,
+                          ),
+                          child: Text(
+                            intro.buttonLabel,
+                            style: const TextStyle(
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.w800,
+                              fontSize: 20,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

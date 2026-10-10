@@ -1189,6 +1189,51 @@ class DatabaseService {
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
+  Future<int> upsertWordByNaturalKey(Word word) async {
+    final db = await database;
+    final existing = await db.query(
+      'words',
+      where: 'grade_level = ? AND difficulty = ? AND text = ?',
+      whereArgs: [word.gradeLevel, word.difficulty, word.text],
+      limit: 1,
+    );
+    if (existing.isNotEmpty) {
+      final id = existing.first['id'] as int;
+      final updated = word.toMap()..['id'] = id;
+      await db.update('words', updated, where: 'id = ?', whereArgs: [id]);
+      return id;
+    }
+    return await db.insert('words', word.toMap());
+  }
+
+  /// Upsert a batch by natural key (grade_level + difficulty + batch_index).
+  /// Preserves batch ID so quiz_attempts.batch_id stays valid.
+  Future<int> upsertBatchByNaturalKey(LessonBatch batch) async {
+    final db = await database;
+    final existing = await db.query(
+      'batches',
+      where: 'grade_level = ? AND difficulty = ? AND batch_index = ?',
+      whereArgs: [batch.gradeLevel, batch.difficulty, batch.batchIndex],
+      limit: 1,
+    );
+    if (existing.isNotEmpty) {
+      final id = existing.first['id'] as int;
+      final updated = batch.toMap()..['id'] = id;
+      await db.update('batches', updated, where: 'id = ?', whereArgs: [id]);
+      return id;
+    }
+    return await db.insert('batches', batch.toMap());
+  }
+
+  /// Delete all quiz questions for a specific word.
+  /// Called before re-inserting to refresh question content without
+  /// disturbing the word ID.
+  Future<void> deleteQuizQuestionsForWord(int wordId) async {
+    final db = await database;
+    await db.delete('quiz_questions',
+        where: 'word_id = ?', whereArgs: [wordId]);
+  }
+
   // ---------- QuizResult methods ----------
 
   Future<int> insertQuizResult(QuizResult result) async {
@@ -1999,10 +2044,6 @@ class DatabaseService {
   /// Delete all content for a grade (for re-import).
   Future<void> clearContentForGrade(int gradeLevel) async {
     final db = await database;
-    await db.delete('words',
-        where: 'grade_level = ?', whereArgs: [gradeLevel]);
-    await db.delete('batches',
-        where: 'grade_level = ?', whereArgs: [gradeLevel]);
     await db.delete('opening_frames',
         where: 'grade_level = ?', whereArgs: [gradeLevel]);
     await db.delete('story_frames',
@@ -2011,6 +2052,7 @@ class DatabaseService {
         where: 'grade_level = ?', whereArgs: [gradeLevel]);
     await db.delete('content_versions',
         where: 'grade_level = ?', whereArgs: [gradeLevel]);
+    // Intentionally NOT deleting 'words' or 'batches'.
   }
 
   /// Record a Word of the Day shown to student.
@@ -2239,7 +2281,7 @@ class DatabaseService {
       'words',
       where: gradeLevel != null ? 'grade_level = ?' : null,
       whereArgs: gradeLevel != null ? [gradeLevel] : null,
-      orderBy: 'grade_level ASC, difficulty ASC, text ASC',
+      orderBy: 'text COLLATE NOCASE ASC, grade_level ASC',
     );
     return maps.map((m) => Word.fromMap(m)).toList();
   }
