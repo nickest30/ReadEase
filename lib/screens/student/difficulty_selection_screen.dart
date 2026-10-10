@@ -171,7 +171,7 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
     String difficulty,
   ) {
     Navigator.of(context).pushNamed(
-      '/lesson-play',
+      '/lesson-intro',
       arguments: {
         'gradeLevel': gradeLevel,
         'difficulty': difficulty,

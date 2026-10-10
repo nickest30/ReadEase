@@ -8,8 +8,8 @@ import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
 
-/// Orchestrates the full lesson flow for a single batch:
-/// Opening Frame (first visit only) → Introduce → Quiz
+/// Orchestrates the Introduce phase for a single batch.
+/// Flow: Lesson Intro → Introduce → Game Intro → Game
 class LessonPlayScreen extends StatefulWidget {
   const LessonPlayScreen({super.key});
 
@@ -17,21 +17,14 @@ class LessonPlayScreen extends StatefulWidget {
   State<LessonPlayScreen> createState() => _LessonPlayScreenState();
 }
 
-enum LessonPhase { loading, opening, introduce, quiz }
-
 class _LessonPlayScreenState extends State<LessonPlayScreen> {
-  LessonPhase _phase = LessonPhase.loading;
+  bool _loading = true;
   String? _error;
 
-  // Data
   LessonBatch? _batch;
   List<Word> _words = [];
-  OpeningFrame? _openingFrame;
-
-  // Introduce state
   int _currentWordIndex = 0;
 
-  // Audio
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
@@ -54,7 +47,7 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
 
     if (student == null || student.id == null) {
       setState(() {
-        _phase = LessonPhase.loading;
+        _loading = false;
         _error = 'Not signed in.';
       });
       return;
@@ -65,7 +58,7 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
           .getFirstBatch(gradeLevel, difficulty);
       if (batch == null || batch.id == null) {
         setState(() {
-          _phase = LessonPhase.loading;
+          _loading = false;
           _error = 'No content found for this level.';
         });
         return;
@@ -75,64 +68,25 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
           await DatabaseService.instance.getWordsInBatch(batch.id!);
       if (words.isEmpty) {
         setState(() {
-          _phase = LessonPhase.loading;
+          _loading = false;
           _error = 'This lesson has no words yet.';
         });
         return;
       }
 
-      final visited = await DatabaseService.instance
-          .hasVisitedBatch(student.id!, batch.id!);
-      OpeningFrame? frame;
-      if (!visited) {
-        frame = await DatabaseService.instance
-            .getOpeningFrame(gradeLevel, difficulty);
-      }
-
       if (!mounted) return;
-
       setState(() {
         _batch = batch;
         _words = words;
-        _openingFrame = frame;
-        _phase = frame != null
-            ? LessonPhase.opening
-            : LessonPhase.introduce;
+        _loading = false;
       });
-
-      if (frame != null) {
-        _playOpeningAudio(frame.audioAsset);
-        await DatabaseService.instance
-            .recordBatchVisit(student.id!, batch.id!);
-      }
     } catch (e) {
       debugPrint('📚 LessonPlay load ERROR: $e');
+      if (!mounted) return;
       setState(() {
-        _phase = LessonPhase.loading;
+        _loading = false;
         _error = 'Could not load lesson. Try again.';
       });
-    }
-  }
-
-  Future<void> _playOpeningAudio(String assetPath) async {
-    try {
-      final cleanPath = assetPath.startsWith('assets/')
-          ? assetPath.substring('assets/'.length)
-          : assetPath;
-      await _audioPlayer.play(AssetSource(cleanPath));
-    } catch (e) {
-      debugPrint('🔊 Opening audio failed (continuing): $e');
-    }
-  }
-
-  void _skipOpening() {
-    _audioPlayer.stop();
-    setState(() => _phase = LessonPhase.introduce);
-  }
-
-  void _onOpeningFinished() {
-    if (_phase == LessonPhase.opening) {
-      setState(() => _phase = LessonPhase.introduce);
     }
   }
 
@@ -157,23 +111,16 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
     } else {
       if (_batch?.id == null) return;
 
-      final args = {
-        'batchId': _batch!.id,
-        'gradeLevel': _batch!.gradeLevel,
-        'difficulty': _batch!.difficulty,
-      };
-
-      // Route to the game assigned to this lesson's difficulty.
-      // Falls back to the MCQ quiz when no game is configured.
-      final gameType = _batch!.gameType;
-      final route = switch (gameType) {
-        'memory_match' => '/memory-match',
-        'bubble_pop' => '/bubble-pop',
-        'drag_drop' => '/drag-drop',
-        _ => '/quiz-play',
-      };
-
-      Navigator.of(context).pushReplacementNamed(route, arguments: args);
+      // Route to Game Intro. It resolves the game_type → actual game.
+      Navigator.of(context).pushReplacementNamed(
+        '/game-intro',
+        arguments: {
+          'batchId': _batch!.id,
+          'gradeLevel': _batch!.gradeLevel,
+          'difficulty': _batch!.difficulty,
+          'gameType': _batch!.gameType, // null → intro falls back to MCQ
+        },
+      );
     }
   }
 
@@ -196,17 +143,13 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
   }
 
   Widget _buildBody() {
-    if (_error != null) return _buildError();
-    switch (_phase) {
-      case LessonPhase.loading:
-        return const Center(child: CircularProgressIndicator());
-      case LessonPhase.opening:
-        return _buildOpeningFrame();
-      case LessonPhase.introduce:
-        return _buildIntroduce();
-      case LessonPhase.quiz:
-        return const Center(child: CircularProgressIndicator());
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
     }
+    if (_error != null) {
+      return _buildError();
+    }
+    return _buildIntroduce();
   }
 
   Widget _buildError() {
@@ -248,84 +191,6 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  // ─────────────────────────────────────────────────────────
-  // OPENING FRAME
-  // ─────────────────────────────────────────────────────────
-
-  Widget _buildOpeningFrame() {
-    final frame = _openingFrame!;
-    return Stack(
-      children: [
-        _AutoTransition(
-          duration: const Duration(seconds: 4),
-          onComplete: _onOpeningFinished,
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            children: [
-              Align(
-                alignment: Alignment.topRight,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.md),
-                  child: TextButton(
-                    onPressed: _skipOpening,
-                    child: const Text(
-                      'Skip',
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Image.asset(
-                frame.visualAsset,
-                width: 280,
-                height: 280,
-                fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => Container(
-                  width: 280,
-                  height: 280,
-                  decoration: BoxDecoration(
-                    color: AppColors.accentTeal.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.accentTeal,
-                      width: 3,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.auto_stories_rounded,
-                    size: 120,
-                    color: AppColors.accentTeal,
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: Text(
-                  frame.displayText,
-                  textAlign: TextAlign.center,
-                  style: AppText.h2.copyWith(
-                    fontSize: 22,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-              const Spacer(flex: 2),
-            ],
-          ),
-        ),
-      ],
     );
   }
 
@@ -516,7 +381,7 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
                       ),
                     ),
                     child: Text(
-                      isLast ? 'Take Quiz' : 'Next',
+                      isLast ? 'Start Game' : 'Next',
                       style: const TextStyle(
                         fontFamily: 'Nunito',
                         fontWeight: FontWeight.w700,
@@ -532,34 +397,4 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
       ),
     );
   }
-}
-
-// ─────────────────────────────────────────────────────────
-// Top-level helper widget (MUST be outside the state class)
-// ─────────────────────────────────────────────────────────
-
-class _AutoTransition extends StatefulWidget {
-  final Duration duration;
-  final VoidCallback onComplete;
-
-  const _AutoTransition({
-    required this.duration,
-    required this.onComplete,
-  });
-
-  @override
-  State<_AutoTransition> createState() => _AutoTransitionState();
-}
-
-class _AutoTransitionState extends State<_AutoTransition> {
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(widget.duration, () {
-      if (mounted) widget.onComplete();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
 }
