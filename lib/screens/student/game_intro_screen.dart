@@ -92,6 +92,7 @@ class _GameIntroScreenState extends State<GameIntroScreen> {
       'drag_drop' => '/drag-drop',
       'word_scramble' => '/word-scramble',
       'sentence_builder' => '/sentence-builder',
+      'floor_is_lava' => '/floor-is-lava',
       _ => '/quiz-play',
     };
 
@@ -101,6 +102,8 @@ class _GameIntroScreenState extends State<GameIntroScreen> {
         'batchId': args['batchId'],
         'gradeLevel': args['gradeLevel'],
         'difficulty': args['difficulty'],
+        'passageCorrect': args['passageCorrect'] ?? 0,
+        'passageTotal': args['passageTotal'] ?? 0,
       },
     );
   }

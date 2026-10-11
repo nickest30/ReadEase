@@ -17,6 +17,7 @@ class ContentImporter {
     await importGradeIfNeeded(1);
     await importGradeIfNeeded(2);
     await importGradeIfNeeded(3); 
+    await importGradeIfNeeded(4);
   }
 
   /// Import content for a single grade if not already up to date.
@@ -77,8 +78,61 @@ class ContentImporter {
       }
       debugPrint('📚 Game intros: ${gameIntros.length}');
 
-      // ── 3. Lessons ──
+
+      // ── 3. Passages (v15, Grade 4+) ──
+      // Clear any existing passages for this grade first.
+      try {
+        await DatabaseService.instance.clearPassagesForGrade(gradeLevel);
+      } catch (_) {}
+
+      final passagesList = (data['passages'] as List<dynamic>?) ?? [];
+      for (final p in passagesList) {
+        final passage = Passage(
+          passageKey: p['id'] as String,
+          gradeLevel: gradeLevel,
+          difficulty: p['difficulty'] as String,
+          title: p['title'] as String,
+          illustration: 'assets/images/passages/${p['illustration']}',
+          wordCount: p['word_count'] as int,
+        );
+        final passageId =
+            await DatabaseService.instance.insertPassage(passage);
+
+        final sentences = (p['sentences'] as List<dynamic>?) ?? [];
+        for (final s in sentences) {
+          await DatabaseService.instance.insertPassageSentence(
+            PassageSentence(
+              passageId: passageId,
+              index: s['index'] as int,
+              text: s['text'] as String,
+              audio: 'assets/audio/passages/${s['audio']}',
+            ),
+          );
+        }
+
+        final questions =
+            (p['comprehension_questions'] as List<dynamic>?) ?? [];
+        int qOrder = 0;
+        for (final q in questions) {
+          await DatabaseService.instance.insertPassageQuestion(
+            PassageQuestion(
+              passageId: passageId,
+              stem: q['stem'] as String,
+              questionType: q['type'] as String,
+              correctAnswer: q['correct'] as String,
+              distractorsJson: jsonEncode(q['distractors']),
+              showImage: (q['show_image'] as bool?) ?? false,
+              orderIndex: qOrder++,
+            ),
+          );
+        }
+      }
+      debugPrint('📚 Passages: ${passagesList.length}');
+
+      // ── 4. Lessons ──
       final lessons = (data['lessons'] as List<dynamic>?) ?? [];
+
+
       for (final lessonData in lessons) {
         final difficulty = lessonData['difficulty'] as String;
         final theme = (lessonData['theme'] as String?) ?? '';
@@ -102,6 +156,8 @@ class ContentImporter {
             lessonData['game_config'] as Map<String, dynamic>?;
         final gameType = gameConfig?['game_type'] as String?;
 
+        final passageId = lessonData['passage_id'] as String?;
+
         // 3c. Batches
         final batches = (lessonData['batches'] as List<dynamic>?) ?? [];
         for (final batchData in batches) {
@@ -113,7 +169,9 @@ class ContentImporter {
             batchIndex: batchIndex,
             theme: theme,
             gameType: gameType,
+            passageId: passageId,
           );
+
           final batchId = await DatabaseService.instance
               .upsertBatchByNaturalKey(batch);
 

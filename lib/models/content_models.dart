@@ -9,8 +9,8 @@ class LessonBatch {
   final int batchIndex;
   final String theme;
   final String? culturalElementsJson;
-  final String? gameType;          // NEW — 'memory_match' | 'bubble_pop' | 'drag_drop' | null
-
+  final String? gameType;
+  final String? passageId;
   LessonBatch({
     this.id,
     required this.gradeLevel,
@@ -19,6 +19,7 @@ class LessonBatch {
     required this.theme,
     this.culturalElementsJson,
     this.gameType,
+    this.passageId,
   });
 
   Map<String, dynamic> toMap() => {
@@ -29,6 +30,7 @@ class LessonBatch {
         'theme': theme,
         'cultural_elements_json': culturalElementsJson,
         'game_type': gameType,
+        'passage_id': passageId,
       };
 
   factory LessonBatch.fromMap(Map<String, dynamic> m) => LessonBatch(
@@ -39,6 +41,7 @@ class LessonBatch {
         theme: m['theme'] as String,
         culturalElementsJson: m['cultural_elements_json'] as String?,
         gameType: m['game_type'] as String?,
+        passageId: m['passage_id'] as String?,
       );
 
   String get lessonKey => 'grade${gradeLevel}_$difficulty';
@@ -217,89 +220,6 @@ class QuizConfig {
         bufferSize: m['buffer_size'] as int,
         randomized: (m['randomized'] as int) == 1,
         passingThreshold: m['passing_threshold'] as int,
-      );
-}
-
-/// A reading passage (G3+).
-class Passage {
-  final int? id;
-  final int batchId;
-  final String title;
-  final String fullText;
-  final int wordCount;
-  final int philIriTargetGrade;
-  final double? philIriReadabilityScore;
-  final String? philIriReadabilityTool;
-  final String? culturalElementsJson;
-
-  Passage({
-    this.id,
-    required this.batchId,
-    required this.title,
-    required this.fullText,
-    required this.wordCount,
-    required this.philIriTargetGrade,
-    this.philIriReadabilityScore,
-    this.philIriReadabilityTool,
-    this.culturalElementsJson,
-  });
-
-  Map<String, dynamic> toMap() => {
-        'id': id,
-        'batch_id': batchId,
-        'title': title,
-        'full_text': fullText,
-        'word_count': wordCount,
-        'phil_iri_target_grade': philIriTargetGrade,
-        'phil_iri_readability_score': philIriReadabilityScore,
-        'phil_iri_readability_tool': philIriReadabilityTool,
-        'cultural_elements_json': culturalElementsJson,
-      };
-
-  factory Passage.fromMap(Map<String, dynamic> m) => Passage(
-        id: m['id'] as int?,
-        batchId: m['batch_id'] as int,
-        title: m['title'] as String,
-        fullText: m['full_text'] as String,
-        wordCount: m['word_count'] as int,
-        philIriTargetGrade: m['phil_iri_target_grade'] as int,
-        philIriReadabilityScore:
-            (m['phil_iri_readability_score'] as num?)?.toDouble(),
-        philIriReadabilityTool: m['phil_iri_readability_tool'] as String?,
-        culturalElementsJson: m['cultural_elements_json'] as String?,
-      );
-}
-
-/// One sentence inside a passage (for audio sync).
-class PassageSentence {
-  final int? id;
-  final int passageId;
-  final int sentenceIndex;
-  final String text;
-  final String audioFile;
-
-  PassageSentence({
-    this.id,
-    required this.passageId,
-    required this.sentenceIndex,
-    required this.text,
-    required this.audioFile,
-  });
-
-  Map<String, dynamic> toMap() => {
-        'id': id,
-        'passage_id': passageId,
-        'sentence_index': sentenceIndex,
-        'text': text,
-        'audio_file': audioFile,
-      };
-
-  factory PassageSentence.fromMap(Map<String, dynamic> m) => PassageSentence(
-        id: m['id'] as int?,
-        passageId: m['passage_id'] as int,
-        sentenceIndex: m['sentence_index'] as int,
-        text: m['text'] as String,
-        audioFile: m['audio_file'] as String,
       );
 }
 
@@ -705,5 +625,123 @@ class GameIntro {
         buttonLabel: m['button_label'] as String,
         poseAsset: m['pose_asset'] as String,
         audioAsset: m['audio_asset'] as String,
+      );
+}
+
+class Passage {
+  final int? id;
+  final String passageKey; // e.g. "grade4_easy_passage01"
+  final int gradeLevel;
+  final String difficulty;
+  final String title;
+  final String illustration;
+  final int wordCount;
+
+  Passage({
+    this.id,
+    required this.passageKey,
+    required this.gradeLevel,
+    required this.difficulty,
+    required this.title,
+    required this.illustration,
+    required this.wordCount,
+  });
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'passage_key': passageKey,
+        'grade_level': gradeLevel,
+        'difficulty': difficulty,
+        'title': title,
+        'illustration': illustration,
+        'word_count': wordCount,
+      };
+
+  factory Passage.fromMap(Map<String, dynamic> m) => Passage(
+        id: m['id'] as int?,
+        passageKey: m['passage_key'] as String,
+        gradeLevel: m['grade_level'] as int,
+        difficulty: m['difficulty'] as String,
+        title: m['title'] as String,
+        illustration: m['illustration'] as String,
+        wordCount: m['word_count'] as int,
+      );
+}
+
+/// One sentence inside a passage. Has its own audio file.
+class PassageSentence {
+  final int? id;
+  final int passageId;
+  final int index;
+  final String text;
+  final String audio;
+
+  PassageSentence({
+    this.id,
+    required this.passageId,
+    required this.index,
+    required this.text,
+    required this.audio,
+  });
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'passage_id': passageId,
+        'sentence_index': index,
+        'text': text,
+        'audio': audio,
+      };
+
+  factory PassageSentence.fromMap(Map<String, dynamic> m) => PassageSentence(
+        id: m['id'] as int?,
+        passageId: m['passage_id'] as int,
+        index: m['sentence_index'] as int,
+        text: m['text'] as String,
+        audio: m['audio'] as String,
+      );
+}
+
+/// One comprehension question tied to a passage.
+class PassageQuestion {
+  final int? id;
+  final int passageId;
+  final String stem;
+  final String questionType;
+  final String correctAnswer;
+  final String distractorsJson;
+  final bool showImage;
+  final int orderIndex;
+
+  PassageQuestion({
+    this.id,
+    required this.passageId,
+    required this.stem,
+    required this.questionType,
+    required this.correctAnswer,
+    required this.distractorsJson,
+    this.showImage = false,
+    required this.orderIndex,
+  });
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'passage_id': passageId,
+        'stem': stem,
+        'question_type': questionType,
+        'correct_answer': correctAnswer,
+        'distractors_json': distractorsJson,
+        'show_image': showImage ? 1 : 0,
+        'order_index': orderIndex,
+      };
+
+  factory PassageQuestion.fromMap(Map<String, dynamic> m) => PassageQuestion(
+        id: m['id'] as int?,
+        passageId: m['passage_id'] as int,
+        stem: m['stem'] as String,
+        questionType: m['question_type'] as String,
+        correctAnswer: m['correct_answer'] as String,
+        distractorsJson: m['distractors_json'] as String,
+        showImage: ((m['show_image'] as int?) ?? 0) == 1,
+        orderIndex: m['order_index'] as int,
       );
 }

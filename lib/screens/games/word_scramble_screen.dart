@@ -16,6 +16,7 @@ import '../../services/game_sfx.dart';
 import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import 'yse_reaction.dart';
+import '../../utils/game_score.dart';
 
 /// Word Scramble — Grade 2 Hard.
 ///
@@ -49,6 +50,8 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
   int _correctCount = 0;
   int _wrongAttemptsThisRound = 0;
   bool _roundResolved = false;
+  int _passageCorrect = 0;
+  int _passageTotal = 0;
 
   List<_LetterTile?> _placedLetters = [];
   List<_LetterTile> _availableLetters = [];
@@ -89,7 +92,9 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
     final args = ModalRoute.of(context)!.settings.arguments as Map;
     final batchId = args['batchId'] as int;
     final gradeLevel = (args['gradeLevel'] as int?) ?? 1;
-    final difficulty = (args['difficulty'] as String?) ?? 'hard';
+    final difficulty = (args['difficulty'] as String?) ?? 'easy';
+    final passageCorrect = (args['passageCorrect'] as int?) ?? 0;
+    final passageTotal = (args['passageTotal'] as int?) ?? 0;
     final student = context.read<StudentProvider>().currentStudent;
 
     if (student == null || student.id == null) {
@@ -157,6 +162,8 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
         _studentId = student.id!;
         _gradeLevel = gradeLevel;
         _difficulty = difficulty;
+        _passageCorrect = passageCorrect;
+        _passageTotal = passageTotal;
         _loading = false;
       });
 
@@ -346,19 +353,29 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
       final totalRounds = _rounds.length;
       final wrongWordIds = List<int>.from(_wrongWordIds);
 
+      final combinedScore = _passageCorrect + _correctCount;
+      final combinedTotal = _passageTotal + _rounds.length;
+
+      final args = ModalRoute.of(context)!.settings.arguments as Map;
+      final score = GameScore.fromArgs(
+        args,
+        gameCorrect: _correctCount,
+        gameTotal: _rounds.length,
+      );
+
       final pointsDelta =
           await DatabaseService.instance.computePointsDeltaForBatch(
         studentId: _studentId,
         batchId: _batchId,
-        newScore: _correctCount,
+        newScore: score.correct,
       );
 
       final attemptId = await DatabaseService.instance.saveQuizAttempt(
         QuizAttempt(
           studentId: _studentId,
           batchId: _batchId,
-          score: _correctCount,
-          totalQuestions: totalRounds,
+          score: combinedScore,
+          totalQuestions: combinedTotal,
           pointsEarned: pointsDelta,
           wrongWordIdsJson: wrongWordIds.isEmpty
               ? null
@@ -455,8 +472,8 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
       Navigator.of(context).pushReplacementNamed(
         '/results',
         arguments: {
-          'score': _correctCount,
-          'totalQuestions': totalRounds,
+          'score': combinedScore,
+          'totalQuestions': combinedTotal,
           'pointsDelta': pointsDelta,
           'gradeLevel': _gradeLevel,
           'difficulty': _difficulty,

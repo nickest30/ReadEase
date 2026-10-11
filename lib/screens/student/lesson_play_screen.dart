@@ -125,16 +125,24 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
     } else {
       if (_batch?.id == null) return;
 
-      // Route to Game Intro. It resolves the game_type → actual game.
-      Navigator.of(context).pushReplacementNamed(
-        '/game-intro',
-        arguments: {
-          'batchId': _batch!.id,
-          'gradeLevel': _batch!.gradeLevel,
-          'difficulty': _batch!.difficulty,
-          'gameType': _batch!.gameType, // null → intro falls back to MCQ
-        },
-      );
+      final args = {
+        'batchId': _batch!.id,
+        'gradeLevel': _batch!.gradeLevel,
+        'difficulty': _batch!.difficulty,
+        'gameType': _batch!.gameType,
+      };
+
+      // G4+ flow: batch has a passage → route to /passage first.
+      // G1–G3 flow: no passage → straight to /game-intro.
+      final route = _batch!.passageId != null
+          ? '/passage'
+          : '/game-intro';
+
+      if (_batch!.passageId != null) {
+        args['passageId'] = _batch!.passageId!;
+      }
+
+      Navigator.of(context).pushReplacementNamed(route, arguments: args);
     }
   }
 
@@ -395,7 +403,11 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
                       ),
                     ),
                     child: Text(
-                      isLast ? 'Start Game' : 'Next',
+                      isLast
+                          ? (_batch?.passageId != null
+                              ? 'Read the Passage'
+                              : 'Start Game')
+                          : 'Next',
                       style: const TextStyle(
                         fontFamily: 'Nunito',
                         fontWeight: FontWeight.w700,

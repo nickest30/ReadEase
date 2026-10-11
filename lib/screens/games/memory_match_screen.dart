@@ -47,7 +47,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
   bool _locked = false;
 
   // ── [GAME-LAYER] Yse reaction + SFX ──
-    // ── [GAME-LAYER] Yse reaction + SFX ──
+  // ── [GAME-LAYER] Yse reaction + SFX ──
   final YseReactionController _reaction = YseReactionController();
   int _currentStreak = 0;
 

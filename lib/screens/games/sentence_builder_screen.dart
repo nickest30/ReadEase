@@ -16,16 +16,22 @@ import '../../services/game_sfx.dart';
 import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import 'yse_reaction.dart';
+import '../../utils/game_score.dart';
 
 /// Sentence Builder — Grade 3 Hard.
 ///
 /// 14 rounds. Each round: big image + definition, empty sentence slots,
-/// shuffled word tiles at the bottom. Tap a word → fills next empty slot.
-/// Tap a placed word → returns to bank. Green glow on correct, red on
-/// wrong. 3 wrong attempts → reveal the sentence, advance with 0 pts.
+/// shuffled word tiles at the bottom.
 ///
-/// Source: `sample_sentence` (verified by content team to be 5–7 words,
-/// simple grammar, containing the target word).
+/// Partial-feedback mechanic:
+///   1. Learner places all words → auto-check fires
+///   2. Correct-position tiles → green + locked
+///      Wrong-position tiles  → red + tappable to return to bank
+///   3. Learner removes only the wrong ones, refills, checks again
+///   4. When all tiles green → sentence audio plays → +5 pts → advance
+///
+/// First-attempt-only scoring: a round that ever showed a red tile
+/// scores 0, no matter how many retries it took to fix.
 class SentenceBuilderScreen extends StatefulWidget {
   const SentenceBuilderScreen({super.key});
 
@@ -34,7 +40,7 @@ class SentenceBuilderScreen extends StatefulWidget {
       _SentenceBuilderScreenState();
 }
 
-enum _GlowState { none, correct, wrong }
+enum _SlotState { empty, pending, correct, wrong }
 
 class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
   bool _loading = true;
@@ -50,11 +56,11 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
 
   int _currentIndex = 0;
   int _correctCount = 0;
-  int _wrongAttemptsThisRound = 0;
+  int _submissionsThisRound = 0;
   bool _roundResolved = false;
-  _GlowState _glowState = _GlowState.none;
+  bool _firstAttemptFailed = false;
 
-  List<_WordTile?> _placedWords = [];
+  List<_Slot> _slots = [];
   List<_WordTile> _availableWords = [];
 
   DateTime? _roundStart;
@@ -66,7 +72,7 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
 
   final AudioPlayer _audioPlayer = AudioPlayer();
 
-  static const int _maxWrongAttempts = 3;
+  static const int _maxSubmissions = 3;
   static const double _bankTileHeight = 52.0;
   static const double _minTileWidth = 56.0;
   static const double _maxTileWidth = 130.0;
@@ -92,7 +98,7 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
     final args = ModalRoute.of(context)!.settings.arguments as Map;
     final batchId = args['batchId'] as int;
     final gradeLevel = (args['gradeLevel'] as int?) ?? 3;
-    final difficulty = (args['difficulty'] as String?) ?? 'hard';
+    final difficulty = (args['difficulty'] as String?) ?? 'easy';
     final student = context.read<StudentProvider>().currentStudent;
 
     if (student == null || student.id == null) {
@@ -104,7 +110,6 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
     }
 
     try {
-      // Use the randomizer (Grade 3 has randomized: 1)
       final words = await DatabaseService.instance
           .getSampledWordsForBatch(batchId);
 
@@ -130,20 +135,20 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
         final rawSentence = w.sampleSentence.trim();
         if (rawSentence.isEmpty) continue;
 
-        // Split into words (preserve punctuation with the word)
+        // Split and strip punctuation for clean tile matching.
         final words_ = rawSentence
             .split(RegExp(r'\s+'))
+            .where((s) => s.isNotEmpty)
+            .map((s) => s.replaceAll(RegExp(r"[.,!?;:'()]"), ''))
             .where((s) => s.isNotEmpty)
             .toList();
         if (words_.length < 2) continue;
 
-        // Build tiles
         final tiles = <_WordTile>[];
         for (int i = 0; i < words_.length; i++) {
           tiles.add(_WordTile(id: i, text: words_[i]));
         }
 
-        // Shuffle, avoiding the correct order
         final scrambled = List<_WordTile>.from(tiles);
         int attempts = 0;
         do {
@@ -159,6 +164,7 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
           wordId: w.id!,
           targetSentence: words_,
           correctAudioPath: w.audioAsset,
+          sentenceAudioAsset: w.sampleSentenceAudio ?? '',
           imagePath: w.imageAsset,
           definition: w.definition,
           scrambledTiles: scrambled,
@@ -203,11 +209,14 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
   void _startRound() {
     final round = _rounds[_currentIndex];
     setState(() {
-      _placedWords = List.filled(round.targetSentence.length, null);
+      _slots = List.generate(
+        round.targetSentence.length,
+        (_) => _Slot(),
+      );
       _availableWords = List.from(round.scrambledTiles);
-      _wrongAttemptsThisRound = 0;
+      _submissionsThisRound = 0;
+      _firstAttemptFailed = false;
       _roundResolved = false;
-      _glowState = _GlowState.none;
       _roundStart = DateTime.now();
     });
     _playCueAudio(round.correctAudioPath);
@@ -225,121 +234,179 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
     }
   }
 
+  Future<void> _playSentenceAudio(String assetPath) async {
+    if (assetPath.isEmpty) return;
+    try {
+      final clean = assetPath.startsWith('assets/')
+          ? assetPath.substring('assets/'.length)
+          : assetPath;
+      await _audioPlayer.stop();
+      await _audioPlayer.play(AssetSource(clean));
+      // Wait for playback to finish, with a 6s safety timeout.
+      await _audioPlayer.onPlayerComplete
+          .first
+          .timeout(const Duration(seconds: 6));
+    } catch (e) {
+      debugPrint('🔊 Sentence audio failed (continuing): $e');
+    }
+  }
+
   // ────────────────────────────────────────────────────────────
   // Interaction
   // ────────────────────────────────────────────────────────────
 
   void _onWordTap(_WordTile tile) {
     if (_roundResolved) return;
-    final emptyIndex = _placedWords.indexWhere((p) => p == null);
+    final emptyIndex = _slots.indexWhere((s) => s.state == _SlotState.empty);
     if (emptyIndex == -1) return;
 
     setState(() {
-      _placedWords[emptyIndex] = tile;
+      _slots[emptyIndex] = _Slot(
+        tile: tile,
+        state: _SlotState.pending,
+      );
       _availableWords.removeWhere((t) => t.id == tile.id);
     });
 
-    if (_placedWords.every((p) => p != null)) {
+    // Check only when no slots are empty.
+    if (_slots.every((s) => s.state != _SlotState.empty)) {
       _checkSentence();
     }
   }
 
   void _onSlotTap(int index) {
     if (_roundResolved) return;
-    final tile = _placedWords[index];
-    if (tile == null) return;
+    final slot = _slots[index];
 
+    // Correct tiles are locked.
+    if (slot.state == _SlotState.correct) return;
+    if (slot.tile == null) return;
+
+    // Both `pending` and `wrong` tiles can be removed.
     setState(() {
-      _placedWords[index] = null;
-      _availableWords.add(tile);
+      _availableWords.add(slot.tile!);
+      _slots[index] = _Slot();
     });
   }
 
-  Future<void> _checkSentence() async {
+  void _checkSentence() {
     final round = _rounds[_currentIndex];
-    final placed = _placedWords.map((t) => t?.text ?? '').join(' ');
-    final target = round.targetSentence.join(' ');
-    final isCorrect = placed == target;
 
-    if (isCorrect) {
-      _lastResponseTimeMs = _roundStart == null
-          ? null
-          : DateTime.now().difference(_roundStart!).inMilliseconds;
+    bool allCorrect = true;
+    int newWrongCount = 0;
 
-      setState(() {
-        _roundResolved = true;
-        _glowState = _GlowState.correct;
-      });
-      GameSfx.instance.playCorrect();
+    for (int i = 0; i < _slots.length; i++) {
+      final slot = _slots[i];
 
-      if (_wrongAttemptsThisRound == 0) {
-        setState(() => _correctCount++);
-        _currentStreak++;
-        if (_currentStreak >= 3) {
-          _reaction.show(YseReaction.hwaiting, persistent: true);
-        } else {
-          _reaction.show(YseReaction.nice, persistent: true);
-        }
-      } else {
-        _currentStreak = 0;
-        _reaction.show(YseReaction.nice, persistent: true);
+      // Already-locked correct tiles stay put.
+      if (slot.state == _SlotState.correct) continue;
+
+      // Skip empties (shouldn't happen here, but defensive).
+      if (slot.tile == null) {
+        allCorrect = false;
+        continue;
       }
 
-      await Future.delayed(const Duration(milliseconds: 1200));
-      if (!mounted) return;
-      _advanceRound();
-    } else {
-      _wrongAttemptsThisRound++;
-      _currentStreak = 0;
+      // Compare by text (case-insensitive).
+      final placed = slot.tile!.text.toLowerCase();
+      final target = round.targetSentence[i].toLowerCase();
 
-      setState(() => _glowState = _GlowState.wrong);
+      if (placed == target) {
+        slot.state = _SlotState.correct;
+      } else {
+        slot.state = _SlotState.wrong;
+        newWrongCount++;
+        allCorrect = false;
+      }
+    }
+
+    _submissionsThisRound++;
+
+    // First submission — record if it had any wrong.
+    if (_submissionsThisRound == 1 && newWrongCount > 0) {
+      _firstAttemptFailed = true;
+    }
+
+    setState(() {});
+
+    if (allCorrect) {
+      _onRoundComplete();
+    } else if (_submissionsThisRound >= _maxSubmissions) {
+      // 3-strike reveal
+      _wrongWordIds.add(round.wordId);
+      setState(() => _roundResolved = true);
+      _revealCorrectSentence(round);
+      _reaction.show(YseReaction.tryAgain, persistent: true);
+      GameSfx.instance.playWrong();
+      Future.delayed(const Duration(milliseconds: 1600), () {
+        if (mounted) _advanceRound();
+      });
+    } else {
+      // Partial feedback — learner fixes red tiles
+      _currentStreak = 0;
       GameSfx.instance.playWrong();
       _reaction.show(YseReaction.tryAgain, persistent: true);
-
-      if (_wrongAttemptsThisRound >= _maxWrongAttempts) {
-        // 3 strikes — reveal the sentence
-        _wrongWordIds.add(round.wordId);
-        setState(() {
-          _roundResolved = true;
-          _glowState = _GlowState.none;
-        });
-        _revealCorrectSentence(round);
-        setState(() => _glowState = _GlowState.correct);
-        await Future.delayed(const Duration(milliseconds: 1600));
-        if (!mounted) return;
-        _advanceRound();
-      } else {
-        // Return all placed words to bank for retry
-        await Future.delayed(const Duration(milliseconds: 1100));
-        if (!mounted) return;
-        setState(() {
-          _glowState = _GlowState.none;
-          for (final t in _placedWords) {
-            if (t != null) _availableWords.add(t);
-          }
-          _placedWords =
-              List.filled(round.targetSentence.length, null);
-        });
-      }
     }
   }
 
+  Future<void> _onRoundComplete() async {
+    final round = _rounds[_currentIndex];
+
+    _lastResponseTimeMs = _roundStart == null
+        ? null
+        : DateTime.now().difference(_roundStart!).inMilliseconds;
+
+    setState(() => _roundResolved = true);
+
+    GameSfx.instance.playCorrect();
+
+    // First-attempt scoring
+    if (!_firstAttemptFailed) {
+      setState(() => _correctCount++);
+      _currentStreak++;
+      if (_currentStreak >= 3) {
+        _reaction.show(YseReaction.hwaiting, persistent: true);
+      } else {
+        _reaction.show(YseReaction.nice, persistent: true);
+      }
+    } else {
+      _currentStreak = 0;
+      _reaction.show(YseReaction.nice, persistent: true);
+    }
+
+    // Sequence: sparkle → short pause → sentence audio → pause → advance
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+
+    if (round.sentenceAudioAsset.isNotEmpty) {
+      await _playSentenceAudio(round.sentenceAudioAsset);
+    } else {
+      // Fallback: short delay if no sentence audio
+      await Future.delayed(const Duration(milliseconds: 1500));
+    }
+    if (!mounted) return;
+
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+
+    _advanceRound();
+  }
+
   void _revealCorrectSentence(_SentenceRound round) {
-    // Build the correct order using the tile IDs from scrambledTiles
-    final placed = <_WordTile?>[];
+    final placed = <_Slot>[];
     final used = <int>{};
     for (final wordText in round.targetSentence) {
       for (final t in round.scrambledTiles) {
         if (used.contains(t.id)) continue;
-        if (t.text == wordText) {
+        if (t.text.toLowerCase() == wordText.toLowerCase()) {
           used.add(t.id);
-          placed.add(t);
+          placed.add(_Slot(tile: t, state: _SlotState.correct));
           break;
         }
       }
     }
     setState(() {
-      _placedWords = placed;
+      _slots = placed;
       _availableWords = round.scrambledTiles
           .where((t) => !used.contains(t.id))
           .toList();
@@ -369,19 +436,26 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
       final totalRounds = _rounds.length;
       final wrongWordIds = List<int>.from(_wrongWordIds);
 
+      final args = ModalRoute.of(context)!.settings.arguments as Map;
+      final score = GameScore.fromArgs(
+        args,
+        gameCorrect: _correctCount,
+        gameTotal: _rounds.length,
+      );
+
       final pointsDelta =
           await DatabaseService.instance.computePointsDeltaForBatch(
         studentId: _studentId,
         batchId: _batchId,
-        newScore: _correctCount,
+        newScore: score.correct,
       );
 
       final attemptId = await DatabaseService.instance.saveQuizAttempt(
         QuizAttempt(
           studentId: _studentId,
           batchId: _batchId,
-          score: _correctCount,
-          totalQuestions: totalRounds,
+          score: score.correct,
+          totalQuestions: score.total,
           pointsEarned: pointsDelta,
           wrongWordIdsJson: wrongWordIds.isEmpty
               ? null
@@ -478,8 +552,8 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
       Navigator.of(context).pushReplacementNamed(
         '/results',
         arguments: {
-          'score': _correctCount,
-          'totalQuestions': totalRounds,
+          'score': score.correct,
+          'totalQuestions': score.total,
           'pointsDelta': pointsDelta,
           'gradeLevel': _gradeLevel,
           'difficulty': _difficulty,
@@ -542,13 +616,10 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
     );
   }
 
-  /// Uniform tile width based on the longest word in the sentence.
-  /// All slots and bank tiles use the same width for visual consistency.
   double _tileWidthFor(_SentenceRound round) {
     final longest = round.targetSentence
         .map((s) => s.length)
         .fold<int>(0, (a, b) => a > b ? a : b);
-    // ~11px per char + 24px padding
     final computed = (longest * 11.0) + 24.0;
     return computed.clamp(_minTileWidth, _maxTileWidth);
   }
@@ -571,7 +642,6 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
               children: [
                 const SizedBox(height: 4),
 
-                // Yse — top
                 YseReactionOverlay(
                   controller: _reaction,
                   size: 150,
@@ -579,7 +649,6 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
 
                 const SizedBox(height: AppSpacing.sm),
 
-                // Big centered image
                 Center(
                   child: Container(
                     width: imageSize,
@@ -607,7 +676,6 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
 
                 const SizedBox(height: AppSpacing.sm),
 
-                // Definition
                 if (round.definition.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(
@@ -627,11 +695,10 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
 
                 const SizedBox(height: AppSpacing.md),
 
-                // Instruction
                 Text(
-                  _wrongAttemptsThisRound == 0
+                  _submissionsThisRound == 0
                       ? 'Tap the words to build the sentence'
-                      : 'Try again — you can do this!',
+                      : 'Fix the red tiles — you can do this!',
                   textAlign: TextAlign.center,
                   style: AppText.caption.copyWith(
                     fontSize: 13,
@@ -641,7 +708,6 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
 
                 const SizedBox(height: AppSpacing.md),
 
-                // Sentence slots
                 _buildSlots(round, tileWidth),
 
                 const SizedBox(height: AppSpacing.xxl),
@@ -650,7 +716,6 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
           ),
         ),
 
-        // Word bank — fixed at bottom, thumb-reachable
         Container(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
@@ -727,47 +792,55 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
     );
   }
 
-  Color _borderColorForSlot(bool isFilled) {
-    if (_glowState == _GlowState.correct && isFilled) {
-      return AppColors.accentGreen;
-    }
-    if (_glowState == _GlowState.wrong && isFilled) {
-      return AppColors.accentCoral;
-    }
-    return isFilled ? AppColors.accentTeal : AppColors.textMuted;
-  }
-
-  List<BoxShadow>? _glowForSlot(bool isFilled) {
-    if (!isFilled) return null;
-    if (_glowState == _GlowState.correct) {
-      return [
-        BoxShadow(
-          color: AppColors.accentGreen.withValues(alpha: 0.65),
-          blurRadius: 20,
-          spreadRadius: 3,
-        ),
-      ];
-    }
-    if (_glowState == _GlowState.wrong) {
-      return [
-        BoxShadow(
-          color: AppColors.accentCoral.withValues(alpha: 0.65),
-          blurRadius: 20,
-          spreadRadius: 3,
-        ),
-      ];
-    }
-    return null;
-  }
-
   Widget _buildSlots(_SentenceRound round, double tileWidth) {
     return Wrap(
       alignment: WrapAlignment.center,
       spacing: 6,
       runSpacing: 8,
-      children: List.generate(_placedWords.length, (i) {
-        final tile = _placedWords[i];
-        final isFilled = tile != null;
+      children: List.generate(_slots.length, (i) {
+        final slot = _slots[i];
+        final hasTile = slot.tile != null;
+
+        // Colors by state
+        Color borderColor;
+        Color fillColor;
+        Color textColor;
+        List<BoxShadow>? glow;
+
+        switch (slot.state) {
+          case _SlotState.correct:
+            borderColor = AppColors.accentGreen;
+            fillColor = AppColors.accentGreen.withValues(alpha: 0.14);
+            textColor = AppColors.textGreen;
+            glow = [
+              BoxShadow(
+                color: AppColors.accentGreen.withValues(alpha: 0.55),
+                blurRadius: 16,
+                spreadRadius: 2,
+              ),
+            ];
+            break;
+          case _SlotState.wrong:
+            borderColor = AppColors.accentCoral;
+            fillColor = AppColors.accentCoral.withValues(alpha: 0.14);
+            textColor = AppColors.textCoral;
+            glow = [
+              BoxShadow(
+                color: AppColors.accentCoral.withValues(alpha: 0.55),
+                blurRadius: 16,
+                spreadRadius: 2,
+              ),
+            ];
+            break;
+          case _SlotState.pending:
+          case _SlotState.empty:
+            borderColor =
+                hasTile ? AppColors.accentTeal : AppColors.textMuted;
+            fillColor = hasTile ? AppColors.surface : Colors.transparent;
+            textColor = AppColors.textPrimary;
+            glow = null;
+            break;
+        }
 
         return GestureDetector(
           onTap: () => _onSlotTap(i),
@@ -777,23 +850,14 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
             height: _bankTileHeight,
             padding: const EdgeInsets.symmetric(horizontal: 6),
             decoration: BoxDecoration(
-              color: isFilled
-                  ? (_glowState == _GlowState.correct
-                      ? AppColors.accentGreen.withValues(alpha: 0.12)
-                      : _glowState == _GlowState.wrong
-                          ? AppColors.accentCoral.withValues(alpha: 0.12)
-                          : AppColors.surface)
-                  : Colors.transparent,
+              color: fillColor,
               borderRadius: BorderRadius.circular(AppRadius.small),
-              border: Border.all(
-                color: _borderColorForSlot(isFilled),
-                width: 2.5,
-              ),
-              boxShadow: _glowForSlot(isFilled),
+              border: Border.all(color: borderColor, width: 2.5),
+              boxShadow: glow,
             ),
             child: Center(
               child: Text(
-                tile?.text ?? '',
+                slot.tile?.text ?? '',
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
@@ -801,11 +865,7 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
                   fontFamily: 'Nunito',
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
-                  color: _glowState == _GlowState.correct && isFilled
-                      ? AppColors.textGreen
-                      : _glowState == _GlowState.wrong && isFilled
-                          ? AppColors.textCoral
-                          : AppColors.textPrimary,
+                  color: textColor,
                 ),
               ),
             ),
@@ -817,7 +877,6 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
 
   Widget _buildWordBank(_SentenceRound round, double tileWidth) {
     if (_availableWords.isEmpty) {
-      // Reserve height so layout doesn't jump when all words are placed
       return const SizedBox(height: 52);
     }
 
@@ -867,6 +926,7 @@ class _SentenceRound {
   final int wordId;
   final List<String> targetSentence;
   final String correctAudioPath;
+  final String sentenceAudioAsset;
   final String imagePath;
   final String definition;
   final List<_WordTile> scrambledTiles;
@@ -875,6 +935,7 @@ class _SentenceRound {
     required this.wordId,
     required this.targetSentence,
     required this.correctAudioPath,
+    required this.sentenceAudioAsset,
     required this.imagePath,
     required this.definition,
     required this.scrambledTiles,
@@ -886,4 +947,12 @@ class _WordTile {
   final String text;
 
   _WordTile({required this.id, required this.text});
+}
+
+/// A single slot in the sentence. Holds the placed tile + validation state.
+class _Slot {
+  _WordTile? tile;
+  _SlotState state;
+
+  _Slot({this.tile, this.state = _SlotState.empty});
 }

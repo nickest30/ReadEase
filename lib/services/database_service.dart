@@ -28,7 +28,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 14,
+      version: 15,
       onCreate: _createTables,
       onUpgrade: _upgradeTables,
     );
@@ -72,6 +72,7 @@ class DatabaseService {
         lesson_cue TEXT DEFAULT '',
         definition TEXT DEFAULT '',
         sample_sentence TEXT DEFAULT '',
+        sample_sentence_audio TEXT,
         source TEXT DEFAULT '',
         sensitivity_reviewed INTEGER DEFAULT 0,
         sensitivity_notes TEXT,
@@ -192,6 +193,7 @@ class DatabaseService {
         theme TEXT NOT NULL,
         cultural_elements_json TEXT,
         game_type TEXT
+        passage_id TEXT
       )
     ''');
 
@@ -428,10 +430,43 @@ class DatabaseService {
       )
     ''');
 
-    
+    // ── Passage tables (v15) ──
+    await db.execute('''
+      CREATE TABLE passages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        passage_key TEXT NOT NULL UNIQUE,
+        grade_level INTEGER NOT NULL,
+        difficulty TEXT NOT NULL,
+        title TEXT NOT NULL,
+        illustration TEXT NOT NULL,
+        word_count INTEGER NOT NULL
+      )
+    ''');
 
+    await db.execute('''
+      CREATE TABLE passage_sentences (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        passage_id INTEGER NOT NULL,
+        sentence_index INTEGER NOT NULL,
+        text TEXT NOT NULL,
+        audio TEXT NOT NULL,
+        FOREIGN KEY (passage_id) REFERENCES passages (id)
+      )
+    ''');
 
-
+    await db.execute('''
+      CREATE TABLE passage_questions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        passage_id INTEGER NOT NULL,
+        stem TEXT NOT NULL,
+        question_type TEXT NOT NULL,
+        correct_answer TEXT NOT NULL,
+        distractors_json TEXT NOT NULL,
+        show_image INTEGER DEFAULT 0,
+        order_index INTEGER NOT NULL,
+        FOREIGN KEY (passage_id) REFERENCES passages (id)
+      )
+    ''');
 
   }
 
@@ -862,6 +897,64 @@ class DatabaseService {
             button_label TEXT NOT NULL,
             pose_asset TEXT NOT NULL,
             audio_asset TEXT NOT NULL
+          )
+        ''');
+      } catch (_) {}
+    }
+
+    if (oldVersion < 14) {
+      try {
+        await db.execute(
+          'ALTER TABLE words ADD COLUMN sample_sentence_audio TEXT',
+        );
+      } catch (_) {
+      }
+    }
+
+    if (oldVersion < 15) {
+      try {
+        await db.execute(
+          'ALTER TABLE batches ADD COLUMN passage_id TEXT',
+        );
+      } catch (_) {}
+
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS passages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            passage_key TEXT NOT NULL UNIQUE,
+            grade_level INTEGER NOT NULL,
+            difficulty TEXT NOT NULL,
+            title TEXT NOT NULL,
+            illustration TEXT NOT NULL,
+            word_count INTEGER NOT NULL
+          )
+        ''');
+      } catch (_) {}
+
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS passage_sentences (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            passage_id INTEGER NOT NULL,
+            sentence_index INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            audio TEXT NOT NULL
+          )
+        ''');
+      } catch (_) {}
+
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS passage_questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            passage_id INTEGER NOT NULL,
+            stem TEXT NOT NULL,
+            question_type TEXT NOT NULL,
+            correct_answer TEXT NOT NULL,
+            distractors_json TEXT NOT NULL,
+            show_image INTEGER DEFAULT 0,
+            order_index INTEGER NOT NULL
           )
         ''');
       } catch (_) {}
@@ -1798,17 +1891,77 @@ class DatabaseService {
     return Passage.fromMap(maps.first);
   }
 
-  /// Get all sentences for a passage.
-  Future<List<PassageSentence>> getSentencesForPassage(
-      int passageId) async {
+  // ============================================================
+  // PASSAGE METHODS (v15)
+  // ============================================================
+
+  Future<int> insertPassage(Passage passage) async {
     final db = await database;
-    final maps = await db.query(
+    return await db.insert('passages', passage.toMap());
+  }
+
+  Future<int> insertPassageSentence(PassageSentence sentence) async {
+    final db = await database;
+    return await db.insert('passage_sentences', sentence.toMap());
+  }
+
+  Future<int> insertPassageQuestion(PassageQuestion q) async {
+    final db = await database;
+    return await db.insert('passage_questions', q.toMap());
+  }
+
+  /// Get a passage by its key (e.g. "grade4_easy_passage01").
+  Future<Passage?> getPassageByKey(String passageKey) async {
+    final db = await database;
+    final rows = await db.query(
+      'passages',
+      where: 'passage_key = ?',
+      whereArgs: [passageKey],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return Passage.fromMap(rows.first);
+  }
+
+  Future<List<PassageSentence>> getSentencesForPassage(int passageId) async {
+    final db = await database;
+    final rows = await db.query(
       'passage_sentences',
       where: 'passage_id = ?',
       whereArgs: [passageId],
       orderBy: 'sentence_index ASC',
     );
-    return maps.map((m) => PassageSentence.fromMap(m)).toList();
+    return rows.map((m) => PassageSentence.fromMap(m)).toList();
+  }
+
+  Future<List<PassageQuestion>> getQuestionsForPassage(int passageId) async {
+    final db = await database;
+    final rows = await db.query(
+      'passage_questions',
+      where: 'passage_id = ?',
+      whereArgs: [passageId],
+      orderBy: 'order_index ASC',
+    );
+    return rows.map((m) => PassageQuestion.fromMap(m)).toList();
+  }
+
+  Future<void> clearPassagesForGrade(int gradeLevel) async {
+    final db = await database;
+    final rows = await db.query(
+      'passages',
+      columns: ['id'],
+      where: 'grade_level = ?',
+      whereArgs: [gradeLevel],
+    );
+    for (final r in rows) {
+      final id = r['id'] as int;
+      await db.delete('passage_sentences',
+          where: 'passage_id = ?', whereArgs: [id]);
+      await db.delete('passage_questions',
+          where: 'passage_id = ?', whereArgs: [id]);
+    }
+    await db.delete('passages',
+        where: 'grade_level = ?', whereArgs: [gradeLevel]);
   }
 
   // ============================================================

@@ -1,0 +1,1084 @@
+{
+  "content_version": "1.0.0",
+  "grade": 4,
+  "lesson_intros": [
+    {
+      "grade": 4,
+      "difficulty": "easy",
+      "header": "Welcome to Easy Level!",
+      "body": "Let's learn about fiesta time. Ready to start?",
+      "button_label": "LET'S GO!",
+      "pose_asset": "yse_nerd.png",
+      "audio_asset": "lesson_intro_g4_easy.wav"
+    },
+    {
+      "grade": 4,
+      "difficulty": "medium",
+      "header": "Welcome to Medium Level!",
+      "body": "Time to explore Philippine landmarks. You're doing great!",
+      "button_label": "LET'S GO!",
+      "pose_asset": "yse_nerd.png",
+      "audio_asset": "lesson_intro_g4_medium.wav"
+    },
+    {
+      "grade": 4,
+      "difficulty": "hard",
+      "header": "Welcome to Hard Level!",
+      "body": "Let's meet our heroes. You've got this!",
+      "button_label": "LET'S GO!",
+      "pose_asset": "yse_nerd.png",
+      "audio_asset": "lesson_intro_g4_hard.wav"
+    }
+  ],
+  "game_intros": [
+    {"game_type": "memory_match", "header": "Match the Pairs!", "body": "Tap two cards to find the matching pairs.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_memory_match.wav"},
+    {"game_type": "bubble_pop", "header": "Pop the Picture!", "body": "Tap the bubble with the correct picture.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_bubble_pop.wav"},
+    {"game_type": "drag_drop", "header": "Drag the Word!", "body": "Drag the word to the matching picture.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_drag_drop.wav"},
+    {"game_type": "word_scramble", "header": "Spell the Word!", "body": "Rearrange the letters to spell the word.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_word_scramble.wav"},
+    {"game_type": "sentence_builder", "header": "Build a Sentence!", "body": "Put the words in order to make a sentence.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_sentence_builder.wav"},
+    {"game_type": "floor_is_lava", "header": "Escape the Lava!", "body": "Guess the word before the lava rises!", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_floor_is_lava.wav"},
+    {"game_type": "word_hunt", "header": "Find the Words!", "body": "Find the hidden words in the letter grid.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_word_hunt.wav"},
+    {"game_type": "category_sort", "header": "Sort the Words!", "body": "Drag each word into the correct group.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_category_sort.wav"},
+    {"game_type": "crossword_lite", "header": "Fill the Boxes!", "body": "Fill the boxes with the correct words.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_crossword_lite.wav"},
+    {"game_type": "timed_blitz", "header": "Beat the Clock!", "body": "Answer as fast as you can before time runs out.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_timed_blitz.wav"}
+  ],
+  "passages": [
+    {
+      "id": "grade4_easy_passage01",
+      "difficulty": "easy",
+      "title": "Fiesta sa Barangay",
+      "illustration": "grade4_easy_passage01_illustration.png",
+      "word_count": 72,
+      "sentences": [
+        {"index": 1, "text": "Today is fiesta day in our barangay.", "audio": "grade4_easy_passage01_s01.wav"},
+        {"index": 2, "text": "Everyone is happy and excited.", "audio": "grade4_easy_passage01_s02.wav"},
+        {"index": 3, "text": "The streets are filled with bright lights and colorful bands.", "audio": "grade4_easy_passage01_s03.wav"},
+        {"index": 4, "text": "Music plays all day long.", "audio": "grade4_easy_passage01_s04.wav"},
+        {"index": 5, "text": "Children dance and sing with joy.", "audio": "grade4_easy_passage01_s05.wav"},
+        {"index": 6, "text": "The parade has many people in beautiful costumes.", "audio": "grade4_easy_passage01_s06.wav"},
+        {"index": 7, "text": "There is plenty of food for everyone.", "audio": "grade4_easy_passage01_s07.wav"},
+        {"index": 8, "text": "What a wonderful celebration!", "audio": "grade4_easy_passage01_s08.wav"}
+      ],
+      "comprehension_questions": [
+        {"stem": "Where is the fiesta happening?", "type": "literal", "correct": "In the barangay", "distractors": ["At school", "At the market", "At the beach"], "show_image": false},
+        {"stem": "What fills the streets?", "type": "literal", "correct": "Bright lights and colorful bands", "distractors": ["Cars and trucks", "Rain and wind", "Trees and flowers"], "show_image": false},
+        {"stem": "What plays all day long?", "type": "literal", "correct": "Music", "distractors": ["Video games", "Movies", "Sports"], "show_image": false},
+        {"stem": "What does the parade have?", "type": "literal", "correct": "People in costumes", "distractors": ["Animals", "Cars", "Trucks"], "show_image": false},
+        {"stem": "How do people feel during the fiesta?", "type": "inferential", "correct": "Happy and excited", "distractors": ["Bored", "Tired", "Angry"], "show_image": false},
+        {"stem": "What is the passage mainly about?", "type": "inferential", "correct": "A fiesta celebration", "distractors": ["A school trip", "A rainy day", "A family dinner"], "show_image": false}
+      ]
+    },
+    {
+      "id": "grade4_medium_passage02",
+      "difficulty": "medium",
+      "title": "Mayon Volcano",
+      "illustration": "grade4_medium_passage02_illustration.png",
+      "word_count": 78,
+      "sentences": [
+        {"index": 1, "text": "Mayon Volcano is in the province of Albay.", "audio": "grade4_medium_passage02_s01.wav"},
+        {"index": 2, "text": "It is famous for its perfect cone shape.", "audio": "grade4_medium_passage02_s02.wav"},
+        {"index": 3, "text": "Every year, many people visit this beautiful mountain.", "audio": "grade4_medium_passage02_s03.wav"},
+        {"index": 4, "text": "Some tourists go to the beach to see the view.", "audio": "grade4_medium_passage02_s04.wav"},
+        {"index": 5, "text": "Others climb the hills and explore the caves nearby.", "audio": "grade4_medium_passage02_s05.wav"},
+        {"index": 6, "text": "There is also a beautiful garden at the foot of the mountain.", "audio": "grade4_medium_passage02_s06.wav"},
+        {"index": 7, "text": "Mayon is one of the most beautiful volcanoes in the world.", "audio": "grade4_medium_passage02_s07.wav"},
+        {"index": 8, "text": "Everyone agrees it is a wonderful place to visit.", "audio": "grade4_medium_passage02_s08.wav"}
+      ],
+      "comprehension_questions": [
+        {"stem": "Where is Mayon Volcano?", "type": "literal", "correct": "In Albay", "distractors": ["In Manila", "In Cebu", "In Baguio"], "show_image": false},
+        {"stem": "What is Mayon famous for?", "type": "literal", "correct": "Its perfect cone shape", "distractors": ["Its height", "Its color", "Its size"], "show_image": false},
+        {"stem": "Where do some tourists go?", "type": "literal", "correct": "To the beach", "distractors": ["To the city", "To the mall", "To the airport"], "show_image": false},
+        {"stem": "What is at the foot of the mountain?", "type": "literal", "correct": "A garden", "distractors": ["A school", "A market", "A factory"], "show_image": false},
+        {"stem": "What do people climb?", "type": "literal", "correct": "Hills", "distractors": ["Trees", "Walls", "Stairs"], "show_image": false},
+        {"stem": "What do people explore?", "type": "inferential", "correct": "Caves", "distractors": ["Rivers", "Lakes", "Roads"], "show_image": false},
+        {"stem": "Why do tourists visit Mayon?", "type": "inferential", "correct": "To see its beauty", "distractors": ["To swim", "To fish", "To study"], "show_image": false},
+        {"stem": "How might tourists feel when they see Mayon?", "type": "inferential", "correct": "Amazed", "distractors": ["Scared", "Bored", "Sleepy"], "show_image": false},
+        {"stem": "What can you do at Mayon based on the passage?", "type": "inferential", "correct": "Explore the caves", "distractors": ["Ski", "Skate", "Surf"], "show_image": false},
+        {"stem": "What is the main idea of the passage?", "type": "critical", "correct": "Mayon is a beautiful place to visit", "distractors": ["Mayon is dangerous", "Mayon is empty", "Mayon is boring"], "show_image": false}
+      ]
+    },
+    {
+      "id": "grade4_hard_passage03",
+      "difficulty": "hard",
+      "title": "Our Heroes",
+      "illustration": "grade4_hard_passage03_illustration.png",
+      "word_count": 105,
+      "sentences": [
+        {"index": 1, "text": "Our heroes are brave people.", "audio": "grade4_hard_passage03_s01.wav"},
+        {"index": 2, "text": "They protect our nation with courage.", "audio": "grade4_hard_passage03_s02.wav"},
+        {"index": 3, "text": "They serve our country with honor and loyalty.", "audio": "grade4_hard_passage03_s03.wav"},
+        {"index": 4, "text": "They fight for freedom and defend our flag.", "audio": "grade4_hard_passage03_s04.wav"},
+        {"index": 5, "text": "Many heroes made big sacrifices.", "audio": "grade4_hard_passage03_s05.wav"},
+        {"index": 6, "text": "They were strong and proud.", "audio": "grade4_hard_passage03_s06.wav"},
+        {"index": 7, "text": "They showed us what it means to be a true leader.", "audio": "grade4_hard_passage03_s07.wav"},
+        {"index": 8, "text": "Some gave their lives so we could be free.", "audio": "grade4_hard_passage03_s08.wav"},
+        {"index": 9, "text": "Others worked hard to make our country better.", "audio": "grade4_hard_passage03_s09.wav"},
+        {"index": 10, "text": "They never gave up, even when things were difficult.", "audio": "grade4_hard_passage03_s10.wav"},
+        {"index": 11, "text": "We must be kind and remember them every day.", "audio": "grade4_hard_passage03_s11.wav"},
+        {"index": 12, "text": "Their glory will never fade.", "audio": "grade4_hard_passage03_s12.wav"}
+      ],
+      "comprehension_questions": [
+        {"stem": "Who protects our nation?", "type": "literal", "correct": "Our heroes", "distractors": ["Our teachers", "Our doctors", "Our farmers"], "show_image": false},
+        {"stem": "With what do heroes serve our country?", "type": "literal", "correct": "Honor and loyalty", "distractors": ["Money and power", "Fame and fortune", "Food and water"], "show_image": false},
+        {"stem": "What do heroes fight for?", "type": "literal", "correct": "Freedom", "distractors": ["Food", "Money", "Land"], "show_image": false},
+        {"stem": "What did many heroes make?", "type": "literal", "correct": "Big sacrifices", "distractors": ["Big mistakes", "Big plans", "Big promises"], "show_image": false},
+        {"stem": "How were the heroes described?", "type": "literal", "correct": "Strong and proud", "distractors": ["Weak and shy", "Tall and thin", "Slow and quiet"], "show_image": false},
+        {"stem": "What will never fade?", "type": "literal", "correct": "Their glory", "distractors": ["Their name", "Their flag", "Their country"], "show_image": false},
+        {"stem": "Why did some heroes give their lives?", "type": "inferential", "correct": "So we could be free", "distractors": ["So we could be rich", "So we could be famous", "So we could be strong"], "show_image": false},
+        {"stem": "Why are heroes called brave?", "type": "inferential", "correct": "Because they face danger", "distractors": ["Because they are strong", "Because they are smart", "Because they are fast"], "show_image": false},
+        {"stem": "What kind of people are heroes based on the passage?", "type": "inferential", "correct": "Selfless and loyal", "distractors": ["Selfish and greedy", "Lazy and slow", "Rich and famous"], "show_image": false},
+        {"stem": "How should we feel about our heroes?", "type": "inferential", "correct": "Grateful", "distractors": ["Afraid", "Angry", "Confused"], "show_image": false},
+        {"stem": "Why did the author write this passage?", "type": "inferential", "correct": "To honor our heroes", "distractors": ["To sell a book", "To teach Math", "To tell a joke"], "show_image": false},
+        {"stem": "What is the main idea of the passage?", "type": "critical", "correct": "We should remember and honor our heroes", "distractors": ["Heroes are just stories", "Heroes are only for books", "Heroes should be forgotten"], "show_image": false}
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "difficulty": "easy",
+      "theme": "Fiesta Time",
+      "passage_id": "grade4_easy_passage01",
+      "quiz_config": {
+        "quiz_size": 6,
+        "buffer_size": 3,
+        "randomized": 1,
+        "passing_threshold": 70
+      },
+      "game_config": {
+        "game_type": "drag_drop",
+        "rounds": 6,
+        "points_per_correct": 5,
+        "max_points": 30,
+        "pass_threshold": 70
+      },
+      "batches": [
+        {
+          "batch_index": 1,
+          "words": [
+            {
+              "text": "Fiesta",
+              "category": "celebration",
+              "image": "grade4_easy_fiesta.png",
+              "audio": "grade4_easy_fiesta.wav",
+              "lesson_cue": "This is a fiesta... F, I, E, S, T, A... Fiesta!",
+              "lesson_cue_audio": "grade4_easy_fiesta_cue.wav",
+              "definition": "A big Filipino celebration.",
+              "sample_sentence": "The fiesta starts next week.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Fiesta",
+                  "distractors": ["Siesta", "Festa", "Forest"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Parade",
+              "category": "celebration",
+              "image": "grade4_easy_parade.png",
+              "audio": "grade4_easy_parade.wav",
+              "lesson_cue": "This is a parade... P, A, R, A, D, E... Parade!",
+              "lesson_cue_audio": "grade4_easy_parade_cue.wav",
+              "definition": "A line of people moving together.",
+              "sample_sentence": "The parade has many people.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Parade",
+                  "distractors": ["Palace", "Paradee", "Palm"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Food",
+              "category": "food",
+              "image": "grade4_easy_food.png",
+              "audio": "grade4_easy_food.wav",
+              "lesson_cue": "This is food... F, O, O, D... Food!",
+              "lesson_cue_audio": "grade4_easy_food_cue.wav",
+              "definition": "Things that we eat.",
+              "sample_sentence": "There is food for everyone.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Food",
+                  "distractors": ["Foot", "Mood", "Wood"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Music",
+              "category": "sound",
+              "image": "grade4_easy_music.png",
+              "audio": "grade4_easy_music.wav",
+              "lesson_cue": "This is music... M, U, S, I, C... Music!",
+              "lesson_cue_audio": "grade4_easy_music_cue.wav",
+              "definition": "Sounds made by voices or instruments.",
+              "sample_sentence": "The music is loud and joyful.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Music",
+                  "distractors": ["Mosaic", "Musing", "Museum"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Dance",
+              "category": "action",
+              "image": "grade4_easy_dance.png",
+              "audio": "grade4_easy_dance.wav",
+              "lesson_cue": "This is a dance... D, A, N, C, E... Dance!",
+              "lesson_cue_audio": "grade4_easy_dance_cue.wav",
+              "definition": "Moving your body to music.",
+              "sample_sentence": "Children dance with joy.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Dance",
+                  "distractors": ["Dancer", "Fence", "Chance"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Light",
+              "category": "object",
+              "image": "grade4_easy_light.png",
+              "audio": "grade4_easy_light.wav",
+              "lesson_cue": "This is a light... L, I, G, H, T... Light!",
+              "lesson_cue_audio": "grade4_easy_light_cue.wav",
+              "definition": "Something that makes things bright.",
+              "sample_sentence": "Bright lights fill the street.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Light",
+                  "distractors": ["Night", "Right", "Slight"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Color",
+              "category": "quality",
+              "image": "grade4_easy_color.png",
+              "audio": "grade4_easy_color.wav",
+              "lesson_cue": "This is a color... C, O, L, O, R... Color!",
+              "lesson_cue_audio": "grade4_easy_color_cue.wav",
+              "definition": "What we see like red, blue, or yellow.",
+              "sample_sentence": "Every color is on display.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What do we see on the banderitas?",
+                  "type": "inferential",
+                  "correct": "Color",
+                  "distractors": ["Cover", "Colder", "Collar"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Band",
+              "category": "group",
+              "image": "grade4_easy_band.png",
+              "audio": "grade4_easy_band.wav",
+              "lesson_cue": "This is a band... B, A, N, D... Band!",
+              "lesson_cue_audio": "grade4_easy_band_cue.wav",
+              "definition": "A group of people who play music.",
+              "sample_sentence": "The band plays all day.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Band",
+                  "distractors": ["Bend", "Bind", "Bond"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Happy",
+              "category": "feeling",
+              "image": "grade4_easy_happy.png",
+              "audio": "grade4_easy_happy.wav",
+              "lesson_cue": "This is happy... H, A, P, P, Y... Happy!",
+              "lesson_cue_audio": "grade4_easy_happy_cue.wav",
+              "definition": "Feeling glad and joyful.",
+              "sample_sentence": "We are happy at the fiesta.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "How do we feel during a fiesta?",
+                  "type": "inferential",
+                  "correct": "Happy",
+                  "distractors": ["Hamper", "Handy", "Hasty"],
+                  "show_image": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "difficulty": "medium",
+      "theme": "Philippine Landmarks",
+      "passage_id": "grade4_medium_passage02",
+      "quiz_config": {
+        "quiz_size": 10,
+        "buffer_size": 3,
+        "randomized": 1,
+        "passing_threshold": 70
+      },
+      "game_config": {
+        "game_type": "sentence_builder",
+        "rounds": 10,
+        "points_per_correct": 5,
+        "max_points": 50,
+        "pass_threshold": 70
+      },
+      "batches": [
+        {
+          "batch_index": 1,
+          "words": [
+            {
+              "text": "Island",
+              "category": "place",
+              "image": "grade4_medium_island.png",
+              "audio": "grade4_medium_island.wav",
+              "lesson_cue": "This is an island... I, S, L, A, N, D... Island!",
+              "lesson_cue_audio": "grade4_medium_island_cue.wav",
+              "definition": "Land surrounded by water.",
+              "sample_sentence": "The island has many palm trees.",
+              "sample_sentence_audio": "grade4_medium_island_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Island",
+                  "distractors": ["Ireland", "Iceland", "Icelander"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Beach",
+              "category": "place",
+              "image": "grade4_medium_beach.png",
+              "audio": "grade4_medium_beach.wav",
+              "lesson_cue": "This is a beach... B, E, A, C, H... Beach!",
+              "lesson_cue_audio": "grade4_medium_beach_cue.wav",
+              "definition": "Sandy land beside the sea.",
+              "sample_sentence": "We play on the beach.",
+              "sample_sentence_audio": "grade4_medium_beach_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Beach",
+                  "distractors": ["Beech", "Peach", "Reach"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Bridge",
+              "category": "structure",
+              "image": "grade4_medium_bridge.png",
+              "audio": "grade4_medium_bridge.wav",
+              "lesson_cue": "This is a bridge... B, R, I, D, G, E... Bridge!",
+              "lesson_cue_audio": "grade4_medium_bridge_cue.wav",
+              "definition": "A path built over water or a road.",
+              "sample_sentence": "The bridge crosses the river.",
+              "sample_sentence_audio": "grade4_medium_bridge_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Bridge",
+                  "distractors": ["Bribe", "Bridle", "Bright"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Valley",
+              "category": "place",
+              "image": "grade4_medium_valley.png",
+              "audio": "grade4_medium_valley.wav",
+              "lesson_cue": "This is a valley... V, A, L, L, E, Y... Valley!",
+              "lesson_cue_audio": "grade4_medium_valley_cue.wav",
+              "definition": "Low land between hills or mountains.",
+              "sample_sentence": "The valley is green and wide.",
+              "sample_sentence_audio": "grade4_medium_valley_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Valley",
+                  "distractors": ["Volley", "Village", "Value"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Volcano",
+              "category": "nature",
+              "image": "grade4_medium_volcano.png",
+              "audio": "grade4_medium_volcano.wav",
+              "lesson_cue": "This is a volcano... V, O, L, C, A, N, O... Volcano!",
+              "lesson_cue_audio": "grade4_medium_volcano_cue.wav",
+              "definition": "A mountain that can erupt.",
+              "sample_sentence": "The volcano has a cone shape.",
+              "sample_sentence_audio": "grade4_medium_volcano_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Volcano",
+                  "distractors": ["Volleyball", "Volume", "Volunteer"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Waterfall",
+              "category": "nature",
+              "image": "grade4_medium_waterfall.png",
+              "audio": "grade4_medium_waterfall.wav",
+              "lesson_cue": "This is a waterfall... W, A, T, E, R, F, A, L, L... Waterfall!",
+              "lesson_cue_audio": "grade4_medium_waterfall_cue.wav",
+              "definition": "Water falling from a high place.",
+              "sample_sentence": "The waterfall is very tall.",
+              "sample_sentence_audio": "grade4_medium_waterfall_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Waterfall",
+                  "distractors": ["Wasteland", "Watchman", "Wanderer"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Cave",
+              "category": "place",
+              "image": "grade4_medium_cave.png",
+              "audio": "grade4_medium_cave.wav",
+              "lesson_cue": "This is a cave... C, A, V, E... Cave!",
+              "lesson_cue_audio": "grade4_medium_cave_cue.wav",
+              "definition": "A large hole in a mountain or rock.",
+              "sample_sentence": "The cave is dark inside.",
+              "sample_sentence_audio": "grade4_medium_cave_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Cave",
+                  "distractors": ["Cape", "Care", "Case"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Hill",
+              "category": "nature",
+              "image": "grade4_medium_hill.png",
+              "audio": "grade4_medium_hill.wav",
+              "lesson_cue": "This is a hill... H, I, L, L... Hill!",
+              "lesson_cue_audio": "grade4_medium_hill_cue.wav",
+              "definition": "A small mountain.",
+              "sample_sentence": "We climb the small hill.",
+              "sample_sentence_audio": "grade4_medium_hill_sentence.wav",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What is smaller than a mountain?",
+                  "type": "inferential",
+                  "correct": "Hill",
+                  "distractors": ["Hall", "Hell", "Hull"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Garden",
+              "category": "place",
+              "image": "grade4_medium_garden.png",
+              "audio": "grade4_medium_garden.wav",
+              "lesson_cue": "This is a garden... G, A, R, D, E, N... Garden!",
+              "lesson_cue_audio": "grade4_medium_garden_cue.wav",
+              "definition": "A place where plants and flowers grow.",
+              "sample_sentence": "The garden has many flowers.",
+              "sample_sentence_audio": "grade4_medium_garden_sentence.wav",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Garden",
+                  "distractors": ["Guarded", "Garment", "Gardener"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Statue",
+              "category": "object",
+              "image": "grade4_medium_statue.png",
+              "audio": "grade4_medium_statue.wav",
+              "lesson_cue": "This is a statue... S, T, A, T, U, E... Statue!",
+              "lesson_cue_audio": "grade4_medium_statue_cue.wav",
+              "definition": "A figure made of stone or metal.",
+              "sample_sentence": "The statue stands in the park.",
+              "sample_sentence_audio": "grade4_medium_statue_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What is a figure made of stone?",
+                  "type": "inferential",
+                  "correct": "Statue",
+                  "distractors": ["Status", "Stature", "Stating"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Tower",
+              "category": "structure",
+              "image": "grade4_medium_tower.png",
+              "audio": "grade4_medium_tower.wav",
+              "lesson_cue": "This is a tower... T, O, W, E, R... Tower!",
+              "lesson_cue_audio": "grade4_medium_tower_cue.wav",
+              "definition": "A tall narrow building.",
+              "sample_sentence": "The tower is very old.",
+              "sample_sentence_audio": "grade4_medium_tower_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Tower",
+                  "distractors": ["Tonic", "Tinder", "Tougher"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Lantern",
+              "category": "object",
+              "image": "grade4_medium_lantern.png",
+              "audio": "grade4_medium_lantern.wav",
+              "lesson_cue": "This is a lantern... L, A, N, T, E, R, N... Lantern!",
+              "lesson_cue_audio": "grade4_medium_lantern_cue.wav",
+              "definition": "A light inside a case.",
+              "sample_sentence": "The lantern glows at night.",
+              "sample_sentence_audio": "grade4_medium_lantern_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What glows at night?",
+                  "type": "inferential",
+                  "correct": "Lantern",
+                  "distractors": ["Ladder", "Letter", "Linger"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Harbor",
+              "category": "place",
+              "image": "grade4_medium_harbor.png",
+              "audio": "grade4_medium_harbor.wav",
+              "lesson_cue": "This is a harbor... H, A, R, B, O, R... Harbor!",
+              "lesson_cue_audio": "grade4_medium_harbor_cue.wav",
+              "definition": "A safe place where boats stay.",
+              "sample_sentence": "The boats rest in the harbor.",
+              "sample_sentence_audio": "grade4_medium_harbor_sentence.wav",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Why do boats stay in a harbor?",
+                  "type": "inferential",
+                  "correct": "It is safe",
+                  "distractors": ["It is far", "It is dirty", "It is dry"],
+                  "show_image": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "difficulty": "hard",
+      "theme": "Our Heroes",
+      "passage_id": "grade4_hard_passage03",
+      "quiz_config": {
+        "quiz_size": 14,
+        "buffer_size": 3,
+        "randomized": 1,
+        "passing_threshold": 70
+      },
+      "game_config": {
+        "game_type": "floor_is_lava",
+        "rounds": 14,
+        "points_per_correct": 5,
+        "max_points": 70,
+        "pass_threshold": 70
+      },
+      "batches": [
+        {
+          "batch_index": 1,
+          "words": [
+            {
+              "text": "Hero",
+              "category": "hero",
+              "image": "grade4_hard_hero.png",
+              "audio": "grade4_hard_hero.wav",
+              "lesson_cue": "This is a hero... H, E, R, O... Hero!",
+              "lesson_cue_audio": "grade4_hard_hero_cue.wav",
+              "definition": "A brave person we admire.",
+              "sample_sentence": "Apolinario Mabini was a hero of our nation.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Hero",
+                  "distractors": ["Here", "Her", "Zero"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Brave",
+              "category": "trait",
+              "image": "grade4_hard_brave.png",
+              "audio": "grade4_hard_brave.wav",
+              "lesson_cue": "This is brave... B, R, A, V, E... Brave!",
+              "lesson_cue_audio": "grade4_hard_brave_cue.wav",
+              "definition": "Not afraid to face danger.",
+              "sample_sentence": "Andres Bonifacio was brave.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "How was Andres Bonifacio described?",
+                  "type": "inferential",
+                  "correct": "Brave",
+                  "distractors": ["Grave", "Braid", "Bravo"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Freedom",
+              "category": "concept",
+              "image": "grade4_hard_freedom.png",
+              "audio": "grade4_hard_freedom.wav",
+              "lesson_cue": "This is freedom... F, R, E, E, D, O, M... Freedom!",
+              "lesson_cue_audio": "grade4_hard_freedom_cue.wav",
+              "definition": "Being free to live your own life.",
+              "sample_sentence": "Jose Rizal fought for freedom.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Freedom",
+                  "distractors": ["Kingdom", "Wisdom", "Freezer"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Flag",
+              "category": "object",
+              "image": "grade4_hard_flag.png",
+              "audio": "grade4_hard_flag.wav",
+              "lesson_cue": "This is a flag... F, L, A, G... Flag!",
+              "lesson_cue_audio": "grade4_hard_flag_cue.wav",
+              "definition": "A symbol of our country.",
+              "sample_sentence": "Our flag has a sun and three stars.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Flag",
+                  "distractors": ["Flat", "Flap", "Flake"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Proud",
+              "category": "feeling",
+              "image": "grade4_hard_proud.png",
+              "audio": "grade4_hard_proud.wav",
+              "lesson_cue": "This is proud... P, R, O, U, D... Proud!",
+              "lesson_cue_audio": "grade4_hard_proud_cue.wav",
+              "definition": "Feeling pleased about something.",
+              "sample_sentence": "Lapulapu was proud of his people.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Proud",
+                  "distractors": ["Crowd", "Cloud", "Prove"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Defend",
+              "category": "action",
+              "image": "grade4_hard_defend.png",
+              "audio": "grade4_hard_defend.wav",
+              "lesson_cue": "This is defend... D, E, F, E, N, D... Defend!",
+              "lesson_cue_audio": "grade4_hard_defend_cue.wav",
+              "definition": "To protect from harm.",
+              "sample_sentence": "Antonio Luna defended our land.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What did Antonio Luna do for our land?",
+                  "type": "inferential",
+                  "correct": "Defend it",
+                  "distractors": ["Depend on it", "Defeat it", "Defect from it"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Honor",
+              "category": "concept",
+              "image": "grade4_hard_honor.png",
+              "audio": "grade4_hard_honor.wav",
+              "lesson_cue": "This is honor... H, O, N, O, R... Honor!",
+              "lesson_cue_audio": "grade4_hard_honor_cue.wav",
+              "definition": "Respect and good name.",
+              "sample_sentence": "Gregorio del Pilar showed honor.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Honor",
+                  "distractors": ["Honest", "Honey", "Hour"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Nation",
+              "category": "concept",
+              "image": "grade4_hard_nation.png",
+              "audio": "grade4_hard_nation.wav",
+              "lesson_cue": "This is a nation... N, A, T, I, O, N... Nation!",
+              "lesson_cue_audio": "grade4_hard_nation_cue.wav",
+              "definition": "A country and its people.",
+              "sample_sentence": "The nation has many islands.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Nation",
+                  "distractors": ["Station", "Mansion", "Native"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Serve",
+              "category": "action",
+              "image": "grade4_hard_serve.png",
+              "audio": "grade4_hard_serve.wav",
+              "lesson_cue": "This is serve... S, E, R, V, E... Serve!",
+              "lesson_cue_audio": "grade4_hard_serve_cue.wav",
+              "definition": "To help others.",
+              "sample_sentence": "Melchora Aquino served the people.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Serve",
+                  "distractors": ["Nerve", "Curve", "Preserve"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Protect",
+              "category": "action",
+              "image": "grade4_hard_protect.png",
+              "audio": "grade4_hard_protect.wav",
+              "lesson_cue": "This is protect... P, R, O, T, E, C, T... Protect!",
+              "lesson_cue_audio": "grade4_hard_protect_cue.wav",
+              "definition": "To keep safe from harm.",
+              "sample_sentence": "Sultan Kudarat protected his people.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What did Sultan Kudarat do for his people?",
+                  "type": "inferential",
+                  "correct": "Protect them",
+                  "distractors": ["Project them", "Protest them", "Prospect them"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Courage",
+              "category": "trait",
+              "image": "grade4_hard_courage.png",
+              "audio": "grade4_hard_courage.wav",
+              "lesson_cue": "This is courage... C, O, U, R, A, G, E... Courage!",
+              "lesson_cue_audio": "grade4_hard_courage_cue.wav",
+              "definition": "Being brave even when scared.",
+              "sample_sentence": "Gabriela Silang had great courage.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Courage",
+                  "distractors": ["Cottage", "Message", "Voyage"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Loyal",
+              "category": "trait",
+              "image": "grade4_hard_loyal.png",
+              "audio": "grade4_hard_loyal.wav",
+              "lesson_cue": "This is loyal... L, O, Y, A, L... Loyal!",
+              "lesson_cue_audio": "grade4_hard_loyal_cue.wav",
+              "definition": "Always staying true to someone.",
+              "sample_sentence": "Artemio Ricarte was loyal to his country.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "How was Artemio Ricarte to his country?",
+                  "type": "inferential",
+                  "correct": "Loyal",
+                  "distractors": ["Royal", "Local", "Lower"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Strong",
+              "category": "trait",
+              "image": "grade4_hard_strong.png",
+              "audio": "grade4_hard_strong.wav",
+              "lesson_cue": "This is strong... S, T, R, O, N, G... Strong!",
+              "lesson_cue_audio": "grade4_hard_strong_cue.wav",
+              "definition": "Having a lot of power.",
+              "sample_sentence": "Macli-ing Dulag was strong.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Strong",
+                  "distractors": ["String", "Stranger", "Stroke"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Sacrifice",
+              "category": "concept",
+              "image": "grade4_hard_sacrifice.png",
+              "audio": "grade4_hard_sacrifice.wav",
+              "lesson_cue": "This is sacrifice... S, A, C, R, I, F, I, C, E... Sacrifice!",
+              "lesson_cue_audio": "grade4_hard_sacrifice_cue.wav",
+              "definition": "Giving up something important for others.",
+              "sample_sentence": "The Gomburza made a great sacrifice.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Sacrifice",
+                  "distractors": ["Saturday", "Security", "Secondly"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Leader",
+              "category": "role",
+              "image": "grade4_hard_leader.png",
+              "audio": "grade4_hard_leader.wav",
+              "lesson_cue": "This is a leader... L, E, A, D, E, R... Leader!",
+              "lesson_cue_audio": "grade4_hard_leader_cue.wav",
+              "definition": "A person who guides others.",
+              "sample_sentence": "Emilio Aguinaldo was our first leader.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Leader",
+                  "distractors": ["Ladder", "Letter", "Lighter"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Kind",
+              "category": "trait",
+              "image": "grade4_hard_kind.png",
+              "audio": "grade4_hard_kind.wav",
+              "lesson_cue": "This is kind... K, I, N, D... Kind!",
+              "lesson_cue_audio": "grade4_hard_kind_cue.wav",
+              "definition": "Being nice to others.",
+              "sample_sentence": "Dr. Fe del Mundo was kind to children.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word is this?",
+                  "type": "literal",
+                  "correct": "Kind",
+                  "distractors": ["Mind", "Find", "Wind"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Glory",
+              "category": "concept",
+              "image": "grade4_hard_glory.png",
+              "audio": "grade4_hard_glory.wav",
+              "lesson_cue": "This is glory... G, L, O, R, Y... Glory!",
+              "lesson_cue_audio": "grade4_hard_glory_cue.wav",
+              "definition": "Great honor and praise.",
+              "sample_sentence": "Juan Luna brought glory to our country.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What did Juan Luna bring to our country?",
+                  "type": "critical",
+                  "correct": "Glory",
+                  "distractors": ["Story", "Worry", "Forty"],
+                  "show_image": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

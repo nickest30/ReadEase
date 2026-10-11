@@ -16,6 +16,7 @@ import '../../services/game_sfx.dart';
 import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import 'yse_reaction.dart';
+import '../../utils/game_score.dart';
 
 /// Bubble Pop — replaces the MCQ quiz for Grade 1 Medium.
 ///
@@ -84,7 +85,7 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
     final args = ModalRoute.of(context)!.settings.arguments as Map;
     final batchId = args['batchId'] as int;
     final gradeLevel = (args['gradeLevel'] as int?) ?? 1;
-    final difficulty = (args['difficulty'] as String?) ?? 'medium';
+    final difficulty = (args['difficulty'] as String?) ?? 'easy';
     final student = context.read<StudentProvider>().currentStudent;
 
     if (student == null || student.id == null) {
@@ -262,19 +263,26 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
       final totalRounds = _rounds.length;
       final wrongWordIds = List<int>.from(_wrongWordIds);
 
+      final args = ModalRoute.of(context)!.settings.arguments as Map;
+      final score = GameScore.fromArgs(
+        args,
+        gameCorrect: _correctCount,
+        gameTotal: _rounds.length,
+      );
+
       final pointsDelta =
           await DatabaseService.instance.computePointsDeltaForBatch(
         studentId: _studentId,
         batchId: _batchId,
-        newScore: _correctCount,
+        newScore: score.correct,
       );
 
       final attemptId = await DatabaseService.instance.saveQuizAttempt(
         QuizAttempt(
           studentId: _studentId,
           batchId: _batchId,
-          score: _correctCount,
-          totalQuestions: totalRounds,
+          score: score.correct,
+          totalQuestions: score.total,
           pointsEarned: pointsDelta,
           wrongWordIdsJson: wrongWordIds.isEmpty
               ? null
@@ -371,8 +379,8 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
       Navigator.of(context).pushReplacementNamed(
         '/results',
         arguments: {
-          'score': _correctCount,
-          'totalQuestions': totalRounds,
+          'score': score.correct,
+          'totalQuestions': score.total,
           'pointsDelta': pointsDelta,
           'gradeLevel': _gradeLevel,
           'difficulty': _difficulty,

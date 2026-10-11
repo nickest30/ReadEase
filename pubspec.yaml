@@ -47,6 +47,8 @@ flutter:
     - assets/data/grade1.json
     - assets/data/grade2.json
     - assets/audio/sentences/
+    - assets/audio/passages/
+    - assets/images/mascot/lava/
 
   fonts:
     - family: Nunito

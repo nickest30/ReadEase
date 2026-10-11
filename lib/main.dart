@@ -67,6 +67,8 @@ import 'screens/student/lesson_intro_screen.dart';
 import 'screens/student/game_intro_screen.dart';
 import 'screens/games/word_scramble_screen.dart';
 import 'screens/games/sentence_builder_screen.dart';
+import 'screens/games/floor_is_lava_screen.dart';
+import 'screens/games/passage_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -193,6 +195,8 @@ class _ReadEaseAppState extends State<ReadEaseApp> {
               '/game-intro': (context) => const GameIntroScreen(),
               '/word-scramble': (context) => const WordScrambleScreen(),
               '/sentence-builder': (context) => const SentenceBuilderScreen(),
+              '/floor-is-lava': (context) => const FloorIsLavaScreen(),
+              '/passage': (context) => const PassageScreen(),
             },
           );
         },
