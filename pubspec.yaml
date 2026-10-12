@@ -50,6 +50,7 @@ flutter:
     - assets/audio/passages/
     - assets/images/mascot/lava/
     - assets/audio/questions/ 
+    - assets/images/passages/
 
   fonts:
     - family: Nunito

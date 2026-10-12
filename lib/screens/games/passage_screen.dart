@@ -1,13 +1,16 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 import '../../models/content_models.dart';
+import '../../models/word.dart';
 import '../../services/database_service.dart';
 import '../../services/game_sfx.dart';
 import '../../utils/app_theme.dart';
+
 import 'package:provider/provider.dart';
 import '../../providers/student_provider.dart';
 
@@ -55,7 +58,12 @@ class _PassageScreenState extends State<PassageScreen> {
 
   final AudioPlayer _audioPlayer = AudioPlayer();
   final AudioPlayer _questionAudioPlayer = AudioPlayer();
+  final AudioPlayer _popupAudioPlayer = AudioPlayer();
   bool _isPlayingQuestion = false;
+
+  // Tappable words (G5+) — populated from passage.tappableWords on load.
+  Set<String> _tappableWords = <String>{};
+  final Map<String, TapGestureRecognizer> _tappableRecognizers = {};
 
   @override
   void initState() {
@@ -67,7 +75,12 @@ class _PassageScreenState extends State<PassageScreen> {
   void dispose() {
     _audioPlayer.dispose();
     _questionAudioPlayer.dispose();
+    _popupAudioPlayer.dispose();
     _sentenceScroll.dispose();
+    for (final r in _tappableRecognizers.values) {
+      r.dispose();
+    }
+    _tappableRecognizers.clear();
     super.dispose();
   }
 
@@ -115,6 +128,8 @@ class _PassageScreenState extends State<PassageScreen> {
       _sentenceKeys.add(GlobalKey());
     }
 
+    _initTappableWords(passage);
+
     setState(() {
       _passage = passage;
       _sentences = sentences;
@@ -126,12 +141,171 @@ class _PassageScreenState extends State<PassageScreen> {
     });
   }
 
-  /// Some installs still carry the old /passages/ path — retry from /words/.
-  String _resolveIllustrationPath(String raw) {
-    if (raw.contains('/passages/')) {
-      return raw.replaceFirst('/passages/', '/words/');
+
+    void _initTappableWords(Passage passage) {
+    for (final r in _tappableRecognizers.values) {
+      r.dispose();
     }
-    return raw;
+    _tappableRecognizers.clear();
+
+    _tappableWords = passage.tappableWords
+        .map((w) => w.toLowerCase())
+        .where((w) => w.isNotEmpty)
+        .toSet();
+
+    for (final w in _tappableWords) {
+      _tappableRecognizers[w] = TapGestureRecognizer()
+        ..onTap = () => _onTappableWordTap(w);
+    }
+  }
+
+  Future<void> _onTappableWordTap(String lowerWord) async {
+    // Pause any playing audio so the popup isn't drowned out.
+    try {
+      await _audioPlayer.stop();
+      await _questionAudioPlayer.stop();
+    } catch (_) {}
+
+    if (!mounted) return;
+    final passage = _passage;
+    if (passage == null) return;
+
+    final word = await DatabaseService.instance
+        .getWordByText(passage.gradeLevel, lowerWord);
+    if (!mounted || word == null) return;
+
+    await _playPopupAudio(word.audioAsset);
+
+    if (!mounted) return;
+    await _showWordPopup(word);
+  }
+
+  Future<void> _playPopupAudio(String assetPath) async {
+    if (assetPath.isEmpty) return;
+    try {
+      final clean = assetPath.startsWith('assets/')
+          ? assetPath.substring('assets/'.length)
+          : assetPath;
+      await _popupAudioPlayer.stop();
+      await _popupAudioPlayer.play(AssetSource(clean));
+    } catch (e) {
+      debugPrint('🔊 Popup audio failed (continuing): $e');
+    }
+  }
+
+  Future<void> _showWordPopup(Word word) async {
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black26,
+      builder: (ctx) => Align(
+        alignment: Alignment.topCenter,
+        child: Padding(
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(ctx).padding.top + 24,
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: _WordPopupCard(
+                word: word,
+                onPlay: () => _playPopupAudio(word.audioAsset),
+                onClose: () => Navigator.of(ctx).pop(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds a RichText for one sentence.
+  /// Tappable words get a dotted teal underline + tap handler.
+  Widget _buildTappableSentence(
+    String text, {
+    required TextStyle baseStyle,
+  }) {
+    if (_tappableWords.isEmpty) {
+      return Text(text, style: baseStyle);
+    }
+
+    final wordRegex = RegExp(r"[A-Za-z']+");
+    final spans = <InlineSpan>[];
+    int lastEnd = 0;
+
+    for (final match in wordRegex.allMatches(text)) {
+      if (match.start > lastEnd) {
+        spans.add(TextSpan(text: text.substring(lastEnd, match.start)));
+      }
+      final raw = match.group(0)!;
+      final lower = raw.toLowerCase();
+
+      if (_tappableWords.contains(lower)) {
+        spans.add(TextSpan(
+          text: raw,
+          style: baseStyle.copyWith(
+            decoration: TextDecoration.underline,
+            decorationStyle: TextDecorationStyle.dotted,
+            decorationColor: const Color(0xFF2EC4B6),
+            decorationThickness: 2.5,
+          ),
+          recognizer: _tappableRecognizers[lower],
+        ));
+      } else {
+        spans.add(TextSpan(text: raw, style: baseStyle));
+      }
+      lastEnd = match.end;
+    }
+    if (lastEnd < text.length) {
+      spans.add(TextSpan(text: text.substring(lastEnd)));
+    }
+
+    return RichText(
+      text: TextSpan(style: baseStyle, children: spans),
+    );
+  }
+
+  /// Renders the illustration, falling back to the alternate folder if the
+  /// primary path fails. Handles the G4 migration from /words/ to /passages/.
+  Widget _buildIllustration(String rawPath) {
+    return Image.asset(
+      rawPath,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => _buildIllustrationAlt(rawPath),
+    );
+  }
+
+  Widget _buildIllustrationAlt(String rawPath) {
+    String? alt;
+    if (rawPath.contains('/passages/')) {
+      alt = rawPath.replaceFirst('/passages/', '/words/');
+    } else if (rawPath.contains('/words/')) {
+      alt = rawPath.replaceFirst('/words/', '/passages/');
+    }
+
+    if (alt == null || alt == rawPath) {
+      return const Center(
+        child: Icon(
+          Icons.image_outlined,
+          size: 96,
+          color: AppColors.textMuted,
+        ),
+      );
+    }
+
+    return Image.asset(
+      alt,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => const Center(
+        child: Icon(
+          Icons.image_outlined,
+          size: 96,
+          color: AppColors.textMuted,
+        ),
+      ),
+    );
   }
 
   Future<void> _playSentence(int index) async {
@@ -402,17 +576,7 @@ class _PassageScreenState extends State<PassageScreen> {
               width: double.infinity,
               height: illustrationHeight,
               color: AppColors.surface,
-              child: Image.asset(
-                _resolveIllustrationPath(p.illustration),
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => const Center(
-                  child: Icon(
-                    Icons.image_outlined,
-                    size: 96,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ),
+              child: _buildIllustration(p.illustration),
             ),
           ),
 
@@ -467,9 +631,9 @@ class _PassageScreenState extends State<PassageScreen> {
                               width: isActive ? 2 : 1,
                             ),
                           ),
-                          child: Text(
+                          child: _buildTappableSentence(
                             s.text,
-                            style: TextStyle(
+                            baseStyle: TextStyle(
                               fontFamily: 'Nunito',
                               fontSize: 15,
                               height: 1.5,
@@ -700,5 +864,164 @@ class _PassageScreenState extends State<PassageScreen> {
     } catch (_) {
       return [];
     }
+  }
+}
+
+class _WordPopupCard extends StatelessWidget {
+  final Word word;
+  final VoidCallback onPlay;
+  final VoidCallback onClose;
+
+  const _WordPopupCard({
+    required this.word,
+    required this.onPlay,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDef = word.definition.trim().isNotEmpty;
+    final hasSentence = word.sampleSentence.trim().isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: const Color(0xFF2EC4B6), width: 2),
+        boxShadow: AppShadows.soft,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header row — word + close
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  word.text.toUpperCase(),
+                  style: AppText.h2.copyWith(
+                    fontSize: 22,
+                    letterSpacing: 1.2,
+                    color: const Color(0xFF2EC4B6),
+                  ),
+                ),
+              ),
+              InkWell(
+                onTap: onClose,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: AppColors.studentBg,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppSpacing.md),
+
+          // Image
+          Container(
+            height: 120,
+            decoration: BoxDecoration(
+              color: AppColors.studentBg,
+              borderRadius: BorderRadius.circular(AppRadius.large),
+              border: Border.all(color: AppColors.border),
+            ),
+            padding: const EdgeInsets.all(8),
+            child: Image.asset(
+              word.imageAsset,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => const Icon(
+                Icons.image_outlined,
+                size: 56,
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: AppSpacing.md),
+
+          // Audio replay
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: onPlay,
+              icon: const Icon(Icons.volume_up_rounded, size: 20),
+              label: const Text(
+                'Hear it',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF2EC4B6),
+                padding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+
+          if (hasDef) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              word.definition,
+              style: AppText.body.copyWith(fontSize: 14),
+            ),
+          ],
+
+          if (hasSentence) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: AppColors.studentBg,
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+              ),
+              child: Text(
+                '"${word.sampleSentence}"',
+                style: AppText.caption.copyWith(
+                  fontStyle: FontStyle.italic,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: AppSpacing.md),
+
+          SizedBox(
+            height: 44,
+            child: ElevatedButton(
+              onPressed: onClose,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2EC4B6),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.medium),
+                ),
+              ),
+              child: const Text(
+                'Close',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

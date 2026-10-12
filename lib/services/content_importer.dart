@@ -18,6 +18,7 @@ class ContentImporter {
     await importGradeIfNeeded(2);
     await importGradeIfNeeded(3);
     await importGradeIfNeeded(4);
+    await importGradeIfNeeded(5);
     // await importGradeIfNeeded(5);
     // ...
   }
@@ -88,13 +89,21 @@ class ContentImporter {
 
       final passagesList = (data['passages'] as List<dynamic>?) ?? [];
       for (final p in passagesList) {
+        final tappable = (p['tappable_words'] as List<dynamic>?) ?? [];
         final passage = Passage(
           passageKey: p['id'] as String,
           gradeLevel: gradeLevel,
           difficulty: p['difficulty'] as String,
           title: p['title'] as String,
-          illustration: 'assets/images/words/${p['illustration']}',
+          illustration: 'assets/images/passages/${p['illustration']}',
           wordCount: p['word_count'] as int,
+          tappableWordsJson: tappable.isEmpty
+              ? null
+              : jsonEncode(
+                  tappable
+                      .map((e) => e.toString().toLowerCase())
+                      .toList(),
+                ),
         );
         final passageId =
             await DatabaseService.instance.insertPassage(passage);

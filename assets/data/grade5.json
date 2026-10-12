@@ -1,0 +1,1154 @@
+{
+  "content_version": "1.0.1",
+  "grade": 5,
+  "lesson_intros": [
+    {
+      "grade": 5,
+      "difficulty": "easy",
+      "header": "Welcome to Easy Level!",
+      "body": "Let's read Filipino folk tales together. Ready to start?",
+      "button_label": "LET'S GO!",
+      "pose_asset": "yse_nerd.png",
+      "audio_asset": "lesson_intro_g5_easy.wav"
+    },
+    {
+      "grade": 5,
+      "difficulty": "medium",
+      "header": "Welcome to Medium Level!",
+      "body": "Time to learn about bayanihan and community. You're doing great!",
+      "button_label": "LET'S GO!",
+      "pose_asset": "yse_nerd.png",
+      "audio_asset": "lesson_intro_g5_medium.wav"
+    },
+    {
+      "grade": 5,
+      "difficulty": "hard",
+      "header": "Welcome to Hard Level!",
+      "body": "Let's explore nature and our environment. You've got this!",
+      "button_label": "LET'S GO!",
+      "pose_asset": "yse_nerd.png",
+      "audio_asset": "lesson_intro_g5_hard.wav"
+    }
+  ],
+  "game_intros": [
+    {"game_type": "memory_match", "header": "Match the Pairs!", "body": "Tap two cards to find the matching pairs.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_memory_match.wav"},
+    {"game_type": "bubble_pop", "header": "Pop the Picture!", "body": "Tap the bubble with the correct picture.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_bubble_pop.wav"},
+    {"game_type": "drag_drop", "header": "Drag the Word!", "body": "Drag the word to the matching picture.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_drag_drop.wav"},
+    {"game_type": "word_scramble", "header": "Spell the Word!", "body": "Rearrange the letters to spell the word.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_word_scramble.wav"},
+    {"game_type": "sentence_builder", "header": "Build a Sentence!", "body": "Put the words in order to make a sentence.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_sentence_builder.wav"},
+    {"game_type": "floor_is_lava", "header": "Escape the Lava!", "body": "Guess the word before the lava rises!", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_floor_is_lava.wav"},
+    {"game_type": "word_hunt", "header": "Find the Words!", "body": "Find the hidden words in the letter grid.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_word_hunt.wav"},
+    {"game_type": "category_sort", "header": "Sort the Words!", "body": "Drag each word into the correct group.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_category_sort.wav"},
+    {"game_type": "crossword_lite", "header": "Fill the Boxes!", "body": "Fill the boxes with the correct words.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_crossword_lite.wav"},
+    {"game_type": "timed_blitz", "header": "Beat the Clock!", "body": "Answer as fast as you can before time runs out.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_timed_blitz.wav"}
+  ],
+  "passages": [
+    {
+      "id": "grade5_easy_passage01",
+      "difficulty": "easy",
+      "title": "Alamat ng Pinya",
+      "illustration": "grade5_easy_passage01_illustration.png",
+      "word_count": 85,
+      "tappable_words": ["lazy", "sick", "disappeared"],
+      "sentences": [
+        {"index": 1, "text": "Long ago, a mother named Pinang lived with her daughter in a small house.", "audio": "grade5_easy_passage01_s01.wav"},
+        {"index": 2, "text": "The daughter was very lazy.", "audio": "grade5_easy_passage01_s02.wav"},
+        {"index": 3, "text": "She always asked, \"Where is my dress? Where is my food?\"", "audio": "grade5_easy_passage01_s03.wav"},
+        {"index": 4, "text": "One day, the mother became very sick.", "audio": "grade5_easy_passage01_s04.wav"},
+        {"index": 5, "text": "She asked her daughter to cook rice.", "audio": "grade5_easy_passage01_s05.wav"},
+        {"index": 6, "text": "But the daughter could not find anything in the kitchen.", "audio": "grade5_easy_passage01_s06.wav"},
+        {"index": 7, "text": "She shouted, \"Mother, where is the pot?\"", "audio": "grade5_easy_passage01_s07.wav"},
+        {"index": 8, "text": "The mother whispered, \"I wish you had many eyes to see.\"", "audio": "grade5_easy_passage01_s08.wav"},
+        {"index": 9, "text": "Soon, the mother disappeared, and in her place grew a fruit with many eyes.", "audio": "grade5_easy_passage01_s09.wav"}
+      ],
+      "comprehension_questions": [
+        {"stem": "Who lived in the small house?", "type": "literal", "correct": "A mother and her daughter", "distractors": ["A father and his son", "Two brothers", "A grandmother and her grandson"], "show_image": false, "stem_audio": "grade5_easy_passage01_q01_stem.wav"},
+        {"stem": "What was the daughter like?", "type": "literal", "correct": "Lazy", "distractors": ["Kind", "Brave", "Helpful"], "show_image": false, "stem_audio": "grade5_easy_passage01_q02_stem.wav"},
+        {"stem": "What did the mother ask the daughter to cook?", "type": "literal", "correct": "Rice", "distractors": ["Soup", "Bread", "Fish"], "show_image": false, "stem_audio": "grade5_easy_passage01_q03_stem.wav"},
+        {"stem": "Where could the daughter not find anything?", "type": "literal", "correct": "In the kitchen", "distractors": ["In the garden", "In the bedroom", "In the market"], "show_image": false, "stem_audio": "grade5_easy_passage01_q04_stem.wav"},
+        {"stem": "What did the mother whisper to her daughter?", "type": "literal", "correct": "I wish you had many eyes to see", "distractors": ["Please cook me dinner", "Come here, my child", "I love you very much"], "show_image": false, "stem_audio": "grade5_easy_passage01_q05_stem.wav"},
+        {"stem": "What happened to the mother at the end of the story?", "type": "inferential", "correct": "She disappeared and became a fruit", "distractors": ["She became rich", "She went to the market", "She found a new home"], "show_image": false, "stem_audio": "grade5_easy_passage01_q06_stem.wav"},
+        {"stem": "Why did the mother wish her daughter had many eyes?", "type": "inferential", "correct": "Because the daughter could not see what she needed to do", "distractors": ["Because the mother wanted a pet", "Because the daughter liked insects", "Because the mother was angry at the world"], "show_image": false, "stem_audio": "grade5_easy_passage01_q07_stem.wav"},
+        {"stem": "What does the story teach us?", "type": "inferential", "correct": "We should help our parents and not be lazy", "distractors": ["We should eat more fruit", "We should live in a small house", "We should always cook rice"], "show_image": false, "stem_audio": "grade5_easy_passage01_q08_stem.wav"}
+      ]
+    },
+    {
+      "id": "grade5_medium_passage02",
+      "difficulty": "medium",
+      "title": "Ang Unggoy at ang Pagong",
+      "illustration": "grade5_medium_passage02_illustration.png",
+      "word_count": 102,
+      "tappable_words": ["forest", "greedy", "steady"],
+      "sentences": [
+        {"index": 1, "text": "One morning, a monkey and a turtle walked together in the forest.", "audio": "grade5_medium_passage02_s01.wav"},
+        {"index": 2, "text": "The monkey saw a banana tree and said, \"Let us plant this tree.\"", "audio": "grade5_medium_passage02_s02.wav"},
+        {"index": 3, "text": "The monkey took the top part with leaves.", "audio": "grade5_medium_passage02_s03.wav"},
+        {"index": 4, "text": "The turtle took the bottom part with roots.", "audio": "grade5_medium_passage02_s04.wav"},
+        {"index": 5, "text": "The monkey laughed and said, \"My part is better!\"", "audio": "grade5_medium_passage02_s05.wav"},
+        {"index": 6, "text": "But soon, the turtle's part grew into a big tree with sweet bananas.", "audio": "grade5_medium_passage02_s06.wav"},
+        {"index": 7, "text": "The monkey's part died.", "audio": "grade5_medium_passage02_s07.wav"},
+        {"index": 8, "text": "The monkey asked the turtle for some bananas.", "audio": "grade5_medium_passage02_s08.wav"},
+        {"index": 9, "text": "The turtle said, \"Climb the tree, but do not eat too much.\"", "audio": "grade5_medium_passage02_s09.wav"},
+        {"index": 10, "text": "The greedy monkey climbed, ate many bananas, and fell down.", "audio": "grade5_medium_passage02_s10.wav"},
+        {"index": 11, "text": "The turtle smiled and said, \"Slow and steady is better than greedy and fast.\"", "audio": "grade5_medium_passage02_s11.wav"}
+      ],
+      "comprehension_questions": [
+        {"stem": "Where did the monkey and the turtle walk together?", "type": "literal", "correct": "In the forest", "distractors": ["In the city", "On the beach", "In the market"], "show_image": false, "stem_audio": "grade5_medium_passage02_q01_stem.wav"},
+        {"stem": "What tree did the monkey see?", "type": "literal", "correct": "A banana tree", "distractors": ["A mango tree", "A coconut tree", "An apple tree"], "show_image": false, "stem_audio": "grade5_medium_passage02_q02_stem.wav"},
+        {"stem": "Which part did the monkey take?", "type": "literal", "correct": "The top part with leaves", "distractors": ["The bottom part with roots", "The middle part", "The whole tree"], "show_image": false, "stem_audio": "grade5_medium_passage02_q03_stem.wav"},
+        {"stem": "Which part did the turtle take?", "type": "literal", "correct": "The bottom part with roots", "distractors": ["The top part with leaves", "The fruit", "The seeds"], "show_image": false, "stem_audio": "grade5_medium_passage02_q04_stem.wav"},
+        {"stem": "What grew from the turtle's part of the tree?", "type": "literal", "correct": "A big tree with sweet bananas", "distractors": ["A small bush", "A flower garden", "A vine"], "show_image": false, "stem_audio": "grade5_medium_passage02_q05_stem.wav"},
+        {"stem": "What happened to the monkey's part?", "type": "literal", "correct": "It died", "distractors": ["It grew", "It became a tree", "It bloomed"], "show_image": false, "stem_audio": "grade5_medium_passage02_q06_stem.wav"},
+        {"stem": "What did the monkey ask the turtle for?", "type": "literal", "correct": "Some bananas", "distractors": ["Some water", "A new home", "A different tree"], "show_image": false, "stem_audio": "grade5_medium_passage02_q07_stem.wav"},
+        {"stem": "Why did the monkey fall from the tree?", "type": "inferential", "correct": "Because he was greedy and ate too much.", "distractors": ["Because the tree was too tall.", "Because the turtle pushed him.", "Because the bananas were rotten."], "show_image": false, "stem_audio": "grade5_medium_passage02_q08_stem.wav"},
+        {"stem": "What lesson does the story teach us?", "type": "inferential", "correct": "Being patient is better than being greedy.", "distractors": ["Monkeys should not climb trees.", "Bananas are the best fruit.", "Turtles are always lucky."], "show_image": false, "stem_audio": "grade5_medium_passage02_q09_stem.wav"},
+        {"stem": "Why did the monkey laugh at the turtle at first?", "type": "inferential", "correct": "He thought his part of the tree was better.", "distractors": ["He wanted to play a game.", "He was happy to share.", "He liked the turtle's roots."], "show_image": false, "stem_audio": "grade5_medium_passage02_q10_stem.wav"},
+        {"stem": "How would you describe the monkey in this story?", "type": "inferential", "correct": "Greedy and boastful", "distractors": ["Kind and helpful", "Slow and quiet", "Wise and patient"], "show_image": false, "stem_audio": "grade5_medium_passage02_q11_stem.wav"},
+        {"stem": "What does the turtle mean by slow and steady is better than greedy and fast?", "type": "critical", "correct": "Patience leads to better results than rushing for more", "distractors": ["Slow animals always win races", "Speed is always dangerous", "Fruits grow better when ignored"], "show_image": false, "stem_audio": "grade5_medium_passage02_q12_stem.wav"}
+      ]
+    },
+    {
+      "id": "grade5_hard_passage03",
+      "difficulty": "hard",
+      "title": "Alamat ng Mangga",
+      "illustration": "grade5_hard_passage03_illustration.png",
+      "word_count": 117,
+      "tappable_words": ["drought", "crops", "villagers", "beloved"],
+      "sentences": [
+        {"index": 1, "text": "Long ago, in a village near the mountains, lived a kind farmer named Mang Isko.", "audio": "grade5_hard_passage03_s01.wav"},
+        {"index": 2, "text": "He had one daughter, Manggita, who loved helping the poor.", "audio": "grade5_hard_passage03_s02.wav"},
+        {"index": 3, "text": "Every day, she gave rice to hungry neighbors.", "audio": "grade5_hard_passage03_s03.wav"},
+        {"index": 4, "text": "One year, a terrible drought came.", "audio": "grade5_hard_passage03_s04.wav"},
+        {"index": 5, "text": "The river dried up, and the crops died.", "audio": "grade5_hard_passage03_s05.wav"},
+        {"index": 6, "text": "Many villagers became weak and sad.", "audio": "grade5_hard_passage03_s06.wav"},
+        {"index": 7, "text": "Manggita prayed every night for her people.", "audio": "grade5_hard_passage03_s07.wav"},
+        {"index": 8, "text": "One evening, a strange light appeared in her garden.", "audio": "grade5_hard_passage03_s08.wav"},
+        {"index": 9, "text": "A tree grew where the light touched the ground.", "audio": "grade5_hard_passage03_s09.wav"},
+        {"index": 10, "text": "It bore golden fruit shaped like a heart.", "audio": "grade5_hard_passage03_s10.wav"},
+        {"index": 11, "text": "The villagers ate the fruit and felt strong again.", "audio": "grade5_hard_passage03_s11.wav"},
+        {"index": 12, "text": "They named the tree \"mangga\" after Manggita, the beloved girl who saved them all.", "audio": "grade5_hard_passage03_s12.wav"}
+      ],
+      "comprehension_questions": [
+        {"stem": "Where did Mang Isko live?", "type": "literal", "correct": "In a village near the mountains", "distractors": ["By the sea", "In the city", "On an island"], "show_image": false, "stem_audio": "grade5_hard_passage03_q01_stem.wav"},
+        {"stem": "What was the name of Mang Isko's daughter?", "type": "literal", "correct": "Manggita", "distractors": ["Maria", "Pinang", "Rosa"], "show_image": false, "stem_audio": "grade5_hard_passage03_q02_stem.wav"},
+        {"stem": "What did Manggita give to hungry neighbors?", "type": "literal", "correct": "Rice", "distractors": ["Bread", "Fruit", "Water"], "show_image": false, "stem_audio": "grade5_hard_passage03_q03_stem.wav"},
+        {"stem": "What disaster came to the village?", "type": "literal", "correct": "A drought", "distractors": ["A flood", "A storm", "An earthquake"], "show_image": false, "stem_audio": "grade5_hard_passage03_q04_stem.wav"},
+        {"stem": "What happened to the river and crops?", "type": "literal", "correct": "The river dried up and the crops died.", "distractors": ["They grew bigger.", "They became colorful.", "They froze over."], "show_image": false, "stem_audio": "grade5_hard_passage03_q05_stem.wav"},
+        {"stem": "What did Manggita do every night?", "type": "literal", "correct": "She prayed for her people.", "distractors": ["She sang songs.", "She cooked food.", "She planted seeds."], "show_image": false, "stem_audio": "grade5_hard_passage03_q06_stem.wav"},
+        {"stem": "Where did the strange light appear?", "type": "literal", "correct": "In her garden", "distractors": ["On the mountain", "By the river", "In the village square"], "show_image": false, "stem_audio": "grade5_hard_passage03_q07_stem.wav"},
+        {"stem": "What shape was the fruit?", "type": "literal", "correct": "Like a heart", "distractors": ["Like a star", "Like a circle", "Like a triangle"], "show_image": false, "stem_audio": "grade5_hard_passage03_q08_stem.wav"},
+        {"stem": "Why did the villagers name the tree after Manggita?", "type": "inferential", "correct": "Because she loved and saved them.", "distractors": ["Because she was tall.", "Because she planted the tree.", "Because she owned the garden."], "show_image": false, "stem_audio": "grade5_hard_passage03_q09_stem.wav"},
+        {"stem": "Why did Manggita pray every night?", "type": "inferential", "correct": "She wanted to help her people who were suffering.", "distractors": ["She wanted to become rich.", "She was afraid of the dark.", "She wanted a new home."], "show_image": false, "stem_audio": "grade5_hard_passage03_q10_stem.wav"},
+        {"stem": "What kind of person was Manggita?", "type": "inferential", "correct": "Kind and selfless", "distractors": ["Lazy and selfish", "Angry and loud", "Shy and quiet"], "show_image": false, "stem_audio": "grade5_hard_passage03_q11_stem.wav"},
+        {"stem": "Why did the villagers feel strong again?", "type": "inferential", "correct": "They ate the fruit from the magical tree.", "distractors": ["They slept for many days.", "They moved to a new village.", "They found a new river."], "show_image": false, "stem_audio": "grade5_hard_passage03_q12_stem.wav"},
+        {"stem": "What does this story teach us about helping others?", "type": "critical", "correct": "Helping others with a kind heart can be rewarded in unexpected ways.", "distractors": ["Never share your food with neighbors.", "Only help people who can pay you back.", "Praying is more important than acting."], "show_image": false, "stem_audio": "grade5_hard_passage03_q13_stem.wav"},
+        {"stem": "Why do you think the author wrote this story?", "type": "critical", "correct": "To explain where mangoes come from and to teach kindness.", "distractors": ["To make people afraid of droughts.", "To describe a real farmer's life.", "To sell more mangoes in the market."], "show_image": false, "stem_audio": "grade5_hard_passage03_q14_stem.wav"}
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "difficulty": "easy",
+      "theme": "Alamat at Kuwentong Bayan",
+      "passage_id": "grade5_easy_passage01",
+      "quiz_config": {
+        "quiz_size": 8,
+        "buffer_size": 2,
+        "randomized": 1,
+        "passing_threshold": 70
+      },
+      "game_config": {
+        "game_type": "word_scramble",
+        "rounds": 8,
+        "points_per_correct": 5,
+        "max_points": 40,
+        "pass_threshold": 70
+      },
+      "batches": [
+        {
+          "batch_index": 1,
+          "words": [
+            {
+              "text": "Legend",
+              "category": "story",
+              "image": "grade5_easy_legend.png",
+              "audio": "grade5_easy_legend.wav",
+              "lesson_cue": "This is a legend... L, E, G, E, N, D... Legend!",
+              "lesson_cue_audio": "grade5_easy_legend_cue.wav",
+              "definition": "A story from long ago about brave people or amazing events.",
+              "sample_sentence": "Lola tells us a legend about the volcano.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What is a legend?",
+                  "type": "literal",
+                  "correct": "A story from long ago",
+                  "distractors": ["A new song", "A modern book", "A funny joke"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Lazy",
+              "category": "trait",
+              "image": "grade5_easy_lazy.png",
+              "audio": "grade5_easy_lazy.wav",
+              "lesson_cue": "This is lazy... L, A, Z, Y... Lazy!",
+              "lesson_cue_audio": "grade5_easy_lazy_cue.wav",
+              "definition": "Not wanting to work or move.",
+              "sample_sentence": "The lazy cat sleeps all day on the banig.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"not wanting to work\"?",
+                  "type": "inferential",
+                  "correct": "Lazy",
+                  "distractors": ["Hungry", "Happy", "Helpful"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Hungry",
+              "category": "feeling",
+              "image": "grade5_easy_hungry.png",
+              "audio": "grade5_easy_hungry.wav",
+              "lesson_cue": "This is hungry... H, U, N, G, R, Y... Hungry!",
+              "lesson_cue_audio": "grade5_easy_hungry_cue.wav",
+              "definition": "Feeling that you need to eat food.",
+              "sample_sentence": "The hungry boy asks Nanay for rice.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "How does a person feel when they need food?",
+                  "type": "inferential",
+                  "correct": "Hungry",
+                  "distractors": ["Sleepy", "Gentle", "Patient"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Mother",
+              "category": "person",
+              "image": "grade5_easy_mother.png",
+              "audio": "grade5_easy_mother.wav",
+              "lesson_cue": "This is a mother... M, O, T, H, E, R... Mother!",
+              "lesson_cue_audio": "grade5_easy_mother_cue.wav",
+              "definition": "A woman who takes care of her children.",
+              "sample_sentence": "Mother cooks dinner for our family.",
+              "source": "Dolch Pre-Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Mother",
+                  "distractors": ["Daughter", "Neighbor", "Sister"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Daughter",
+              "category": "person",
+              "image": "grade5_easy_daughter.png",
+              "audio": "grade5_easy_daughter.wav",
+              "lesson_cue": "This is a daughter... D, A, U, G, H, T, E, R... Daughter!",
+              "lesson_cue_audio": "grade5_easy_daughter_cue.wav",
+              "definition": "A girl or woman in relation to her parents.",
+              "sample_sentence": "The daughter helps her mother at home.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Daughter",
+                  "distractors": ["Mother", "Cousin", "Neighbor"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Kindness",
+              "category": "trait",
+              "image": "grade5_easy_kindness.png",
+              "audio": "grade5_easy_kindness.wav",
+              "lesson_cue": "This is kindness... K, I, N, D, N, E, S, S... Kindness!",
+              "lesson_cue_audio": "grade5_easy_kindness_cue.wav",
+              "definition": "Being nice and caring to other people.",
+              "sample_sentence": "Her kindness makes everyone smile.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What is the word for being nice to others?",
+                  "type": "literal",
+                  "correct": "Kindness",
+                  "distractors": ["Anger", "Fear", "Laziness"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Patient",
+              "category": "trait",
+              "image": "grade5_easy_patient.png",
+              "audio": "grade5_easy_patient.wav",
+              "lesson_cue": "This is patient... P, A, T, I, E, N, T... Patient!",
+              "lesson_cue_audio": "grade5_easy_patient_cue.wav",
+              "definition": "Able to wait calmly without getting upset.",
+              "sample_sentence": "The patient girl waits for her turn.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word describes waiting calmly?",
+                  "type": "inferential",
+                  "correct": "Patient",
+                  "distractors": ["Hungry", "Lazy", "Gentle"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Gentle",
+              "category": "trait",
+              "image": "grade5_easy_gentle.png",
+              "audio": "grade5_easy_gentle.wav",
+              "lesson_cue": "This is gentle... G, E, N, T, L, E... Gentle!",
+              "lesson_cue_audio": "grade5_easy_gentle_cue.wav",
+              "definition": "Soft and careful, not rough.",
+              "sample_sentence": "He is gentle with the baby bird.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Gentle",
+                  "distractors": ["Hungry", "Lazy", "Patient"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Helpful",
+              "category": "trait",
+              "image": "grade5_easy_helpful.png",
+              "audio": "grade5_easy_helpful.wav",
+              "lesson_cue": "This is helpful... H, E, L, P, F, U, L... Helpful!",
+              "lesson_cue_audio": "grade5_easy_helpful_cue.wav",
+              "definition": "Always ready to help other people.",
+              "sample_sentence": "The helpful boy carries the heavy bag.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"always ready to help\"?",
+                  "type": "inferential",
+                  "correct": "Helpful",
+                  "distractors": ["Lazy", "Hungry", "Gentle"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Grateful",
+              "category": "feeling",
+              "image": "grade5_easy_grateful.png",
+              "audio": "grade5_easy_grateful.wav",
+              "lesson_cue": "This is grateful... G, R, A, T, E, F, U, L... Grateful!",
+              "lesson_cue_audio": "grade5_easy_grateful_cue.wav",
+              "definition": "Feeling thankful for something.",
+              "sample_sentence": "We are grateful for our family.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"feeling thankful\"?",
+                  "type": "literal",
+                  "correct": "Grateful",
+                  "distractors": ["Hungry", "Lazy", "Patient"],
+                  "show_image": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "difficulty": "medium",
+      "theme": "Bayanihan at Pamayanan",
+      "passage_id": "grade5_medium_passage02",
+      "quiz_config": {
+        "quiz_size": 12,
+        "buffer_size": 2,
+        "randomized": 1,
+        "passing_threshold": 70
+      },
+      "game_config": {
+        "game_type": "floor_is_lava",
+        "rounds": 12,
+        "points_per_correct": 5,
+        "max_points": 60,
+        "pass_threshold": 70
+      },
+      "batches": [
+        {
+          "batch_index": 1,
+          "words": [
+            {
+              "text": "Community",
+              "category": "concept",
+              "image": "grade5_medium_community.png",
+              "audio": "grade5_medium_community.wav",
+              "lesson_cue": "This is a community... C, O, M, M, U, N, I, T, Y... Community!",
+              "lesson_cue_audio": "grade5_medium_community_cue.wav",
+              "definition": "A group of people living in the same place.",
+              "sample_sentence": "Our community works together on Saturday.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Community",
+                  "distractors": ["Neighbor", "Factory", "Unity"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Neighbor",
+              "category": "person",
+              "image": "grade5_medium_neighbor.png",
+              "audio": "grade5_medium_neighbor.wav",
+              "lesson_cue": "This is a neighbor... N, E, I, G, H, B, O, R... Neighbor!",
+              "lesson_cue_audio": "grade5_medium_neighbor_cue.wav",
+              "definition": "A person who lives near your home.",
+              "sample_sentence": "Our neighbor shares mangoes with us.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Neighbor",
+                  "distractors": ["Brother", "Vendor", "Helper"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Unity",
+              "category": "concept",
+              "image": "grade5_medium_unity.png",
+              "audio": "grade5_medium_unity.wav",
+              "lesson_cue": "This is unity... U, N, I, T, Y... Unity!",
+              "lesson_cue_audio": "grade5_medium_unity_cue.wav",
+              "definition": "Being together as one.",
+              "sample_sentence": "Unity makes our barangay strong.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"being together as one\"?",
+                  "type": "inferential",
+                  "correct": "Unity",
+                  "distractors": ["Community", "Harvest", "Friendship"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Bayanihan",
+              "category": "concept",
+              "image": "grade5_medium_bayanihan.png",
+              "audio": "grade5_medium_bayanihan.wav",
+              "lesson_cue": "This is bayanihan... B, A, Y, A, N, I, H, A, N... Bayanihan!",
+              "lesson_cue_audio": "grade5_medium_bayanihan_cue.wav",
+              "definition": "A Filipino tradition of helping each other.",
+              "sample_sentence": "Bayanihan means helping each other.",
+              "source": "MELC G5 / Cultural",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — cultural term, appropriate.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Bayanihan",
+                  "distractors": ["Unity", "Harvest", "Friendship"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Together",
+              "category": "concept",
+              "image": "grade5_medium_together.png",
+              "audio": "grade5_medium_together.wav",
+              "lesson_cue": "This is together... T, O, G, E, T, H, E, R... Together!",
+              "lesson_cue_audio": "grade5_medium_together_cue.wav",
+              "definition": "With each other, not apart.",
+              "sample_sentence": "The family eats dinner together.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Together",
+                  "distractors": ["Respect", "Community", "Share"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Share",
+              "category": "action",
+              "image": "grade5_medium_share.png",
+              "audio": "grade5_medium_share.wav",
+              "lesson_cue": "This is share... S, H, A, R, E... Share!",
+              "lesson_cue_audio": "grade5_medium_share_cue.wav",
+              "definition": "To give some of what you have to others.",
+              "sample_sentence": "Please share your baon with your friend.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Share",
+                  "distractors": ["Steal", "Hide", "Keep"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Cooperate",
+              "category": "action",
+              "image": "grade5_medium_cooperate.png",
+              "audio": "grade5_medium_cooperate.wav",
+              "lesson_cue": "This is cooperate... C, O, O, P, E, R, A, T, E... Cooperate!",
+              "lesson_cue_audio": "grade5_medium_cooperate_cue.wav",
+              "definition": "To work together for the same goal.",
+              "sample_sentence": "We cooperate to clean the classroom.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"to work together\"?",
+                  "type": "inferential",
+                  "correct": "Cooperate",
+                  "distractors": ["Compete", "Celebrate", "Collect"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Harvest",
+              "category": "event",
+              "image": "grade5_medium_harvest.png",
+              "audio": "grade5_medium_harvest.wav",
+              "lesson_cue": "This is a harvest... H, A, R, V, E, S, T... Harvest!",
+              "lesson_cue_audio": "grade5_medium_harvest_cue.wav",
+              "definition": "The time when farmers gather crops.",
+              "sample_sentence": "The farmers celebrate a good harvest.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Harvest",
+                  "distractors": ["Market", "Garden", "Village"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Generous",
+              "category": "trait",
+              "image": "grade5_medium_generous.png",
+              "audio": "grade5_medium_generous.wav",
+              "lesson_cue": "This is generous... G, E, N, E, R, O, U, S... Generous!",
+              "lesson_cue_audio": "grade5_medium_generous_cue.wav",
+              "definition": "Happy to give to others.",
+              "sample_sentence": "The generous man gives rice to the poor.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word describes someone happy to give?",
+                  "type": "inferential",
+                  "correct": "Generous",
+                  "distractors": ["Selfish", "Lazy", "Patient"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Respect",
+              "category": "concept",
+              "image": "grade5_medium_respect.png",
+              "audio": "grade5_medium_respect.wav",
+              "lesson_cue": "This is respect... R, E, S, P, E, C, T... Respect!",
+              "lesson_cue_audio": "grade5_medium_respect_cue.wav",
+              "definition": "Showing that you value someone.",
+              "sample_sentence": "Show respect to your elders.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Respect",
+                  "distractors": ["Unity", "Harvest", "Kindness"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Friendship",
+              "category": "concept",
+              "image": "grade5_medium_friendship.png",
+              "audio": "grade5_medium_friendship.wav",
+              "lesson_cue": "This is friendship... F, R, I, E, N, D, S, H, I, P... Friendship!",
+              "lesson_cue_audio": "grade5_medium_friendship_cue.wav",
+              "definition": "A close and caring bond between friends.",
+              "sample_sentence": "Their friendship started in grade one.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"a close bond between friends\"?",
+                  "type": "inferential",
+                  "correct": "Friendship",
+                  "distractors": ["Community", "Unity", "Respect"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Helper",
+              "category": "person",
+              "image": "grade5_medium_helper.png",
+              "audio": "grade5_medium_helper.wav",
+              "lesson_cue": "This is a helper... H, E, L, P, E, R... Helper!",
+              "lesson_cue_audio": "grade5_medium_helper_cue.wav",
+              "definition": "A person who helps others.",
+              "sample_sentence": "The barangay helper sweeps the street.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Helper",
+                  "distractors": ["Neighbor", "Volunteer", "Vendor"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Volunteer",
+              "category": "person",
+              "image": "grade5_medium_volunteer.png",
+              "audio": "grade5_medium_volunteer.wav",
+              "lesson_cue": "This is a volunteer... V, O, L, U, N, T, E, E, R... Volunteer!",
+              "lesson_cue_audio": "grade5_medium_volunteer_cue.wav",
+              "definition": "A person who helps without pay.",
+              "sample_sentence": "The volunteer packs relief goods.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Who helps without expecting payment?",
+                  "type": "inferential",
+                  "correct": "Volunteer",
+                  "distractors": ["Helper", "Neighbor", "Vendor"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Reliable",
+              "category": "trait",
+              "image": "grade5_medium_reliable.png",
+              "audio": "grade5_medium_reliable.wav",
+              "lesson_cue": "This is reliable... R, E, L, I, A, B, L, E... Reliable!",
+              "lesson_cue_audio": "grade5_medium_reliable_cue.wav",
+              "definition": "Always doing what you promise to do.",
+              "sample_sentence": "A reliable child does their chores.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What is the best way to show you are reliable?",
+                  "type": "critical",
+                  "correct": "Doing your chores without being told",
+                  "distractors": ["Waiting for someone else to do it", "Only doing fun tasks", "Pretending to be busy"],
+                  "show_image": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "difficulty": "hard",
+      "theme": "Kalikasan at Kapaligiran",
+      "passage_id": "grade5_hard_passage03",
+      "quiz_config": {
+        "quiz_size": 16,
+        "buffer_size": 2,
+        "randomized": 1,
+        "passing_threshold": 70
+      },
+      "game_config": {
+        "game_type": "word_hunt",
+        "rounds": 6,
+        "points_per_correct": 5,
+        "max_points": 30,
+        "pass_threshold": 70,
+        "grid_size": 10,
+        "words_per_round": 6,
+        "hint_after_seconds": 60,
+        "auto_reveal_after_seconds": 120
+      },
+      "batches": [
+        {
+          "batch_index": 1,
+          "words": [
+            {
+              "text": "Landscape",
+              "category": "concept",
+              "image": "grade5_hard_landscape.png",
+              "audio": "grade5_hard_landscape.wav",
+              "lesson_cue": "This is a landscape... L, A, N, D, S, C, A, P, E... Landscape!",
+              "lesson_cue_audio": "grade5_hard_landscape_cue.wav",
+              "definition": "The natural scenery of a place.",
+              "sample_sentence": "The landscape is full of green hills.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Landscape",
+                  "distractors": ["Weather", "Climate", "Nature"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Nature",
+              "category": "concept",
+              "image": "grade5_hard_nature.png",
+              "audio": "grade5_hard_nature.wav",
+              "lesson_cue": "This is nature... N, A, T, U, R, E... Nature!",
+              "lesson_cue_audio": "grade5_hard_nature_cue.wav",
+              "definition": "The natural world — plants, animals, and landscapes.",
+              "sample_sentence": "Nature gives us fresh air and water.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Nature",
+                  "distractors": ["Landscape", "Weather", "Climate"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Climate",
+              "category": "concept",
+              "image": "grade5_hard_climate.png",
+              "audio": "grade5_hard_climate.wav",
+              "lesson_cue": "This is climate... C, L, I, M, A, T, E... Climate!",
+              "lesson_cue_audio": "grade5_hard_climate_cue.wav",
+              "definition": "The usual weather of a place over many years.",
+              "sample_sentence": "The climate is changing around the world.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Climate",
+                  "distractors": ["Weather", "Nature", "Balance"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Weather",
+              "category": "concept",
+              "image": "grade5_hard_weather.png",
+              "audio": "grade5_hard_weather.wav",
+              "lesson_cue": "This is weather... W, E, A, T, H, E, R... Weather!",
+              "lesson_cue_audio": "grade5_hard_weather_cue.wav",
+              "definition": "What the sky and air are like today.",
+              "sample_sentence": "The weather is sunny today.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Weather",
+                  "distractors": ["Climate", "Landscape", "Flood"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Pollution",
+              "category": "concept",
+              "image": "grade5_hard_pollution.png",
+              "audio": "grade5_hard_pollution.wav",
+              "lesson_cue": "This is pollution... P, O, L, L, U, T, I, O, N... Pollution!",
+              "lesson_cue_audio": "grade5_hard_pollution_cue.wav",
+              "definition": "Harmful waste that makes air, water, or land dirty.",
+              "sample_sentence": "Pollution makes the river dirty.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Pollution",
+                  "distractors": ["Litter", "Protection", "Preserve"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Ecosystem",
+              "category": "concept",
+              "image": "grade5_hard_ecosystem.png",
+              "audio": "grade5_hard_ecosystem.wav",
+              "lesson_cue": "This is an ecosystem... E, C, O, S, Y, S, T, E, M... Ecosystem!",
+              "lesson_cue_audio": "grade5_hard_ecosystem_cue.wav",
+              "definition": "All living things and their environment together.",
+              "sample_sentence": "A coral reef is a rich ecosystem.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Ecosystem",
+                  "distractors": ["Landscape", "Protection", "Climate"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Protection",
+              "category": "concept",
+              "image": "grade5_hard_protection.png",
+              "audio": "grade5_hard_protection.wav",
+              "lesson_cue": "This is protection... P, R, O, T, E, C, T, I, O, N... Protection!",
+              "lesson_cue_audio": "grade5_hard_protection_cue.wav",
+              "definition": "Keeping something safe from harm.",
+              "sample_sentence": "Protection keeps our forests safe.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Protection",
+                  "distractors": ["Pollution", "Ecosystem", "Awareness"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Clean",
+              "category": "quality",
+              "image": "grade5_hard_clean.png",
+              "audio": "grade5_hard_clean.wav",
+              "lesson_cue": "This is clean... C, L, E, A, N... Clean!",
+              "lesson_cue_audio": "grade5_hard_clean_cue.wav",
+              "definition": "Free from dirt or trash.",
+              "sample_sentence": "The clean river has many fish.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Clean",
+                  "distractors": ["Dirty", "Polluted", "Waste"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Preserve",
+              "category": "action",
+              "image": "grade5_hard_preserve.png",
+              "audio": "grade5_hard_preserve.wav",
+              "lesson_cue": "This is preserve... P, R, E, S, E, R, V, E... Preserve!",
+              "lesson_cue_audio": "grade5_hard_preserve_cue.wav",
+              "definition": "To keep something safe so it lasts.",
+              "sample_sentence": "We preserve our old churches.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Preserve",
+                  "distractors": ["Protection", "Pollute", "Destroy"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Recycle",
+              "category": "action",
+              "image": "grade5_hard_recycle.png",
+              "audio": "grade5_hard_recycle.wav",
+              "lesson_cue": "This is recycle... R, E, C, Y, C, L, E... Recycle!",
+              "lesson_cue_audio": "grade5_hard_recycle_cue.wav",
+              "definition": "Turning old things into new things.",
+              "sample_sentence": "We recycle plastic bottles at home.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"turning old things into new ones\"?",
+                  "type": "inferential",
+                  "correct": "Recycle",
+                  "distractors": ["Preserve", "Waste", "Litter"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Waste",
+              "category": "concept",
+              "image": "grade5_hard_waste.png",
+              "audio": "grade5_hard_waste.wav",
+              "lesson_cue": "This is waste... W, A, S, T, E... Waste!",
+              "lesson_cue_audio": "grade5_hard_waste_cue.wav",
+              "definition": "Things we throw away.",
+              "sample_sentence": "Do not waste water and food.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What do we call things we throw away?",
+                  "type": "inferential",
+                  "correct": "Waste",
+                  "distractors": ["Recycle", "Clean", "Preserve"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Litter",
+              "category": "action",
+              "image": "grade5_hard_litter.png",
+              "audio": "grade5_hard_litter.wav",
+              "lesson_cue": "This is litter... L, I, T, T, E, R... Litter!",
+              "lesson_cue_audio": "grade5_hard_litter_cue.wav",
+              "definition": "Trash left in the wrong place.",
+              "sample_sentence": "Do not litter in the park.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What do we call trash that is left in the wrong place?",
+                  "type": "inferential",
+                  "correct": "Litter",
+                  "distractors": ["Recycle", "Waste", "Pollution"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Disaster",
+              "category": "concept",
+              "image": "grade5_hard_disaster.png",
+              "audio": "grade5_hard_disaster.wav",
+              "lesson_cue": "This is a disaster... D, I, S, A, S, T, E, R... Disaster!",
+              "lesson_cue_audio": "grade5_hard_disaster_cue.wav",
+              "definition": "A sudden event that causes great harm.",
+              "sample_sentence": "A typhoon is a natural disaster.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "inferential",
+                  "correct": "Disaster",
+                  "distractors": ["Flood", "Drought", "Weather"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Flood",
+              "category": "nature",
+              "image": "grade5_hard_flood.png",
+              "audio": "grade5_hard_flood.wav",
+              "lesson_cue": "This is a flood... F, L, O, O, D... Flood!",
+              "lesson_cue_audio": "grade5_hard_flood_cue.wav",
+              "definition": "Water covering land that is usually dry.",
+              "sample_sentence": "The flood covered the streets.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"water covering the land\"?",
+                  "type": "inferential",
+                  "correct": "Flood",
+                  "distractors": ["Drought", "Weather", "Climate"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Drought",
+              "category": "nature",
+              "image": "grade5_hard_drought.png",
+              "audio": "grade5_hard_drought.wav",
+              "lesson_cue": "This is a drought... D, R, O, U, G, H, T... Drought!",
+              "lesson_cue_audio": "grade5_hard_drought_cue.wav",
+              "definition": "A long time with no rain.",
+              "sample_sentence": "The drought dried up the river.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"a long time with no rain\"?",
+                  "type": "inferential",
+                  "correct": "Drought",
+                  "distractors": ["Flood", "Weather", "Climate"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Commitment",
+              "category": "concept",
+              "image": "grade5_hard_commitment.png",
+              "audio": "grade5_hard_commitment.wav",
+              "lesson_cue": "This is commitment... C, O, M, M, I, T, M, E, N, T... Commitment!",
+              "lesson_cue_audio": "grade5_hard_commitment_cue.wav",
+              "definition": "Sticking to a promise or a duty.",
+              "sample_sentence": "It is our commitment to care for nature.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word describes sticking to a promise or a duty?",
+                  "type": "inferential",
+                  "correct": "Commitment",
+                  "distractors": ["Awareness", "Protection", "Balance"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Balance",
+              "category": "concept",
+              "image": "grade5_hard_balance.png",
+              "audio": "grade5_hard_balance.wav",
+              "lesson_cue": "This is balance... B, A, L, A, N, C, E... Balance!",
+              "lesson_cue_audio": "grade5_hard_balance_cue.wav",
+              "definition": "Having the right amount of everything.",
+              "sample_sentence": "Balance keeps the ecosystem healthy.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which best describes balance in nature?",
+                  "type": "critical",
+                  "correct": "The right amount of plants, animals, and resources",
+                  "distractors": ["Too many animals in one place", "No plants growing anywhere", "Using everything up quickly"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Awareness",
+              "category": "concept",
+              "image": "grade5_hard_awareness.png",
+              "audio": "grade5_hard_awareness.wav",
+              "lesson_cue": "This is awareness... A, W, A, R, E, N, E, S, S... Awareness!",
+              "lesson_cue_audio": "grade5_hard_awareness_cue.wav",
+              "definition": "Knowing that something is important.",
+              "sample_sentence": "Awareness helps people protect the planet.",
+              "source": "MELC G5",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Why is environmental awareness important?",
+                  "type": "critical",
+                  "correct": "It helps people make choices that protect nature.",
+                  "distractors": ["It gives people more money.", "It makes animals talk.", "It stops all rain from falling."],
+                  "show_image": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

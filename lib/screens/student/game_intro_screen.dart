@@ -93,6 +93,7 @@ class _GameIntroScreenState extends State<GameIntroScreen> {
       'word_scramble' => '/word-scramble',
       'sentence_builder' => '/sentence-builder',
       'floor_is_lava' => '/floor-is-lava',
+      'word_hunt' => '/word-hunt',
       _ => '/quiz-play',
     };
 

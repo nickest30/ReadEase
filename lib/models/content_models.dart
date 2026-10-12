@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 // Content-side models — bundled with app, seeded from JSON.
 // These represent the DATABANK, not user progress.
 
@@ -636,6 +638,7 @@ class Passage {
   final String title;
   final String illustration;
   final int wordCount;
+  final String? tappableWordsJson; // JSON-encoded list of lowercase words
 
   Passage({
     this.id,
@@ -645,7 +648,24 @@ class Passage {
     required this.title,
     required this.illustration,
     required this.wordCount,
+    this.tappableWordsJson,
   });
+
+  /// Convenience accessor — returns lowercase tappable words, or empty list.
+  List<String> get tappableWords {
+    final raw = tappableWordsJson;
+    if (raw == null || raw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        return decoded
+            .map((e) => e.toString().toLowerCase())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      }
+    } catch (_) {}
+    return const [];
+  }
 
   Map<String, dynamic> toMap() => {
         'id': id,
@@ -655,6 +675,7 @@ class Passage {
         'title': title,
         'illustration': illustration,
         'word_count': wordCount,
+        'tappable_words_json': tappableWordsJson,
       };
 
   factory Passage.fromMap(Map<String, dynamic> m) => Passage(
@@ -665,6 +686,7 @@ class Passage {
         title: m['title'] as String,
         illustration: m['illustration'] as String,
         wordCount: m['word_count'] as int,
+        tappableWordsJson: m['tappable_words_json'] as String?,
       );
 }
 

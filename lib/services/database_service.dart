@@ -28,7 +28,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 19,
+      version: 20,
       onCreate: _createTables,
       onUpgrade: _upgradeTables,
     );
@@ -447,7 +447,8 @@ class DatabaseService {
         difficulty TEXT NOT NULL,
         title TEXT NOT NULL,
         illustration TEXT NOT NULL,
-        word_count INTEGER NOT NULL
+        word_count INTEGER NOT NULL,
+        tappable_words_json TEXT
       )
     ''');
 
@@ -971,17 +972,18 @@ class DatabaseService {
       } catch (_) {}
 
       try {
-        await db.execute('''
-          CREATE TABLE passages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            passage_key TEXT NOT NULL UNIQUE,
-            grade_level INTEGER NOT NULL,
-            difficulty TEXT NOT NULL,
-            title TEXT NOT NULL,
-            illustration TEXT NOT NULL,
-            word_count INTEGER NOT NULL
-          )
-        ''');
+            await db.execute('''
+              CREATE TABLE passages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                passage_key TEXT NOT NULL UNIQUE,
+                grade_level INTEGER NOT NULL,
+                difficulty TEXT NOT NULL,
+                title TEXT NOT NULL,
+                illustration TEXT NOT NULL,
+                word_count INTEGER NOT NULL,
+                tappable_words_json TEXT
+              )
+            ''');
       } catch (_) {}
 
       try {
@@ -1191,6 +1193,14 @@ class DatabaseService {
       try {
         await db.execute(
           'ALTER TABLE passage_questions ADD COLUMN stem_audio TEXT',
+        );
+      } catch (_) {}
+    }
+
+    if (oldVersion < 20) {
+      try {
+        await db.execute(
+          'ALTER TABLE passages ADD COLUMN tappable_words_json TEXT',
         );
       } catch (_) {}
     }
@@ -2763,6 +2773,18 @@ class DatabaseService {
       where: 'id = ?',
       whereArgs: [wordId],
       limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return Word.fromMap(maps.first);
+  }
+
+  Future<Word?> getWordByText(int gradeLevel, String text) async {
+    final db = await database;
+    final maps = await db.rawQuery(
+      'SELECT * FROM words '
+      'WHERE grade_level = ? AND LOWER(text) = LOWER(?) '
+      'LIMIT 1',
+      [gradeLevel, text.trim()],
     );
     if (maps.isEmpty) return null;
     return Word.fromMap(maps.first);
