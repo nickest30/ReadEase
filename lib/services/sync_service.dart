@@ -255,16 +255,22 @@ class SyncService {
   Future<void> _updateLeaderboard(Student student) async {
     final uid = student.firebaseUid!;
 
+    // Refresh from DB — the passed-in `student` may be a stale snapshot
+    // from before this sync's `incrementStudentPoints` calls landed.
+    final fresh =
+        await DatabaseService.instance.getStudentById(student.id!);
+    final source = fresh ?? student;
+
     final badges = await DatabaseService.instance
-        .getBadgesForStudent(student.id!);
+        .getBadgesForStudent(source.id!);
 
     await FirestoreService.instance.updateLeaderboardEntry(
       studentUid: uid,
-      displayName: student.displayName,
-      totalPoints: student.totalPoints,
-      gradeLevel: student.gradeLevel,
+      displayName: source.displayName,
+      totalPoints: source.totalPoints,
+      gradeLevel: source.gradeLevel,
       badgeCount: badges.length,
-      classId: student.classFirestoreId,
+      classId: source.classFirestoreId,
     );
   }
 
