@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/student_provider.dart';
 import '../../utils/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -13,7 +16,7 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _progressAnimation;
 
-  @override
+    @override
   void initState() {
     super.initState();
 
@@ -28,11 +31,30 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/role-selection');
-      }
-    });
+    _bootstrap();
+  }
+
+  /// Loads the last-active student in parallel with the minimum
+  /// splash duration, then routes accordingly.
+  Future<void> _bootstrap() async {
+    final studentProvider = context.read<StudentProvider>();
+
+    await Future.wait([
+      studentProvider.init(),
+      Future.delayed(const Duration(milliseconds: 2500)),
+    ]);
+
+    if (!mounted) return;
+
+    final student = studentProvider.currentStudent;
+    if (student != null) {
+      Navigator.of(context).pushReplacementNamed(
+        '/pin-entry',
+        arguments: student,
+      );
+    } else {
+      Navigator.of(context).pushReplacementNamed('/role-selection');
+    }
   }
 
   @override
