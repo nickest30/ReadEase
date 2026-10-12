@@ -28,7 +28,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 15,
+      version: 19,
       onCreate: _createTables,
       onUpgrade: _upgradeTables,
     );
@@ -192,7 +192,7 @@ class DatabaseService {
         batch_index INTEGER NOT NULL,
         theme TEXT NOT NULL,
         cultural_elements_json TEXT,
-        game_type TEXT
+        game_type TEXT,
         passage_id TEXT
       )
     ''');
@@ -249,42 +249,6 @@ class DatabaseService {
         buffer_size INTEGER NOT NULL DEFAULT 0,
         randomized INTEGER NOT NULL DEFAULT 0,
         passing_threshold INTEGER DEFAULT 70
-      )
-    ''');
-
-    // passages — G3+
-    await db.execute('''
-      CREATE TABLE passages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        batch_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        full_text TEXT NOT NULL,
-        word_count INTEGER NOT NULL,
-        phil_iri_target_grade INTEGER NOT NULL,
-        phil_iri_readability_score REAL,
-        phil_iri_readability_tool TEXT,
-        cultural_elements_json TEXT
-      )
-    ''');
-
-    // passage_sentences
-    await db.execute('''
-      CREATE TABLE passage_sentences (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        passage_id INTEGER NOT NULL,
-        sentence_index INTEGER NOT NULL,
-        text TEXT NOT NULL,
-        audio_file TEXT NOT NULL
-      )
-    ''');
-
-    // passage_words
-    await db.execute('''
-      CREATE TABLE passage_words (
-        passage_id INTEGER NOT NULL,
-        word_id INTEGER NOT NULL,
-        is_tone_word INTEGER DEFAULT 0,
-        PRIMARY KEY (passage_id, word_id)
       )
     ''');
 
@@ -430,7 +394,51 @@ class DatabaseService {
       )
     ''');
 
-    // ── Passage tables (v15) ──
+    await db.execute('''
+      CREATE TABLE passage_questions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        passage_id INTEGER NOT NULL,
+        stem TEXT NOT NULL,
+        question_type TEXT NOT NULL,
+        correct_answer TEXT NOT NULL,
+        distractors_json TEXT NOT NULL,
+        show_image INTEGER DEFAULT 0,
+        order_index INTEGER NOT NULL,
+        stem_audio TEXT,
+        FOREIGN KEY (passage_id) REFERENCES passages (id)
+      )
+    ''');
+
+        // ============================================================
+    // Intro screens (v13+)
+    // ============================================================
+
+    await db.execute('''
+      CREATE TABLE lesson_intros (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        grade INTEGER NOT NULL,
+        difficulty TEXT NOT NULL,
+        header TEXT NOT NULL,
+        body TEXT NOT NULL,
+        button_label TEXT NOT NULL,
+        pose_asset TEXT NOT NULL,
+        audio_asset TEXT NOT NULL,
+        UNIQUE(grade, difficulty)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE game_intros (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        game_type TEXT NOT NULL UNIQUE,
+        header TEXT NOT NULL,
+        body TEXT NOT NULL,
+        button_label TEXT NOT NULL,
+        pose_asset TEXT NOT NULL,
+        audio_asset TEXT NOT NULL
+      )
+    ''');
+
     await db.execute('''
       CREATE TABLE passages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -449,26 +457,14 @@ class DatabaseService {
         passage_id INTEGER NOT NULL,
         sentence_index INTEGER NOT NULL,
         text TEXT NOT NULL,
-        audio TEXT NOT NULL,
-        FOREIGN KEY (passage_id) REFERENCES passages (id)
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE passage_questions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        passage_id INTEGER NOT NULL,
-        stem TEXT NOT NULL,
-        question_type TEXT NOT NULL,
-        correct_answer TEXT NOT NULL,
-        distractors_json TEXT NOT NULL,
-        show_image INTEGER DEFAULT 0,
-        order_index INTEGER NOT NULL,
-        FOREIGN KEY (passage_id) REFERENCES passages (id)
+        audio TEXT NOT NULL
       )
     ''');
 
   }
+
+
+
 
   Future<void> _upgradeTables(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
@@ -960,6 +956,244 @@ class DatabaseService {
       } catch (_) {}
     }
 
+        if (oldVersion < 16) {
+      // The old `passages`, `passage_sentences`, `passage_words` tables
+      // existed with a schema from the earlier Lesson Blueprint. Drop
+      // them and recreate with the v15 schema that the code expects.
+      try {
+        await db.execute('DROP TABLE IF EXISTS passage_words');
+      } catch (_) {}
+      try {
+        await db.execute('DROP TABLE IF EXISTS passage_sentences');
+      } catch (_) {}
+      try {
+        await db.execute('DROP TABLE IF EXISTS passages');
+      } catch (_) {}
+
+      try {
+        await db.execute('''
+          CREATE TABLE passages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            passage_key TEXT NOT NULL UNIQUE,
+            grade_level INTEGER NOT NULL,
+            difficulty TEXT NOT NULL,
+            title TEXT NOT NULL,
+            illustration TEXT NOT NULL,
+            word_count INTEGER NOT NULL
+          )
+        ''');
+      } catch (_) {}
+
+      try {
+        await db.execute('''
+          CREATE TABLE passage_sentences (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            passage_id INTEGER NOT NULL,
+            sentence_index INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            audio TEXT NOT NULL
+          )
+        ''');
+      } catch (_) {}
+
+      try {
+        await db.execute('''
+          CREATE TABLE passage_questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            passage_id INTEGER NOT NULL,
+            stem TEXT NOT NULL,
+            question_type TEXT NOT NULL,
+            correct_answer TEXT NOT NULL,
+            distractors_json TEXT NOT NULL,
+            show_image INTEGER DEFAULT 0,
+            order_index INTEGER NOT NULL,
+            stem_audio TEXT,
+            FOREIGN KEY (passage_id) REFERENCES passages (id)
+          )
+        ''');
+      } catch (_) {}
+    }
+
+        if (oldVersion < 17) {
+      // Drop any legacy passage tables from earlier blueprint versions.
+      try {
+        await db.execute('DROP TABLE IF EXISTS passage_words');
+      } catch (_) {}
+      try {
+        await db.execute('DROP TABLE IF EXISTS passage_sentences');
+      } catch (_) {}
+      try {
+        await db.execute('DROP TABLE IF EXISTS passages');
+      } catch (_) {}
+      try {
+        await db.execute('DROP TABLE IF EXISTS comprehension_questions');
+      } catch (_) {}
+
+      // Create the intro tables.
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS lesson_intros (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            grade INTEGER NOT NULL,
+            difficulty TEXT NOT NULL,
+            header TEXT NOT NULL,
+            body TEXT NOT NULL,
+            button_label TEXT NOT NULL,
+            pose_asset TEXT NOT NULL,
+            audio_asset TEXT NOT NULL,
+            UNIQUE(grade, difficulty)
+          )
+        ''');
+      } catch (_) {}
+
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS game_intros (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_type TEXT NOT NULL UNIQUE,
+            header TEXT NOT NULL,
+            body TEXT NOT NULL,
+            button_label TEXT NOT NULL,
+            pose_asset TEXT NOT NULL,
+            audio_asset TEXT NOT NULL
+          )
+        ''');
+      } catch (_) {}
+
+      // Create the passage tables with the importer-compatible schema.
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS passages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            passage_key TEXT NOT NULL UNIQUE,
+            grade_level INTEGER NOT NULL,
+            difficulty TEXT NOT NULL,
+            title TEXT NOT NULL,
+            illustration TEXT NOT NULL,
+            word_count INTEGER NOT NULL
+          )
+        ''');
+      } catch (_) {}
+
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS passage_sentences (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            passage_id INTEGER NOT NULL,
+            sentence_index INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            audio TEXT NOT NULL
+          )
+        ''');
+      } catch (_) {}
+
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS passage_questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            passage_id INTEGER NOT NULL,
+            stem TEXT NOT NULL,
+            question_type TEXT NOT NULL,
+            correct_answer TEXT NOT NULL,
+            distractors_json TEXT NOT NULL,
+            show_image INTEGER DEFAULT 0,
+            order_index INTEGER NOT NULL
+          )
+        ''');
+      } catch (_) {}
+    }
+
+    if (oldVersion < 18) {
+      // Safety net for installs where _createTables ran on an older version
+      // that didn't yet include these tables. All statements are guarded so
+      // this block is idempotent.
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS passages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            passage_key TEXT NOT NULL UNIQUE,
+            grade_level INTEGER NOT NULL,
+            difficulty TEXT NOT NULL,
+            title TEXT NOT NULL,
+            illustration TEXT NOT NULL,
+            word_count INTEGER NOT NULL
+          )
+        ''');
+      } catch (_) {}
+
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS passage_sentences (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            passage_id INTEGER NOT NULL,
+            sentence_index INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            audio TEXT NOT NULL
+          )
+        ''');
+      } catch (_) {}
+
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS passage_questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            passage_id INTEGER NOT NULL,
+            stem TEXT NOT NULL,
+            question_type TEXT NOT NULL,
+            correct_answer TEXT NOT NULL,
+            distractors_json TEXT NOT NULL,
+            show_image INTEGER DEFAULT 0,
+            order_index INTEGER NOT NULL
+          )
+        ''');
+      } catch (_) {}
+
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS lesson_intros (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            grade INTEGER NOT NULL,
+            difficulty TEXT NOT NULL,
+            header TEXT NOT NULL,
+            body TEXT NOT NULL,
+            button_label TEXT NOT NULL,
+            pose_asset TEXT NOT NULL,
+            audio_asset TEXT NOT NULL,
+            UNIQUE(grade, difficulty)
+          )
+        ''');
+      } catch (_) {}
+
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS game_intros (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_type TEXT NOT NULL UNIQUE,
+            header TEXT NOT NULL,
+            body TEXT NOT NULL,
+            button_label TEXT NOT NULL,
+            pose_asset TEXT NOT NULL,
+            audio_asset TEXT NOT NULL
+          )
+        ''');
+      } catch (_) {}
+
+      // Ensure batches has the v12/v15 columns.
+      try {
+        await db.execute('ALTER TABLE batches ADD COLUMN game_type TEXT');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE batches ADD COLUMN passage_id TEXT');
+      } catch (_) {}
+    }
+
+    if (oldVersion < 19) {
+      try {
+        await db.execute(
+          'ALTER TABLE passage_questions ADD COLUMN stem_audio TEXT',
+        );
+      } catch (_) {}
+    }
   }
 
   // ---------- Student methods ----------
@@ -1879,16 +2113,21 @@ class DatabaseService {
   }
 
   /// Get the passage for a batch (G3+).
+  /// Passages are linked to batches via `batches.passage_id`, which is a
+  /// passage_key string (not an integer FK).
   Future<Passage?> getPassageForBatch(int batchId) async {
     final db = await database;
-    final maps = await db.query(
-      'passages',
-      where: 'batch_id = ?',
+    final batchRows = await db.query(
+      'batches',
+      columns: ['passage_id'],
+      where: 'id = ?',
       whereArgs: [batchId],
       limit: 1,
     );
-    if (maps.isEmpty) return null;
-    return Passage.fromMap(maps.first);
+    if (batchRows.isEmpty) return null;
+    final passageKey = batchRows.first['passage_id'] as String?;
+    if (passageKey == null || passageKey.isEmpty) return null;
+    return getPassageByKey(passageKey);
   }
 
   // ============================================================
@@ -2824,6 +3063,7 @@ class DatabaseService {
   static const int kMaxLoginAttempts = 5;
   static const int kMaxPinAttempts = 5;
   static const Duration kRateLimitWindow = Duration(minutes: 15);
+  static const Duration kPinLockWindow = Duration(minutes: 3);
 
   /// Record a login attempt (success = true on successful login).
   Future<void> recordLoginAttempt({
@@ -2904,7 +3144,7 @@ class DatabaseService {
 
   Future<bool> isPinRateLimited(int studentLocalId) async {
     final db = await database;
-    final cutoff = DateTime.now().subtract(kRateLimitWindow).toIso8601String();
+    final cutoff = DateTime.now().subtract(kPinLockWindow).toIso8601String();
 
     final rows = await db.rawQuery('''
       SELECT COUNT(*) as count FROM pin_attempts
@@ -2915,6 +3155,31 @@ class DatabaseService {
 
     final count = Sqflite.firstIntValue(rows) ?? 0;
     return count >= kMaxPinAttempts;
+  }
+
+  /// Remaining lock time for a PIN-locked student, or null if not locked.
+  Future<Duration?> pinLockRemaining(int studentLocalId) async {
+    final db = await database;
+    final cutoff = DateTime.now().subtract(kPinLockWindow).toIso8601String();
+
+    final rows = await db.query(
+      'pin_attempts',
+      columns: ['attempt_at'],
+      where: 'student_local_id = ? AND attempt_at > ? AND success = 0',
+      whereArgs: [studentLocalId, cutoff],
+      orderBy: 'attempt_at DESC',
+    );
+
+    if (rows.length < kMaxPinAttempts) return null;
+
+    final mostRecentRaw = rows.first['attempt_at'] as String?;
+    if (mostRecentRaw == null) return null;
+    final mostRecent = DateTime.tryParse(mostRecentRaw);
+    if (mostRecent == null) return null;
+
+    final expiry = mostRecent.add(kPinLockWindow);
+    final remaining = expiry.difference(DateTime.now());
+    return remaining.isNegative ? null : remaining;
   }
 
   Future<void> clearPinAttempts(int studentLocalId) async {
@@ -3035,7 +3300,4 @@ class DatabaseService {
     );
     // game_intros are shared across grades — don't delete on grade re-import
   }
-
-  
-
 }

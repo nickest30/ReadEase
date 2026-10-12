@@ -6,15 +6,18 @@ import 'package:audioplayers/audioplayers.dart';
 
 import '../../models/content_models.dart';
 import '../../services/database_service.dart';
+import '../../services/game_sfx.dart';
 import '../../utils/app_theme.dart';
+import 'package:provider/provider.dart';
+import '../../providers/student_provider.dart';
 
-/// PassageScreen — simplified version (Grade 4+).
+/// PassageScreen — Grade 4+.
 ///
 /// Flow:
-///   1. Show illustration + title
-///   2. Play sentences one by one (active sentence highlighted)
-///   3. After last sentence, show comprehension questions
-///   4. Compute passage score, pass to game via route args
+///   1. Illustration + title
+///   2. Sentences played one at a time (active sentence highlighted, auto-scrolled)
+///   3. Comprehension questions (mascot top, question middle, answers bottom)
+///   4. Passage score passed to the game via route args
 class PassageScreen extends StatefulWidget {
   const PassageScreen({super.key});
 
@@ -34,13 +37,25 @@ class _PassageScreenState extends State<PassageScreen> {
 
   int _activeSentenceIndex = 0;
   bool _isPlaying = false;
+  bool _hasStartedReading = false; // controls the Ready / Next Sentence button
+  bool _hasCompletedBefore = false; // shows a Skip-to-Questions button
 
   int _currentQuestionIndex = 0;
   String? _selectedAnswer;
   bool _answered = false;
   int _passageCorrect = 0;
 
+  // Cached choices per question — prevents reshuffle on rebuild.
+  List<String>? _cachedChoices;
+  int _cachedChoicesForIndex = -1;
+
+  // Sentence scroll + per-sentence keys for auto-scroll.
+  final ScrollController _sentenceScroll = ScrollController();
+  final List<GlobalKey> _sentenceKeys = [];
+
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final AudioPlayer _questionAudioPlayer = AudioPlayer();
+  bool _isPlayingQuestion = false;
 
   @override
   void initState() {
@@ -51,6 +66,8 @@ class _PassageScreenState extends State<PassageScreen> {
   @override
   void dispose() {
     _audioPlayer.dispose();
+    _questionAudioPlayer.dispose();
+    _sentenceScroll.dispose();
     super.dispose();
   }
 
@@ -58,8 +75,10 @@ class _PassageScreenState extends State<PassageScreen> {
     final args = ModalRoute.of(context)!.settings.arguments as Map;
     final passageKey = args['passageId'] as String?;
 
+    final studentId = context.read<StudentProvider>().currentStudent?.id;
+    final batchIdArg = args['batchId'] as int?;
+
     if (passageKey == null || passageKey.isEmpty) {
-      // No passage — skip straight to game intro.
       Navigator.of(context).pushReplacementNamed(
         '/game-intro',
         arguments: args,
@@ -67,9 +86,7 @@ class _PassageScreenState extends State<PassageScreen> {
       return;
     }
 
-    final passage = await DatabaseService.instance
-        .getPassageByKey(passageKey);
-
+    final passage = await DatabaseService.instance.getPassageByKey(passageKey);
     if (passage == null || passage.id == null) {
       setState(() {
         _phase = _PassagePhase.loading;
@@ -78,12 +95,25 @@ class _PassageScreenState extends State<PassageScreen> {
       return;
     }
 
-    final sentences = await DatabaseService.instance
-        .getSentencesForPassage(passage.id!);
-    final questions = await DatabaseService.instance
-        .getQuestionsForPassage(passage.id!);
+    final sentences =
+        await DatabaseService.instance.getSentencesForPassage(passage.id!);
+    final questions =
+        await DatabaseService.instance.getQuestionsForPassage(passage.id!);
+
+    // Did this student already finish this batch before?
+    bool alreadyDone = false;
+    if (studentId != null && batchIdArg != null) {
+      final prior = await DatabaseService.instance
+          .getQuizAttempts(studentId, batchIdArg);
+      alreadyDone = prior.isNotEmpty;
+    }
 
     if (!mounted) return;
+
+    _sentenceKeys.clear();
+    for (int i = 0; i < sentences.length; i++) {
+      _sentenceKeys.add(GlobalKey());
+    }
 
     setState(() {
       _passage = passage;
@@ -91,7 +121,17 @@ class _PassageScreenState extends State<PassageScreen> {
       _questions = questions;
       _phase = _PassagePhase.reading;
       _activeSentenceIndex = 0;
+      _hasStartedReading = false;
+      _hasCompletedBefore = alreadyDone;
     });
+  }
+
+  /// Some installs still carry the old /passages/ path — retry from /words/.
+  String _resolveIllustrationPath(String raw) {
+    if (raw.contains('/passages/')) {
+      return raw.replaceFirst('/passages/', '/words/');
+    }
+    return raw;
   }
 
   Future<void> _playSentence(int index) async {
@@ -101,7 +141,10 @@ class _PassageScreenState extends State<PassageScreen> {
     setState(() {
       _activeSentenceIndex = index;
       _isPlaying = true;
+      _hasStartedReading = true;
     });
+
+    _scrollToActiveSentence();
 
     try {
       final clean = sentence.audio.startsWith('assets/')
@@ -109,7 +152,6 @@ class _PassageScreenState extends State<PassageScreen> {
           : sentence.audio;
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource(clean));
-      // Wait for completion or 15s timeout.
       await _audioPlayer.onPlayerComplete
           .first
           .timeout(const Duration(seconds: 15));
@@ -121,21 +163,97 @@ class _PassageScreenState extends State<PassageScreen> {
     setState(() => _isPlaying = false);
   }
 
-  Future<void> _onNextSentence() async {
+  void _scrollToActiveSentence() {
+    if (_activeSentenceIndex >= _sentenceKeys.length) return;
+    final key = _sentenceKeys[_activeSentenceIndex];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = key.currentContext;
+      if (ctx == null) return;
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
+        alignment: 0.35,
+      );
+    });
+  }
+
+  Future<void> _onButtonPressed() async {
     if (_isPlaying) return;
 
+    // First tap — "READY?" — start sentence 0.
+    if (!_hasStartedReading) {
+      await _playSentence(0);
+      return;
+    }
+
+    // Subsequent taps — advance to next sentence, or go to questions.
     if (_activeSentenceIndex < _sentences.length - 1) {
       await _playSentence(_activeSentenceIndex + 1);
     } else {
-      // Last sentence — move to questions.
       setState(() => _phase = _PassagePhase.questions);
+      _playQuestionStem();
     }
   }
 
-  void _onSelectAnswer(String answer) {
+    Future<void> _playQuestionStem() async {
+    if (_questions.isEmpty) return;
+    final q = _questions[_currentQuestionIndex];
+    final audio = q.stemAudio;
+    if (audio == null || audio.isEmpty) return;
+    if (_isPlayingQuestion) return;
+
+    _isPlayingQuestion = true;
+    try {
+      final clean = audio.startsWith('assets/')
+          ? audio.substring('assets/'.length)
+          : audio;
+      await _questionAudioPlayer.stop();
+      await _questionAudioPlayer.play(AssetSource(clean));
+      await _questionAudioPlayer.onPlayerComplete
+          .first
+          .timeout(const Duration(seconds: 12));
+    } catch (e) {
+      debugPrint('🔊 Question stem audio failed (continuing): $e');
+    }
+    _isPlayingQuestion = false;
+  }
+
+  void _advanceToQuestion(int index) {
+    setState(() {
+      _currentQuestionIndex = index;
+      _selectedAnswer = null;
+      _answered = false;
+      _cachedChoices = null;
+      _cachedChoicesForIndex = -1;
+    });
+    _playQuestionStem();
+  }
+
+  List<String> _choicesForCurrentQuestion() {
+    if (_cachedChoicesForIndex == _currentQuestionIndex &&
+        _cachedChoices != null) {
+      return _cachedChoices!;
+    }
+    final q = _questions[_currentQuestionIndex];
+    final distractors = _parseDistractors(q.distractorsJson);
+    final list = <String>[q.correctAnswer, ...distractors]..shuffle(Random());
+    _cachedChoices = list;
+    _cachedChoicesForIndex = _currentQuestionIndex;
+    return list;
+  }
+
+    void _onSelectAnswer(String answer) {
     if (_answered) return;
     final q = _questions[_currentQuestionIndex];
     final isCorrect = answer == q.correctAnswer;
+
+    // Immediate audio feedback on tap.
+    if (isCorrect) {
+      GameSfx.instance.playCorrect();
+    } else {
+      GameSfx.instance.playWrong();
+    }
 
     setState(() {
       _selectedAnswer = answer;
@@ -146,11 +264,7 @@ class _PassageScreenState extends State<PassageScreen> {
     Future.delayed(const Duration(milliseconds: 1200), () {
       if (!mounted) return;
       if (_currentQuestionIndex < _questions.length - 1) {
-        setState(() {
-          _currentQuestionIndex++;
-          _selectedAnswer = null;
-          _answered = false;
-        });
+        _advanceToQuestion(_currentQuestionIndex + 1);
       } else {
         setState(() => _phase = _PassagePhase.done);
         _navigateToGame();
@@ -172,10 +286,6 @@ class _PassageScreenState extends State<PassageScreen> {
       },
     );
   }
-
-  // ────────────────────────────────────────────────────────────
-  // Build
-  // ────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -228,7 +338,20 @@ class _PassageScreenState extends State<PassageScreen> {
   Widget _buildReading() {
     final p = _passage!;
     final screenH = MediaQuery.of(context).size.height;
-    final illustrationSize = (screenH * 0.28).clamp(180.0, 240.0);
+    final illustrationHeight = (screenH * 0.38).clamp(220.0, 340.0);
+
+    final isLastSentence =
+        _hasStartedReading && _activeSentenceIndex >= _sentences.length - 1;
+    final buttonLabel = !_hasStartedReading
+        ? 'READY?'
+        : isLastSentence
+            ? 'ASK QUESTIONS'
+            : 'NEXT SENTENCE';
+    final buttonIcon = !_hasStartedReading
+        ? Icons.play_arrow_rounded
+        : isLastSentence
+            ? Icons.quiz_rounded
+            : Icons.arrow_forward_rounded;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -249,111 +372,135 @@ class _PassageScreenState extends State<PassageScreen> {
               const Expanded(
                 child: Text('Read the Passage', style: AppText.h2),
               ),
+              if (_hasCompletedBefore)
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() => _phase = _PassagePhase.questions);
+                    _playQuestionStem();
+                  },
+                  icon: const Icon(Icons.fast_forward_rounded, size: 18),
+                  label: const Text(
+                    'Skip',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.accentTeal,
+                  ),
+                ),
             ],
           ),
 
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
 
-          // Illustration
-          Container(
-            width: illustrationSize,
-            height: illustrationSize,
-            decoration: BoxDecoration(
+          // Big illustration — full width, cover fit
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+            child: Container(
+              width: double.infinity,
+              height: illustrationHeight,
               color: AppColors.surface,
-              borderRadius: BorderRadius.circular(AppRadius.xl),
-              border: Border.all(color: AppColors.border, width: 2),
-              boxShadow: AppShadows.soft,
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Image.asset(
-              p.illustration,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => const Icon(
-                Icons.image_outlined,
-                size: 72,
-                color: AppColors.textMuted,
+              child: Image.asset(
+                _resolveIllustrationPath(p.illustration),
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => const Center(
+                  child: Icon(
+                    Icons.image_outlined,
+                    size: 96,
+                    color: AppColors.textMuted,
+                  ),
+                ),
               ),
             ),
           ),
 
           const SizedBox(height: AppSpacing.md),
 
-          // Title
           Text(
             p.title,
             textAlign: TextAlign.center,
             style: AppText.h2.copyWith(fontSize: 18),
           ),
 
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
 
-          // Sentences
+          // Sentences — auto-scrolling
           Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: List.generate(_sentences.length, (i) {
-                  final s = _sentences[i];
-                  final isActive = i == _activeSentenceIndex;
-                  final isDone = i < _activeSentenceIndex;
+            child: Scrollbar(
+              controller: _sentenceScroll,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                controller: _sentenceScroll,
+                padding: const EdgeInsets.only(right: 8),
+                child: Column(
+                  children: List.generate(_sentences.length, (i) {
+                    final s = _sentences[i];
+                    final isActive =
+                        _hasStartedReading && i == _activeSentenceIndex;
+                    final isDone =
+                        _hasStartedReading && i < _activeSentenceIndex;
 
-                  return GestureDetector(
-                    onTap: isDone ? () => _playSentence(i) : null,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? AppColors.accentYellow
-                                .withValues(alpha: 0.25)
-                            : AppColors.surface,
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.medium),
-                        border: Border.all(
-                          color: isActive
-                              ? AppColors.accentYellow
-                              : AppColors.border,
-                          width: isActive ? 2 : 1,
+                    return GestureDetector(
+                      onTap: isDone ? () => _playSentence(i) : null,
+                      child: Container(
+                        key: _sentenceKeys[i],
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? AppColors.accentYellow
+                                    .withValues(alpha: 0.25)
+                                : AppColors.surface,
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.medium),
+                            border: Border.all(
+                              color: isActive
+                                  ? AppColors.accentYellow
+                                  : AppColors.border,
+                              width: isActive ? 2 : 1,
+                            ),
+                          ),
+                          child: Text(
+                            s.text,
+                            style: TextStyle(
+                              fontFamily: 'Nunito',
+                              fontSize: 15,
+                              height: 1.5,
+                              fontWeight: isActive
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: isDone
+                                  ? AppColors.textMuted
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
                         ),
                       ),
-                      child: Text(
-                        s.text,
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 15,
-                          height: 1.5,
-                          fontWeight:
-                              isActive ? FontWeight.w700 : FontWeight.w500,
-                          color: isDone
-                              ? AppColors.textMuted
-                              : AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                  );
-                }),
+                    );
+                  }),
+                ),
               ),
             ),
           ),
 
-          // Next button
+          const SizedBox(height: AppSpacing.sm),
+
+          // Ready / Next Sentence / Ask Questions
           SizedBox(
             height: 56,
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: _isPlaying ? null : _onNextSentence,
-              icon: Icon(
-                _activeSentenceIndex >= _sentences.length - 1
-                    ? Icons.quiz_rounded
-                    : Icons.arrow_forward_rounded,
-              ),
+              onPressed: _isPlaying ? null : _onButtonPressed,
+              icon: Icon(buttonIcon),
               label: Text(
-                _activeSentenceIndex >= _sentences.length - 1
-                    ? 'ASK QUESTIONS'
-                    : 'NEXT SENTENCE',
+                buttonLabel,
                 style: const TextStyle(
                   fontFamily: 'Nunito',
                   fontWeight: FontWeight.w700,
@@ -382,117 +529,163 @@ class _PassageScreenState extends State<PassageScreen> {
 
   Widget _buildQuestions() {
     final q = _questions[_currentQuestionIndex];
-    final distractors = _parseDistractors(q.distractorsJson);
-    final choices = <String>[q.correctAnswer, ...distractors]..shuffle(Random());
+    final choices = _choicesForCurrentQuestion();
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: AppSpacing.md),
+    return Container(
+      // Slightly warmer background than the reading phase — visually refreshing.
+      color: AppColors.accentYellow.withValues(alpha: 0.10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: AppSpacing.md),
 
-          Row(
-            children: [
-              const Expanded(
-                child: Text('Comprehension', style: AppText.h2),
-              ),
-              Text(
-                'Q ${_currentQuestionIndex + 1} / ${_questions.length}',
-                style: AppText.caption,
-              ),
-            ],
-          ),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text('Comprehension', style: AppText.h2),
+                ),
+                Text(
+                  'Q ${_currentQuestionIndex + 1} / ${_questions.length}',
+                  style: AppText.caption,
+                ),
+              ],
+            ),
 
-          const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.sm),
 
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.small),
-            child: LinearProgressIndicator(
-              value: (_currentQuestionIndex + 1) / _questions.length,
-              minHeight: 6,
-              backgroundColor: AppColors.border,
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                AppColors.accentTeal,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.small),
+              child: LinearProgressIndicator(
+                value: (_currentQuestionIndex + 1) / _questions.length,
+                minHeight: 6,
+                backgroundColor: AppColors.border,
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.accentTeal,
+                ),
               ),
             ),
-          ),
 
-          const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.md),
 
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(AppRadius.xl),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Text(
-              q.stem,
-              textAlign: TextAlign.center,
-              style: AppText.h2.copyWith(fontSize: 18),
-            ),
-          ),
-
-          const SizedBox(height: AppSpacing.lg),
-
-          ...choices.map((choice) {
-            final isCorrect = choice == q.correctAnswer;
-            final isSelected = choice == _selectedAnswer;
-
-            Color bg = AppColors.surface;
-            Color border = AppColors.border;
-            IconData? icon;
-            Color? iconColor;
-
-            if (_answered) {
-              if (isCorrect) {
-                bg = AppColors.accentTeal.withValues(alpha: 0.15);
-                border = AppColors.accentTeal;
-                icon = Icons.check_circle_rounded;
-                iconColor = AppColors.accentTeal;
-              } else if (isSelected) {
-                bg = AppColors.accentCoral.withValues(alpha: 0.15);
-                border = AppColors.accentCoral;
-                icon = Icons.cancel_rounded;
-                iconColor = AppColors.accentCoral;
-              }
-            }
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: InkWell(
-                onTap: _answered ? null : () => _onSelectAnswer(choice),
-                borderRadius: BorderRadius.circular(AppRadius.medium),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: bg,
-                    borderRadius: BorderRadius.circular(AppRadius.medium),
-                    border: Border.all(color: border, width: 1.5),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          choice,
-                          style: AppText.bodyBold.copyWith(fontSize: 15),
-                        ),
-                      ),
-                      if (icon != null)
-                        Icon(icon, color: iconColor),
-                    ],
+            // Mascot — top area
+            Expanded(
+              flex: 3,
+              child: Center(
+                child: Image.asset(
+                  'assets/images/mascot/groo_teaching.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => const Icon(
+                    Icons.school_rounded,
+                    size: 80,
+                    color: AppColors.accentPurple,
                   ),
                 ),
               ),
-            );
-          }),
+            ),
 
-          const Spacer(),
-        ],
+            // Question stem — middle
+                        // Question stem — middle, with a replay button
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+                border: Border.all(color: AppColors.border),
+                boxShadow: AppShadows.soft,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      q.stem,
+                      textAlign: TextAlign.center,
+                      style: AppText.h2.copyWith(fontSize: 18),
+                    ),
+                  ),
+                  if (q.stemAudio != null && q.stemAudio!.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: _playQuestionStem,
+                      borderRadius:
+                          BorderRadius.circular(AppRadius.medium),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Icon(
+                          Icons.volume_up_rounded,
+                          color: AppColors.accentTeal,
+                          size: 26,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.md),
+
+            // Answers — bottom thumb zone
+            ...choices.map((choice) {
+              final isCorrect = choice == q.correctAnswer;
+              final isSelected = choice == _selectedAnswer;
+
+              Color bg = AppColors.surface;
+              Color border = AppColors.border;
+              IconData? icon;
+              Color? iconColor;
+
+              if (_answered) {
+                if (isCorrect) {
+                  bg = AppColors.accentTeal.withValues(alpha: 0.15);
+                  border = AppColors.accentTeal;
+                  icon = Icons.check_circle_rounded;
+                  iconColor = AppColors.accentTeal;
+                } else if (isSelected) {
+                  bg = AppColors.accentCoral.withValues(alpha: 0.15);
+                  border = AppColors.accentCoral;
+                  icon = Icons.cancel_rounded;
+                  iconColor = AppColors.accentCoral;
+                }
+              }
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: InkWell(
+                  onTap: _answered ? null : () => _onSelectAnswer(choice),
+                  borderRadius: BorderRadius.circular(AppRadius.medium),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: bg,
+                      borderRadius: BorderRadius.circular(AppRadius.medium),
+                      border: Border.all(color: border, width: 1.5),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            choice,
+                            style: AppText.bodyBold.copyWith(fontSize: 15),
+                          ),
+                        ),
+                        if (icon != null) Icon(icon, color: iconColor),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
       ),
     );
   }

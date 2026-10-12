@@ -711,6 +711,7 @@ class PassageQuestion {
   final String distractorsJson;
   final bool showImage;
   final int orderIndex;
+  final String? stemAudio;
 
   PassageQuestion({
     this.id,
@@ -721,9 +722,10 @@ class PassageQuestion {
     required this.distractorsJson,
     this.showImage = false,
     required this.orderIndex,
+    this.stemAudio,
   });
 
-  Map<String, dynamic> toMap() => {
+    Map<String, dynamic> toMap() => {
         'id': id,
         'passage_id': passageId,
         'stem': stem,
@@ -732,6 +734,7 @@ class PassageQuestion {
         'distractors_json': distractorsJson,
         'show_image': showImage ? 1 : 0,
         'order_index': orderIndex,
+        'stem_audio': stemAudio,
       };
 
   factory PassageQuestion.fromMap(Map<String, dynamic> m) => PassageQuestion(
@@ -743,5 +746,6 @@ class PassageQuestion {
         distractorsJson: m['distractors_json'] as String,
         showImage: ((m['show_image'] as int?) ?? 0) == 1,
         orderIndex: m['order_index'] as int,
+        stemAudio: m['stem_audio'] as String?,
       );
 }

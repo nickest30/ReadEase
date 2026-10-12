@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:bcrypt/bcrypt.dart';
@@ -7,6 +9,7 @@ import '../../models/student.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../providers/student_provider.dart';
+import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/number_pad.dart';
 import '../../widgets/pin_dots.dart';
@@ -19,11 +22,70 @@ class PinEntryScreen extends StatefulWidget {
 }
 
 class _PinEntryScreenState extends State<PinEntryScreen> {
+  static const int _maxAttempts = 5;
   String _enteredPin = '';
-  int _attemptsRemaining = 5;
+  int _attemptsRemaining = _maxAttempts;
   bool _isLocked = false;
   bool _isVerifying = false;
   PinDotState _dotState = PinDotState.idle;
+  Timer? _lockTimer;
+  Duration _lockRemaining = Duration.zero;
+
+  Student get _student =>
+      ModalRoute.of(context)!.settings.arguments as Student;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkInitialLock());
+  }
+
+  @override
+  void dispose() {
+    _lockTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkInitialLock() async {
+    final id = _student.id;
+    if (id == null) return;
+    final remaining = await DatabaseService.instance.pinLockRemaining(id);
+    if (!mounted) return;
+    if (remaining != null && remaining.inSeconds > 0) {
+      setState(() {
+        _isLocked = true;
+        _lockRemaining = remaining;
+        _attemptsRemaining = 0;
+      });
+      _startLockCountdown();
+    }
+  }
+
+  void _startLockCountdown() {
+    _lockTimer?.cancel();
+    _lockTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+      final id = _student.id;
+      if (id == null || !mounted) return;
+      final remaining = await DatabaseService.instance.pinLockRemaining(id);
+      if (!mounted) return;
+      if (remaining == null || remaining.inSeconds <= 0) {
+        _lockTimer?.cancel();
+        setState(() {
+          _isLocked = false;
+          _lockRemaining = Duration.zero;
+          _attemptsRemaining = _maxAttempts;
+        });
+      } else {
+        setState(() => _lockRemaining = remaining);
+      }
+    });
+  }
+
+  String _formatRemaining(Duration d) {
+    final m = d.inMinutes;
+    final s = d.inSeconds.remainder(60);
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
 
   void _onDigitPressed(String digit, Student student) {
     if (_isLocked || _isVerifying || _enteredPin.length >= 4) return;
@@ -46,20 +108,47 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
     });
   }
 
-  Future<void> _verifyPin(Student student) async {
+    Future<void> _verifyPin(Student student) async {
     setState(() => _isVerifying = true);
 
+    final id = student.id;
     final isCorrect = BCrypt.checkpw(_enteredPin, student.pinHash ?? '');
+
     if (!isCorrect) {
       HapticFeedback.mediumImpact();
+      if (id != null) {
+        await DatabaseService.instance.recordPinAttempt(
+          studentLocalId: id,
+          success: false,
+        );
+      }
+      if (!mounted) return;
+
       setState(() {
         _attemptsRemaining--;
         _dotState = PinDotState.error;
-        if (_attemptsRemaining <= 0) _isLocked = true;
       });
 
       await Future.delayed(const Duration(milliseconds: 1200));
       if (!mounted) return;
+
+      if (id != null) {
+        final remaining =
+            await DatabaseService.instance.pinLockRemaining(id);
+        if (!mounted) return;
+        if (remaining != null && remaining.inSeconds > 0) {
+          setState(() {
+            _isLocked = true;
+            _lockRemaining = remaining;
+            _enteredPin = '';
+            _dotState = PinDotState.idle;
+            _isVerifying = false;
+          });
+          _startLockCountdown();
+          return;
+        }
+      }
+
       setState(() {
         _enteredPin = '';
         _dotState = PinDotState.idle;
@@ -69,6 +158,9 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
     }
 
     HapticFeedback.heavyImpact();
+    if (id != null) {
+      await DatabaseService.instance.clearPinAttempts(id);
+    }
     setState(() => _dotState = PinDotState.success);
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
@@ -274,7 +366,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
               const SizedBox(height: AppSpacing.md),
               Text(student.displayName, style: AppText.h2),
 
-              if (_isLocked) ...[
+                            if (_isLocked) ...[
                 const SizedBox(height: AppSpacing.xl),
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.lg),
@@ -298,9 +390,9 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xs),
-                      const Text(
+                      Text(
                         'Too many incorrect attempts.\n'
-                        'Full login is required to regain access.',
+                        'Try again in ${_formatRemaining(_lockRemaining)}.',
                         textAlign: TextAlign.center,
                         style: AppText.caption,
                       ),

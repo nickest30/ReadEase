@@ -122,6 +122,18 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 
   void _onNextTapped() {
+    // Never advance unless the student actually passed this level.
+    if (!_isPassing) {
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/difficulty-selection',
+        ModalRoute.withName('/grade-selection'),
+        arguments: {
+          'gradeLevel': _gradeLevel,
+        },
+      );
+      return;
+    }
+
     if (_difficulty == 'easy') {
       // Easy → Medium (same grade)
       Navigator.of(context).pushNamedAndRemoveUntil(
@@ -483,7 +495,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
               const SizedBox(height: AppSpacing.xl),
 
-                            // Buttons — row 1: retry / back to levels
+              // Buttons — row 1: retry (+ next level, only if passed)
               Row(
                 children: [
                   // Try Again
@@ -522,32 +534,35 @@ class _ResultsScreenState extends State<ResultsScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
 
-                  // Next Level / Next Grade
-                  Expanded(
-                    child: SizedBox(
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _onNextTapped,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentTeal,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.large),
+                  // Next Level / Next Grade — only shown when the
+                  // student actually passed this level.
+                  if (_isPassing) ...[
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: SizedBox(
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: _onNextTapped,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accentTeal,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.large),
+                            ),
                           ),
-                        ),
-                        child: Text(
-                          _nextButtonLabel,
-                          style: const TextStyle(
-                            fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w700,
+                          child: Text(
+                            _nextButtonLabel,
+                            style: const TextStyle(
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
 

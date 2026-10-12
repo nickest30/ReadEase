@@ -17,23 +17,26 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
   bool _loading = true;
   bool _mediumUnlocked = false;
   bool _hardUnlocked = false;
-  bool _initialized = false;
+  bool _checking = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_initialized) {
-      _initialized = true;
-      _checkUnlocks();
-    }
+    // Re-check on every dependency change so unlock states stay fresh
+    // after the student returns from a lesson.
+    _checkUnlocks();
   }
 
   Future<void> _checkUnlocks() async {
+    if (_checking) return;
+    _checking = true;
+
     final args = ModalRoute.of(context)!.settings.arguments as Map;
     final gradeLevel = args['gradeLevel'] as int;
     final student = context.read<StudentProvider>().currentStudent;
 
-    if (student == null) {
+    if (student == null || student.id == null) {
+      _checking = false;
       if (mounted) setState(() => _loading = false);
       return;
     }
@@ -43,6 +46,7 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
     final passedMedium = await DatabaseService.instance
         .hasPassedDifficulty(student.id!, gradeLevel, 'medium');
 
+    _checking = false;
     if (!mounted) return;
     setState(() {
       _mediumUnlocked = passedEasy;

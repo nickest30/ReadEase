@@ -175,6 +175,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
           displayName: newChild.displayName,
           gradeLevel: newChild.gradeLevel,
           parentUid: parentUid,
+          pinHash: hashedPin,
         );
       }
 

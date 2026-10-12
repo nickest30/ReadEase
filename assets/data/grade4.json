@@ -1,5 +1,5 @@
 {
-  "content_version": "1.0.0",
+  "content_version": "1.0.2",
   "grade": 4,
   "lesson_intros": [
     {
@@ -60,12 +60,12 @@
         {"index": 8, "text": "What a wonderful celebration!", "audio": "grade4_easy_passage01_s08.wav"}
       ],
       "comprehension_questions": [
-        {"stem": "Where is the fiesta happening?", "type": "literal", "correct": "In the barangay", "distractors": ["At school", "At the market", "At the beach"], "show_image": false},
-        {"stem": "What fills the streets?", "type": "literal", "correct": "Bright lights and colorful bands", "distractors": ["Cars and trucks", "Rain and wind", "Trees and flowers"], "show_image": false},
-        {"stem": "What plays all day long?", "type": "literal", "correct": "Music", "distractors": ["Video games", "Movies", "Sports"], "show_image": false},
-        {"stem": "What does the parade have?", "type": "literal", "correct": "People in costumes", "distractors": ["Animals", "Cars", "Trucks"], "show_image": false},
-        {"stem": "How do people feel during the fiesta?", "type": "inferential", "correct": "Happy and excited", "distractors": ["Bored", "Tired", "Angry"], "show_image": false},
-        {"stem": "What is the passage mainly about?", "type": "inferential", "correct": "A fiesta celebration", "distractors": ["A school trip", "A rainy day", "A family dinner"], "show_image": false}
+        {"stem": "Where is the fiesta happening?", "type": "literal", "correct": "In the barangay", "distractors": ["At school", "At the market", "At the beach"], "show_image": false, "stem_audio": "grade4_easy_passage01_q01_stem.wav"},
+        {"stem": "What fills the streets?", "type": "literal", "correct": "Bright lights and colorful bands", "distractors": ["Cars and trucks", "Rain and wind", "Trees and flowers"], "show_image": false, "stem_audio": "grade4_easy_passage01_q02_stem.wav"},
+        {"stem": "What plays all day long?", "type": "literal", "correct": "Music", "distractors": ["Video games", "Movies", "Sports"], "show_image": false, "stem_audio": "grade4_easy_passage01_q03_stem.wav"},
+        {"stem": "What does the parade have?", "type": "literal", "correct": "People in costumes", "distractors": ["Animals", "Cars", "Trucks"], "show_image": false, "stem_audio": "grade4_easy_passage01_q04_stem.wav"},
+        {"stem": "How do people feel during the fiesta?", "type": "inferential", "correct": "Happy and excited", "distractors": ["Bored", "Tired", "Angry"], "show_image": false, "stem_audio": "grade4_easy_passage01_q05_stem.wav"},
+        {"stem": "What is the passage mainly about?", "type": "inferential", "correct": "A fiesta celebration", "distractors": ["A school trip", "A rainy day", "A family dinner"], "show_image": false, "stem_audio": "grade4_easy_passage01_q06_stem.wav"}
       ]
     },
     {
@@ -85,16 +85,16 @@
         {"index": 8, "text": "Everyone agrees it is a wonderful place to visit.", "audio": "grade4_medium_passage02_s08.wav"}
       ],
       "comprehension_questions": [
-        {"stem": "Where is Mayon Volcano?", "type": "literal", "correct": "In Albay", "distractors": ["In Manila", "In Cebu", "In Baguio"], "show_image": false},
-        {"stem": "What is Mayon famous for?", "type": "literal", "correct": "Its perfect cone shape", "distractors": ["Its height", "Its color", "Its size"], "show_image": false},
-        {"stem": "Where do some tourists go?", "type": "literal", "correct": "To the beach", "distractors": ["To the city", "To the mall", "To the airport"], "show_image": false},
-        {"stem": "What is at the foot of the mountain?", "type": "literal", "correct": "A garden", "distractors": ["A school", "A market", "A factory"], "show_image": false},
-        {"stem": "What do people climb?", "type": "literal", "correct": "Hills", "distractors": ["Trees", "Walls", "Stairs"], "show_image": false},
-        {"stem": "What do people explore?", "type": "inferential", "correct": "Caves", "distractors": ["Rivers", "Lakes", "Roads"], "show_image": false},
-        {"stem": "Why do tourists visit Mayon?", "type": "inferential", "correct": "To see its beauty", "distractors": ["To swim", "To fish", "To study"], "show_image": false},
-        {"stem": "How might tourists feel when they see Mayon?", "type": "inferential", "correct": "Amazed", "distractors": ["Scared", "Bored", "Sleepy"], "show_image": false},
-        {"stem": "What can you do at Mayon based on the passage?", "type": "inferential", "correct": "Explore the caves", "distractors": ["Ski", "Skate", "Surf"], "show_image": false},
-        {"stem": "What is the main idea of the passage?", "type": "critical", "correct": "Mayon is a beautiful place to visit", "distractors": ["Mayon is dangerous", "Mayon is empty", "Mayon is boring"], "show_image": false}
+        {"stem": "Where is Mayon Volcano?", "type": "literal", "correct": "In Albay", "distractors": ["In Manila", "In Cebu", "In Baguio"], "show_image": false, "stem_audio": "grade4_medium_passage02_q01_stem.wav"},
+        {"stem": "What is Mayon famous for?", "type": "literal", "correct": "Its perfect cone shape", "distractors": ["Its height", "Its color", "Its size"], "show_image": false, "stem_audio": "grade4_medium_passage02_q02_stem.wav"},
+        {"stem": "Where do some tourists go?", "type": "literal", "correct": "To the beach", "distractors": ["To the city", "To the mall", "To the airport"], "show_image": false, "stem_audio": "grade4_medium_passage02_q03_stem.wav"},
+        {"stem": "What is at the foot of the mountain?", "type": "literal", "correct": "A garden", "distractors": ["A school", "A market", "A factory"], "show_image": false, "stem_audio": "grade4_medium_passage02_q04_stem.wav"},
+        {"stem": "What do people climb?", "type": "literal", "correct": "Hills", "distractors": ["Trees", "Walls", "Stairs"], "show_image": false, "stem_audio": "grade4_medium_passage02_q05_stem.wav"},
+        {"stem": "What do people explore?", "type": "inferential", "correct": "Caves", "distractors": ["Rivers", "Lakes", "Roads"], "show_image": false, "stem_audio": "grade4_medium_passage02_q06_stem.wav"},
+        {"stem": "Why do tourists visit Mayon?", "type": "inferential", "correct": "To see its beauty", "distractors": ["To swim", "To fish", "To study"], "show_image": false, "stem_audio": "grade4_medium_passage02_q07_stem.wav"},
+        {"stem": "How might tourists feel when they see Mayon?", "type": "inferential", "correct": "Amazed", "distractors": ["Scared", "Bored", "Sleepy"], "show_image": false, "stem_audio": "grade4_medium_passage02_q08_stem.wav"},
+        {"stem": "What can you do at Mayon based on the passage?", "type": "inferential", "correct": "Explore the caves", "distractors": ["Ski", "Skate", "Surf"], "show_image": false, "stem_audio": "grade4_medium_passage02_q09_stem.wav"},
+        {"stem": "What is the main idea of the passage?", "type": "critical", "correct": "Mayon is a beautiful place to visit", "distractors": ["Mayon is dangerous", "Mayon is empty", "Mayon is boring"], "show_image": false, "stem_audio": "grade4_medium_passage02_q10_stem.wav"}
       ]
     },
     {
@@ -118,18 +118,18 @@
         {"index": 12, "text": "Their glory will never fade.", "audio": "grade4_hard_passage03_s12.wav"}
       ],
       "comprehension_questions": [
-        {"stem": "Who protects our nation?", "type": "literal", "correct": "Our heroes", "distractors": ["Our teachers", "Our doctors", "Our farmers"], "show_image": false},
-        {"stem": "With what do heroes serve our country?", "type": "literal", "correct": "Honor and loyalty", "distractors": ["Money and power", "Fame and fortune", "Food and water"], "show_image": false},
-        {"stem": "What do heroes fight for?", "type": "literal", "correct": "Freedom", "distractors": ["Food", "Money", "Land"], "show_image": false},
-        {"stem": "What did many heroes make?", "type": "literal", "correct": "Big sacrifices", "distractors": ["Big mistakes", "Big plans", "Big promises"], "show_image": false},
-        {"stem": "How were the heroes described?", "type": "literal", "correct": "Strong and proud", "distractors": ["Weak and shy", "Tall and thin", "Slow and quiet"], "show_image": false},
-        {"stem": "What will never fade?", "type": "literal", "correct": "Their glory", "distractors": ["Their name", "Their flag", "Their country"], "show_image": false},
-        {"stem": "Why did some heroes give their lives?", "type": "inferential", "correct": "So we could be free", "distractors": ["So we could be rich", "So we could be famous", "So we could be strong"], "show_image": false},
-        {"stem": "Why are heroes called brave?", "type": "inferential", "correct": "Because they face danger", "distractors": ["Because they are strong", "Because they are smart", "Because they are fast"], "show_image": false},
-        {"stem": "What kind of people are heroes based on the passage?", "type": "inferential", "correct": "Selfless and loyal", "distractors": ["Selfish and greedy", "Lazy and slow", "Rich and famous"], "show_image": false},
-        {"stem": "How should we feel about our heroes?", "type": "inferential", "correct": "Grateful", "distractors": ["Afraid", "Angry", "Confused"], "show_image": false},
-        {"stem": "Why did the author write this passage?", "type": "inferential", "correct": "To honor our heroes", "distractors": ["To sell a book", "To teach Math", "To tell a joke"], "show_image": false},
-        {"stem": "What is the main idea of the passage?", "type": "critical", "correct": "We should remember and honor our heroes", "distractors": ["Heroes are just stories", "Heroes are only for books", "Heroes should be forgotten"], "show_image": false}
+        {"stem": "Who protects our nation?", "type": "literal", "correct": "Our heroes", "distractors": ["Our teachers", "Our doctors", "Our farmers"], "show_image": false, "stem_audio": "grade4_hard_passage03_q01_stem.wav"},
+        {"stem": "With what do heroes serve our country?", "type": "literal", "correct": "Honor and loyalty", "distractors": ["Money and power", "Fame and fortune", "Food and water"], "show_image": false, "stem_audio": "grade4_hard_passage03_q02_stem.wav"},
+        {"stem": "What do heroes fight for?", "type": "literal", "correct": "Freedom", "distractors": ["Food", "Money", "Land"], "show_image": false, "stem_audio": "grade4_hard_passage03_q03_stem.wav"},
+        {"stem": "What did many heroes make?", "type": "literal", "correct": "Big sacrifices", "distractors": ["Big mistakes", "Big plans", "Big promises"], "show_image": false, "stem_audio": "grade4_hard_passage03_q04_stem.wav"},
+        {"stem": "How were the heroes described?", "type": "literal", "correct": "Strong and proud", "distractors": ["Weak and shy", "Tall and thin", "Slow and quiet"], "show_image": false, "stem_audio": "grade4_hard_passage03_q05_stem.wav"},
+        {"stem": "What will never fade?", "type": "literal", "correct": "Their glory", "distractors": ["Their name", "Their flag", "Their country"], "show_image": false, "stem_audio": "grade4_hard_passage03_q06_stem.wav"},
+        {"stem": "Why did some heroes give their lives?", "type": "inferential", "correct": "So we could be free", "distractors": ["So we could be rich", "So we could be famous", "So we could be strong"], "show_image": false, "stem_audio": "grade4_hard_passage03_q07_stem.wav"},
+        {"stem": "Why are heroes called brave?", "type": "inferential", "correct": "Because they face danger", "distractors": ["Because they are strong", "Because they are smart", "Because they are fast"], "show_image": false, "stem_audio": "grade4_hard_passage03_q08_stem.wav"},
+        {"stem": "What kind of people are heroes based on the passage?", "type": "inferential", "correct": "Selfless and loyal", "distractors": ["Selfish and greedy", "Lazy and slow", "Rich and famous"], "show_image": false, "stem_audio": "grade4_hard_passage03_q09_stem.wav"},
+        {"stem": "How should we feel about our heroes?", "type": "inferential", "correct": "Grateful", "distractors": ["Afraid", "Angry", "Confused"], "show_image": false, "stem_audio": "grade4_hard_passage03_q10_stem.wav"},
+        {"stem": "Why did the author write this passage?", "type": "inferential", "correct": "To honor our heroes", "distractors": ["To sell a book", "To teach Math", "To tell a joke"], "show_image": false, "stem_audio": "grade4_hard_passage03_q11_stem.wav"},
+        {"stem": "What is the main idea of the passage?", "type": "critical", "correct": "We should remember and honor our heroes", "distractors": ["Heroes are just stories", "Heroes are only for books", "Heroes should be forgotten"], "show_image": false, "stem_audio": "grade4_hard_passage03_q12_stem.wav"}
       ]
     }
   ],

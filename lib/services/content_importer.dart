@@ -16,20 +16,23 @@ class ContentImporter {
   Future<void> importAllGrades() async {
     await importGradeIfNeeded(1);
     await importGradeIfNeeded(2);
-    await importGradeIfNeeded(3); 
+    await importGradeIfNeeded(3);
     await importGradeIfNeeded(4);
+    // await importGradeIfNeeded(5);
+    // ...
   }
 
   /// Import content for a single grade if not already up to date.
   Future<bool> importGradeIfNeeded(int gradeLevel) async {
     try {
+      // Read JSON from bundled assets
       final jsonString = await rootBundle.loadString(
         'assets/data/grade$gradeLevel.json',
       );
       final data = jsonDecode(jsonString) as Map<String, dynamic>;
       final version = data['content_version'] as String;
 
-      // Skip if already imported at this version.
+      // Skip if already imported at this version
       final existing =
           await DatabaseService.instance.getContentVersion(gradeLevel);
       if (existing != null && existing.version == version) {
@@ -39,13 +42,12 @@ class ContentImporter {
 
       debugPrint('📚 Importing grade $gradeLevel v$version...');
 
-      // Clear any existing content for clean re-import.
+      // Clear any existing content for clean re-import
       if (existing != null) {
         await DatabaseService.instance.clearContentForGrade(gradeLevel);
       }
 
-      // ── 1. Lesson Intros (v13) ──
-      // Cleared on re-import; upserted here.
+      // ── 1. Lesson Intros ──
       final lessonIntros =
           (data['lesson_intros'] as List<dynamic>?) ?? [];
       for (final introData in lessonIntros) {
@@ -62,7 +64,7 @@ class ContentImporter {
       }
       debugPrint('📚 Lesson intros: ${lessonIntros.length}');
 
-      // ── 2. Game Intros (v13) ──
+      // ── 2. Game Intros ──
       // Shared across grades — INSERT OR REPLACE, no clear.
       final gameIntros = (data['game_intros'] as List<dynamic>?) ?? [];
       for (final introData in gameIntros) {
@@ -78,9 +80,8 @@ class ContentImporter {
       }
       debugPrint('📚 Game intros: ${gameIntros.length}');
 
-
-      // ── 3. Passages (v15, Grade 4+) ──
-      // Clear any existing passages for this grade first.
+      // ── 3. Passages (Grade 4+) ──
+      // Clear old passages for this grade first, then insert fresh.
       try {
         await DatabaseService.instance.clearPassagesForGrade(gradeLevel);
       } catch (_) {}
@@ -92,7 +93,7 @@ class ContentImporter {
           gradeLevel: gradeLevel,
           difficulty: p['difficulty'] as String,
           title: p['title'] as String,
-          illustration: 'assets/images/passages/${p['illustration']}',
+          illustration: 'assets/images/words/${p['illustration']}',
           wordCount: p['word_count'] as int,
         );
         final passageId =
@@ -114,6 +115,7 @@ class ContentImporter {
             (p['comprehension_questions'] as List<dynamic>?) ?? [];
         int qOrder = 0;
         for (final q in questions) {
+          final stemAudioField = q['stem_audio'] as String?;
           await DatabaseService.instance.insertPassageQuestion(
             PassageQuestion(
               passageId: passageId,
@@ -123,21 +125,24 @@ class ContentImporter {
               distractorsJson: jsonEncode(q['distractors']),
               showImage: (q['show_image'] as bool?) ?? false,
               orderIndex: qOrder++,
+              stemAudio: stemAudioField != null
+                  ? 'assets/audio/questions/$stemAudioField'
+                  : null,
             ),
           );
         }
       }
-      debugPrint('📚 Passages: ${passagesList.length}');
+      if (passagesList.isNotEmpty) {
+        debugPrint('📚 Passages: ${passagesList.length}');
+      }
 
       // ── 4. Lessons ──
       final lessons = (data['lessons'] as List<dynamic>?) ?? [];
-
-
       for (final lessonData in lessons) {
         final difficulty = lessonData['difficulty'] as String;
         final theme = (lessonData['theme'] as String?) ?? '';
 
-        // 3a. Quiz config
+        // 4a. Quiz config
         final configData =
             lessonData['quiz_config'] as Map<String, dynamic>;
         final config = QuizConfig(
@@ -151,14 +156,15 @@ class ContentImporter {
         );
         await DatabaseService.instance.insertQuizConfig(config);
 
-        // 3b. Game config
+        // 4b. Game config (nullable)
         final gameConfig =
             lessonData['game_config'] as Map<String, dynamic>?;
         final gameType = gameConfig?['game_type'] as String?;
 
+        // 4c. Passage link (nullable, Grade 4+)
         final passageId = lessonData['passage_id'] as String?;
 
-        // 3c. Batches
+        // 4d. Batches
         final batches = (lessonData['batches'] as List<dynamic>?) ?? [];
         for (final batchData in batches) {
           final batchIndex = batchData['batch_index'] as int;
@@ -171,16 +177,18 @@ class ContentImporter {
             gameType: gameType,
             passageId: passageId,
           );
-
           final batchId = await DatabaseService.instance
               .upsertBatchByNaturalKey(batch);
 
-          // 3d. Words for this batch
+          // 4e. Words for this batch
           final words = (batchData['words'] as List<dynamic>?) ?? [];
           int questionOrder = 0;
 
           for (final wordData in words) {
-            final cueAudioField = wordData['lesson_cue_audio'] as String?;
+            final cueAudioField =
+                wordData['lesson_cue_audio'] as String?;
+            final sentenceAudioField =
+                wordData['sample_sentence_audio'] as String?;
 
             final word = Word(
               text: wordData['text'] as String,
@@ -195,13 +203,13 @@ class ContentImporter {
               lessonCueAudio: cueAudioField != null
                   ? 'assets/audio/cues/$cueAudioField'
                   : null,
+              sampleSentenceAudio: sentenceAudioField != null
+                  ? 'assets/audio/sentences/$sentenceAudioField'
+                  : null,
               lessonCue: (wordData['lesson_cue'] as String?) ?? '',
               definition: (wordData['definition'] as String?) ?? '',
               sampleSentence:
                   (wordData['sample_sentence'] as String?) ?? '',
-              sampleSentenceAudio: wordData['sample_sentence_audio'] != null
-                  ? 'assets/audio/sentences/${wordData['sample_sentence_audio']}'
-                  : null,
               source: (wordData['source'] as String?) ?? '',
               sensitivityReviewed:
                   ((wordData['sensitivity_reviewed'] as int?) ?? 0) ==
@@ -213,9 +221,10 @@ class ContentImporter {
                 .upsertWordByNaturalKey(word);
 
             // Clear old questions for this word before re-inserting.
-            await DatabaseService.instance.deleteQuizQuestionsForWord(wordId);
+            await DatabaseService.instance
+                .deleteQuizQuestionsForWord(wordId);
 
-            // 3e. Quiz questions
+            // 4f. Quiz questions for this word
             final questions =
                 (wordData['quiz_questions'] as List<dynamic>?) ?? [];
             for (final qData in questions) {
@@ -235,7 +244,7 @@ class ContentImporter {
         }
       }
 
-      // ── 4. Save version record ──
+      // ── 5. Save version record ──
       await DatabaseService.instance.saveContentVersion(
         ContentVersion(
           gradeLevel: gradeLevel,
