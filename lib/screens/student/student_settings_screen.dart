@@ -238,51 +238,113 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     return result ?? false;
   }
 
-  Future<void> _syncStudentToFirestore() async {
+
+    Future<void> _confirmUnlink() async {
     final student = context.read<StudentProvider>().currentStudent;
-    final authUid = context.read<AuthProvider>().uid;
+    if (student == null || student.id == null) return;
 
-    if (student == null) {
-      _showSnack('No student session');
-      return;
+    // Confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
+        backgroundColor: AppColors.surface,
+        title: const Row(
+          children: [
+            Icon(
+              Icons.link_off_rounded,
+              color: AppColors.accentCoral,
+              size: 24,
+            ),
+            SizedBox(width: AppSpacing.sm),
+            Text(
+              'Unlink from Parent?',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w800,
+                fontSize: 17,
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Your parent will no longer see your reading progress on their '
+          'dashboard.\n\n'
+          'You can link again later with a new code from your parent.',
+          style: TextStyle(fontFamily: 'Nunito', fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentCoral,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Unlink',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    // Firestore — only if we have a UID and are online
+    if (student.firebaseUid != null) {
+      try {
+        await FirestoreService.instance
+            .unlinkStudentFromParent(student.firebaseUid!);
+      } catch (e) {
+        debugPrint('🔥 unlink cloud failed (continuing): $e');
+      }
     }
 
-    if (authUid == null) {
-      _showSnack(
-        'Not signed in to cloud. Log out and log back in with internet.',
-      );
-      return;
-    }
-
-    // If local student has no firebaseUid, save the auth UID locally
-    if (student.firebaseUid == null) {
-      await DatabaseService.instance.updateStudentFirebaseUid(
-        student.id!,
-        authUid,
-      );
-    }
-
-    final ok = await FirestoreService.instance.saveStudent(
-      authUid,
-      student.displayName,
-      student.gradeLevel,
+    // SQLite — clear parent link locally
+    await DatabaseService.instance.updateStudentParentUid(
+      student.id!,
+      '',
+      false,
     );
 
     if (!mounted) return;
 
-    if (ok) {
-      _showSnack('✅ Synced to cloud! Try Join Class again.');
-    } else {
-      _showSnack('❌ Sync failed. Check internet.');
-    }
-  }
+    // Refresh provider
+    final refreshed =
+        await DatabaseService.instance.getStudentById(student.id!);
+    if (!mounted || refreshed == null) return;
 
-  void _showSnack(String message) {
+    context.read<StudentProvider>().updateStudent(refreshed);
+
+    // Success feedback
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: const TextStyle(fontFamily: 'Nunito')),
-        duration: const Duration(seconds: 3),
+      const SnackBar(
+        content: Text(
+          'Unlinked. Your progress is now private.',
+          style: TextStyle(fontFamily: 'Nunito'),
+        ),
         behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 3),
       ),
     );
   }
@@ -506,7 +568,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
 
               const SizedBox(height: AppSpacing.md),
 
-              // Link to Parent (only if not linked)
+                            // Link to Parent (not linked) OR Unlink (linked)
               if (!student.isLinked)
                 _SettingCard(
                   icon: Icons.family_restroom_rounded,
@@ -521,9 +583,23 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                       color: AppColors.textMuted,
                     ),
                   ),
+                )
+              else
+                _SettingCard(
+                  icon: Icons.link_off_rounded,
+                  iconColor: AppColors.accentCoral,
+                  label: 'Unlink from Parent',
+                  subtitle: 'Stop sharing progress with your parent',
+                  trailing: IconButton(
+                    onPressed: _confirmUnlink,
+                    icon: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
                 ),
 
-              if (!student.isLinked) const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.md),
 
               _SettingCard(
                 icon: Icons.lock_rounded,
@@ -544,30 +620,6 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
               ),
 
               const SizedBox(height: AppSpacing.xl),
-
-              // ⚠️ TEMPORARY — remove after backfill
-              SizedBox(
-                height: 50,
-                child: OutlinedButton.icon(
-                  onPressed: _syncStudentToFirestore,
-                  icon: const Icon(Icons.cloud_upload_rounded),
-                  label: const Text(
-                    'Sync to Cloud (debug)',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.accentTeal,
-                    side: const BorderSide(color: AppColors.accentTeal),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.large),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
 
               // LOG OUT
               SizedBox(

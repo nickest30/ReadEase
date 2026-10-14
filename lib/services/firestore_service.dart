@@ -317,6 +317,21 @@ class FirestoreService {
     }
   }
 
+  Future<bool> unlinkStudentFromParent(String studentUid) async {
+    try {
+      await _db.collection('students').doc(studentUid).set({
+        'parentId': FieldValue.delete(),
+        'isLinked': FieldValue.delete(),
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      debugPrint('🔥 Firestore: unlinkStudentFromParent OK');
+      return true;
+    } catch (e) {
+      debugPrint('🔥 Firestore unlinkStudentFromParent ERROR: $e');
+      return false;
+    }
+  }
+
   String _generateCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     final seed = DateTime.now().millisecondsSinceEpoch;

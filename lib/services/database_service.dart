@@ -3036,19 +3036,22 @@ class DatabaseService {
     return rows > 0;
   }
 
-  /// Update a student's parent Firebase UID.
   Future<bool> updateStudentParentUid(
     int studentId,
     String parentFirebaseUid,
     bool isLinked,
   ) async {
     final db = await database;
+    final updates = <String, dynamic>{
+      'parent_firebase_uid': parentFirebaseUid,
+      'is_linked': isLinked ? 1 : 0,
+    };
+    if (!isLinked || parentFirebaseUid.isEmpty) {
+      updates['parent_id'] = null;
+    }
     final rows = await db.update(
       'students',
-      {
-        'parent_firebase_uid': parentFirebaseUid,
-        'is_linked': isLinked ? 1 : 0,
-      },
+      updates,
       where: 'id = ?',
       whereArgs: [studentId],
     );
