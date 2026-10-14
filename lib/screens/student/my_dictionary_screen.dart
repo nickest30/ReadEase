@@ -3,9 +3,11 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/word.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
+import 'pronunciation_modal.dart';
 
 class MyDictionaryScreen extends StatefulWidget {
   const MyDictionaryScreen({super.key});
@@ -50,8 +52,6 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
 
     try {
       // Compute highest unlocked grade (same logic as grade selection).
-      // Walks upward from the student's registered grade — each passed
-      // Hard level unlocks the next grade.
       int highest = student.gradeLevel;
       for (int g = student.gradeLevel; g <= 6; g++) {
         final passedHard = await DatabaseService.instance
@@ -78,9 +78,7 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
       if (!mounted) return;
       setState(() {
         _highestUnlocked = highest;
-        _allWords = words
-            .where((w) => w.gradeLevel <= highest)
-            .toList();
+        _allWords = words.where((w) => w.gradeLevel <= highest).toList();
         _encountered = encountered;
         _mastered = mastered;
         _starred = starred;
@@ -120,13 +118,12 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
     }
   }
 
-  void _showWordDetail(Word word) {
-    final isEncountered = _encountered.contains(word.id);
-    final isMastered = _mastered.contains(word.id);
-    final isStarred = _starred.contains(word.id);
-    final isWeak = _weak.contains(word.id);
+  Future<void> _showWordDetail(Word word) async {
+    final student = context.read<StudentProvider>().currentStudent;
+    final studentId = student?.id;
+    if (studentId == null) return;
 
-    showModalBottomSheet(
+    final result = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
@@ -135,19 +132,37 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
         ),
       ),
       isScrollControlled: true,
-      builder: (ctx) => _WordDetailSheet(
+      builder: (sheetCtx) => _WordDetailSheet(
         word: word,
-        isEncountered: isEncountered,
-        isMastered: isMastered,
-        isStarred: isStarred,
-        isWeak: isWeak,
+        studentId: studentId,
+        isEncountered: _encountered.contains(word.id),
+        isMastered: _mastered.contains(word.id),
+        isStarred: _starred.contains(word.id),
+        isWeak: _weak.contains(word.id),
         onPlayAudio: () => _playWordAudio(word),
         onToggleStar: () async {
           await _toggleStar(word);
-          if (ctx.mounted) Navigator.of(ctx).pop();
+          if (sheetCtx.mounted) Navigator.of(sheetCtx).pop();
+        },
+        onPractice: () async {
+          final isOnline =
+              context.read<ConnectivityProvider>().isOnline;
+          final ok = await PronunciationModal.show(
+            sheetCtx,
+            word: word,
+            studentId: studentId,
+            isOnline: isOnline,
+          );
+          if (ok == true && sheetCtx.mounted) {
+            Navigator.of(sheetCtx).pop(true);
+          }
         },
       ),
     );
+
+    if (result == true && mounted) {
+      await _load();
+    }
   }
 
   int get _totalCount => _allWords.length;
@@ -180,7 +195,6 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [
-                  // Header
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.xl,
@@ -202,7 +216,6 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
                     ),
                   ),
 
-                  // Progress
                   Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.xl),
@@ -224,7 +237,8 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
                                 : _discoveredCount / _totalCount,
                             minHeight: 10,
                             backgroundColor: AppColors.border,
-                            valueColor: const AlwaysStoppedAnimation<Color>(
+                            valueColor:
+                                const AlwaysStoppedAnimation<Color>(
                               AppColors.accentTeal,
                             ),
                           ),
@@ -235,7 +249,6 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
 
                   const SizedBox(height: AppSpacing.md),
 
-                  // Tabs
                   TabBar(
                     controller: _tabController,
                     labelColor: AppColors.accentTeal,
@@ -387,8 +400,8 @@ class _WordTile extends StatelessWidget {
               boxShadow: isMastered
                   ? [
                       BoxShadow(
-                        color:
-                            AppColors.accentYellow.withValues(alpha: 0.35),
+                        color: AppColors.accentYellow
+                            .withValues(alpha: 0.35),
                         blurRadius: 12,
                         spreadRadius: 1,
                       ),
@@ -399,14 +412,13 @@ class _WordTile extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Image or "?" placeholder
                 Expanded(
                   child: Center(
                     child: isEncountered
                         ? Image.asset(
                             word.imageAsset,
                             fit: BoxFit.contain,
-                            errorBuilder: (_, _, _) => Icon(
+                            errorBuilder: (_, _, _) => const Icon(
                               Icons.image_outlined,
                               size: 32,
                               color: AppColors.textMuted,
@@ -443,7 +455,6 @@ class _WordTile extends StatelessWidget {
             ),
           ),
 
-          // Star badge
           if (isStarred)
             Positioned(
               top: 4,
@@ -463,7 +474,6 @@ class _WordTile extends StatelessWidget {
               ),
             ),
 
-          // Weak indicator
           if (isWeak && !isMastered)
             Positioned(
               top: 4,
@@ -494,21 +504,25 @@ class _WordTile extends StatelessWidget {
 
 class _WordDetailSheet extends StatelessWidget {
   final Word word;
+  final int studentId;
   final bool isEncountered;
   final bool isMastered;
   final bool isStarred;
   final bool isWeak;
   final VoidCallback onPlayAudio;
   final VoidCallback onToggleStar;
+  final VoidCallback onPractice;
 
   const _WordDetailSheet({
     required this.word,
+    required this.studentId,
     required this.isEncountered,
     required this.isMastered,
     required this.isStarred,
     required this.isWeak,
     required this.onPlayAudio,
     required this.onToggleStar,
+    required this.onPractice,
   });
 
   @override
@@ -518,7 +532,6 @@ class _WordDetailSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag handle
           Container(
             width: 40,
             height: 4,
@@ -548,7 +561,6 @@ class _WordDetailSheet extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ] else ...[
-            // Word image
             SizedBox(
               width: 140,
               height: 140,
@@ -564,7 +576,6 @@ class _WordDetailSheet extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
 
-            // Word
             Text(
               word.text,
               style: AppText.display.copyWith(fontSize: 36),
@@ -572,7 +583,6 @@ class _WordDetailSheet extends StatelessWidget {
 
             const SizedBox(height: AppSpacing.xs),
 
-            // Badges
             Wrap(
               spacing: AppSpacing.sm,
               alignment: WrapAlignment.center,
@@ -592,7 +602,6 @@ class _WordDetailSheet extends StatelessWidget {
 
             const SizedBox(height: AppSpacing.lg),
 
-            // Definition
             if (word.definition.isNotEmpty) ...[
               _label('MEANING'),
               const SizedBox(height: 4),
@@ -600,7 +609,6 @@ class _WordDetailSheet extends StatelessWidget {
               const SizedBox(height: AppSpacing.md),
             ],
 
-            // Sample sentence
             if (word.sampleSentence.isNotEmpty) ...[
               _label('SAMPLE SENTENCE'),
               const SizedBox(height: 4),
@@ -611,7 +619,7 @@ class _WordDetailSheet extends StatelessWidget {
               const SizedBox(height: AppSpacing.lg),
             ],
 
-            // Buttons
+            // LISTEN + STAR row
             Row(
               children: [
                 Expanded(
@@ -671,6 +679,36 @@ class _WordDetailSheet extends StatelessWidget {
                 ),
               ],
             ),
+
+            // PRACTICE SPEAKING — only for weak, un-mastered words
+            if (isWeak && !isMastered) ...[
+              const SizedBox(height: AppSpacing.md),
+              SizedBox(
+                height: 52,
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: onPractice,
+                  icon: const Icon(Icons.mic_rounded, size: 22),
+                  label: const Text(
+                    'PRACTICE SPEAKING',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentOrange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppRadius.large),
+                    ),
+                    elevation: 2,
+                  ),
+                ),
+              ),
+            ],
           ],
           const SizedBox(height: AppSpacing.md),
         ],

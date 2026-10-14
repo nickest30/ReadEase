@@ -2263,6 +2263,8 @@ class DatabaseService {
       return correctCount >= 3;
     }
 
+    
+
     // Update existing
     final existing = WordMastery.fromMap(maps.first);
     final newCorrect = existing.correctCount + (correct ? 1 : 0);
@@ -2286,6 +2288,45 @@ class DatabaseService {
       whereArgs: [studentId, wordId],
     );
     return justMastered;
+  }
+
+
+    /// Force-master a word. Used after a successful pronunciation practice —
+  /// hearing the reference audio and then pronouncing the word correctly
+  /// is treated as sufficient evidence of mastery for that word.
+  Future<void> markWordMastered({
+    required int studentId,
+    required int wordId,
+  }) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+
+    final existing = await db.query(
+      'word_mastery',
+      where: 'student_id = ? AND word_id = ?',
+      whereArgs: [studentId, wordId],
+      limit: 1,
+    );
+
+    if (existing.isEmpty) {
+      await db.insert('word_mastery', {
+        'student_id': studentId,
+        'word_id': wordId,
+        'correct_count': 3,
+        'wrong_count': 0,
+        'mastered_at': now,
+      });
+    } else {
+      await db.update(
+        'word_mastery',
+        {
+          'correct_count': 3,
+          'mastered_at': now,
+        },
+        where: 'student_id = ? AND word_id = ?',
+        whereArgs: [studentId, wordId],
+      );
+    }
   }
 
   /// Star a word.
