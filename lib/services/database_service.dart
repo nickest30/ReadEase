@@ -28,7 +28,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 20,
+      version: 21,
       onCreate: _createTables,
       onUpgrade: _upgradeTables,
     );
@@ -194,33 +194,6 @@ class DatabaseService {
         cultural_elements_json TEXT,
         game_type TEXT,
         passage_id TEXT
-      )
-    ''');
-
-    // opening_frames — Grade 1
-    await db.execute('''
-      CREATE TABLE opening_frames (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        grade_level INTEGER NOT NULL,
-        difficulty TEXT NOT NULL,
-        visual_asset TEXT NOT NULL,
-        audio_asset TEXT NOT NULL,
-        display_text TEXT NOT NULL,
-        trigger_type TEXT NOT NULL DEFAULT 'first_visit_only'
-      )
-    ''');
-
-    // story_frames — Grade 2+
-    await db.execute('''
-      CREATE TABLE story_frames (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        grade_level INTEGER NOT NULL,
-        difficulty TEXT NOT NULL,
-        frame_index INTEGER NOT NULL,
-        visual_asset TEXT NOT NULL,
-        audio_asset TEXT NOT NULL,
-        display_text TEXT NOT NULL,
-        word_introduced_id INTEGER
       )
     ''');
 
@@ -1202,6 +1175,15 @@ class DatabaseService {
         await db.execute(
           'ALTER TABLE passages ADD COLUMN tappable_words_json TEXT',
         );
+      } catch (_) {}
+    }
+
+    if (oldVersion < 21) {
+      try {
+        await db.execute('DROP TABLE IF EXISTS opening_frames');
+      } catch (_) {}
+      try {
+        await db.execute('DROP TABLE IF EXISTS story_frames');
       } catch (_) {}
     }
   }
