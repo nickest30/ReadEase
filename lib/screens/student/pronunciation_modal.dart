@@ -73,8 +73,11 @@ class _PronunciationModalState extends State<PronunciationModal> {
   // Guards against double-fire from onError + onStatus('done')
   bool _evaluateLock = false;
 
+  Timer? _evaluateTimeout;
+
   @override
   void dispose() {
+    _evaluateTimeout?.cancel();
     _speech.cancel();
     _audio.dispose();
     super.dispose();
@@ -200,17 +203,31 @@ class _PronunciationModalState extends State<PronunciationModal> {
   // Evaluation
   // ────────────────────────────────────────────────────────────
 
-  Future<void> _evaluate() async {
+    Future<void> _evaluate() async {
     if (_evaluateLock) return;
     _evaluateLock = true;
 
+    // Failsafe — if the platform recognizer wedges, force a mismatch.
+    _evaluateTimeout?.cancel();
+    _evaluateTimeout = Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      if (_phase == _Phase.evaluating || _phase == _Phase.listening) {
+        debugPrint('🎙 evaluation timeout — forcing mismatch');
+        _finalizeAsMismatch();
+      }
+    });
+
     try {
-      await _speech.stop();
-    } catch (_) {}
+      await _speech.cancel().timeout(const Duration(milliseconds: 500));
+    } catch (_) {
+      try {
+        await _speech.stop().timeout(const Duration(milliseconds: 500));
+      } catch (_) {}
+    }
+
     if (!mounted) return;
     setState(() {
       _phase = _Phase.evaluating;
-      // Clear bars so we don't show stale levels during evaluation.
       for (int i = 0; i < _barCount; i++) {
         _bars[i] = 0.0;
       }
@@ -220,13 +237,14 @@ class _PronunciationModalState extends State<PronunciationModal> {
     final heard = _normalize(_lastTranscript);
     final matched = _matches(heard, target);
 
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
+
+    _evaluateTimeout?.cancel();
 
     if (matched) {
       setState(() => _phase = _Phase.success);
 
-      // One clean pronunciation → mastered. Closes the weak-word loop.
       try {
         await DatabaseService.instance.markWordMastered(
           studentId: widget.studentId,
@@ -242,13 +260,20 @@ class _PronunciationModalState extends State<PronunciationModal> {
       return;
     }
 
+    _finalizeAsMismatch();
+  }
+
+  void _finalizeAsMismatch() {
+    if (!mounted) return;
+    _evaluateTimeout?.cancel();
+
     _attempts++;
 
     if (_attempts >= _maxAttempts) {
       setState(() => _phase = _Phase.cooldown);
-      await Future.delayed(const Duration(milliseconds: 2000));
-      if (!mounted) return;
-      Navigator.of(context).pop(false);
+      Future.delayed(const Duration(milliseconds: 2000), () {
+        if (mounted) Navigator.of(context).pop(false);
+      });
       return;
     }
 
