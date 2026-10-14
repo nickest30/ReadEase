@@ -70,6 +70,7 @@ import 'screens/games/sentence_builder_screen.dart';
 import 'screens/games/floor_is_lava_screen.dart';
 import 'screens/games/passage_screen.dart';
 import 'screens/games/word_hunt_screen.dart';
+import 'screens/games/category_sort_screen.dart';
 
 
 
@@ -201,6 +202,7 @@ class _ReadEaseAppState extends State<ReadEaseApp> {
               '/floor-is-lava': (context) => const FloorIsLavaScreen(),
               '/passage': (context) => const PassageScreen(),
               '/word-hunt': (context) => const WordHuntScreen(),
+              '/category-sort': (context) => const CategorySortScreen(),
             },
           );
         },

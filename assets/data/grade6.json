@@ -1,0 +1,1166 @@
+{
+  "content_version": "1.0.1",
+  "grade": 6,
+  "lesson_intros": [
+    {
+      "grade": 6,
+      "difficulty": "easy",
+      "header": "Welcome to Easy Level!",
+      "body": "Let's learn about Filipino food and flavors. Ready to start?",
+      "button_label": "LET'S GO!",
+      "pose_asset": "yse_nerd.png",
+      "audio_asset": "lesson_intro_g6_easy.wav"
+    },
+    {
+      "grade": 6,
+      "difficulty": "medium",
+      "header": "Welcome to Medium Level!",
+      "body": "Time to play Filipino games. You're doing great!",
+      "button_label": "LET'S GO!",
+      "pose_asset": "yse_nerd.png",
+      "audio_asset": "lesson_intro_g6_medium.wav"
+    },
+    {
+      "grade": 6,
+      "difficulty": "hard",
+      "header": "Welcome to Hard Level!",
+      "body": "Let's explore Filipino art and culture. You've got this!",
+      "button_label": "LET'S GO!",
+      "pose_asset": "yse_nerd.png",
+      "audio_asset": "lesson_intro_g6_hard.wav"
+    }
+  ],
+  "game_intros": [
+    {"game_type": "memory_match", "header": "Match the Pairs!", "body": "Tap two cards to find the matching pairs.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_memory_match.wav"},
+    {"game_type": "bubble_pop", "header": "Pop the Picture!", "body": "Tap the bubble with the correct picture.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_bubble_pop.wav"},
+    {"game_type": "drag_drop", "header": "Drag the Word!", "body": "Drag the word to the matching picture.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_drag_drop.wav"},
+    {"game_type": "word_scramble", "header": "Spell the Word!", "body": "Rearrange the letters to spell the word.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_word_scramble.wav"},
+    {"game_type": "sentence_builder", "header": "Build a Sentence!", "body": "Put the words in order to make a sentence.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_sentence_builder.wav"},
+    {"game_type": "floor_is_lava", "header": "Escape the Lava!", "body": "Guess the word before the lava rises!", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_floor_is_lava.wav"},
+    {"game_type": "word_hunt", "header": "Find the Words!", "body": "Find the hidden words in the letter grid.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_word_hunt.wav"},
+    {"game_type": "category_sort", "header": "Sort the Words!", "body": "Drag each word into the correct group.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_category_sort.wav"},
+    {"game_type": "crossword_lite", "header": "Fill the Boxes!", "body": "Fill the boxes with the correct words.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_crossword_lite.wav"},
+    {"game_type": "timed_blitz", "header": "Beat the Clock!", "body": "Answer as fast as you can before time runs out.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_timed_blitz.wav"}
+  ],
+  "passages": [
+    {
+      "id": "grade6_easy_passage01",
+      "difficulty": "easy",
+      "title": "Ang Tinola ni Lola",
+      "illustration": "grade6_easy_passage01_illustration.png",
+      "word_count": 123,
+      "sentences": [
+        {"index": 1, "text": "Lola wakes up early every Saturday morning.", "audio": "grade6_easy_passage01_s01.wav"},
+        {"index": 2, "text": "She goes to the wet market to buy fresh chicken and vegetables.", "audio": "grade6_easy_passage01_s02.wav"},
+        {"index": 3, "text": "At home, she washes the chicken and cuts the vegetables.", "audio": "grade6_easy_passage01_s03.wav"},
+        {"index": 4, "text": "She lights the clay stove and places the pot on top.", "audio": "grade6_easy_passage01_s04.wav"},
+        {"index": 5, "text": "Soon, the water starts to boil.", "audio": "grade6_easy_passage01_s05.wav"},
+        {"index": 6, "text": "Lola adds ginger, onion, and the chicken pieces.", "audio": "grade6_easy_passage01_s06.wav"},
+        {"index": 7, "text": "The kitchen smells warm and delicious.", "audio": "grade6_easy_passage01_s07.wav"},
+        {"index": 8, "text": "Her granddaughter Ana runs to the kitchen.", "audio": "grade6_easy_passage01_s08.wav"},
+        {"index": 9, "text": "Lola, what are you cooking? Ana asks.", "audio": "grade6_easy_passage01_s09.wav"},
+        {"index": 10, "text": "Tinola, my dear, Lola says with a smile.", "audio": "grade6_easy_passage01_s10.wav"},
+        {"index": 11, "text": "She adds the vegetables and green leaves.", "audio": "grade6_easy_passage01_s11.wav"},
+        {"index": 12, "text": "Ana gets a bowl and waits for lunch.", "audio": "grade6_easy_passage01_s12.wav"}
+      ],
+      "comprehension_questions": [
+        {"stem": "When does Lola wake up early?", "type": "literal", "correct": "Every Saturday morning", "distractors": ["Every Sunday morning", "Every Monday morning", "Every school day"], "show_image": false, "stem_audio": "grade6_easy_passage01_q01_stem.wav"},
+        {"stem": "Where does Lola go to buy ingredients?", "type": "literal", "correct": "To the wet market", "distractors": ["To the sari-sari store", "To the mall", "To the bakery"], "show_image": false, "stem_audio": "grade6_easy_passage01_q02_stem.wav"},
+        {"stem": "What does Lola buy at the wet market?", "type": "literal", "correct": "Fresh chicken and vegetables", "distractors": ["Fish and fruits", "Pork and rice", "Bread and eggs"], "show_image": false, "stem_audio": "grade6_easy_passage01_q03_stem.wav"},
+        {"stem": "Where does Lola place the pot?", "type": "literal", "correct": "On the clay stove", "distractors": ["On the wooden table", "On the sink", "On the floor"], "show_image": false, "stem_audio": "grade6_easy_passage01_q04_stem.wav"},
+        {"stem": "What does Lola add to the boiling water?", "type": "literal", "correct": "Ginger, onion, and chicken pieces", "distractors": ["Garlic, tomato, and fish", "Onion, potato, and pork", "Ginger, carrot, and beef"], "show_image": false, "stem_audio": "grade6_easy_passage01_q05_stem.wav"},
+        {"stem": "Who runs to the kitchen?", "type": "literal", "correct": "Her granddaughter Ana", "distractors": ["Her grandson Pedro", "Her neighbor Maria", "Her friend Rosa"], "show_image": false, "stem_audio": "grade6_easy_passage01_q06_stem.wav"},
+        {"stem": "Why does Ana run to the kitchen?", "type": "inferential", "correct": "She is curious about the warm smell of food", "distractors": ["She is hungry for snacks", "She needs help with homework", "She wants to play outside"], "show_image": false, "stem_audio": "grade6_easy_passage01_q07_stem.wav"},
+        {"stem": "How do Lola and Ana feel about the tinola?", "type": "inferential", "correct": "Warm and happy together", "distractors": ["Worried and tired", "Angry and upset", "Bored and sleepy"], "show_image": false, "stem_audio": "grade6_easy_passage01_q08_stem.wav"},
+        {"stem": "Why is tinola special to Ana?", "type": "inferential", "correct": "It is made with love by her Lola", "distractors": ["It is a new recipe from the internet", "It is her favorite restaurant dish", "It is the cheapest food at the market"], "show_image": false, "stem_audio": "grade6_easy_passage01_q09_stem.wav"},
+        {"stem": "What is the passage mainly about?", "type": "inferential", "correct": "A Lola cooking warm tinola for her granddaughter", "distractors": ["A family going to the beach", "A farmer selling vegetables", "A child learning to cook alone"], "show_image": false, "stem_audio": "grade6_easy_passage01_q10_stem.wav"}
+      ]
+    },
+    {
+      "id": "grade6_medium_passage02",
+      "difficulty": "medium",
+      "title": "Tuwing Bakasyon",
+      "illustration": "grade6_medium_passage02_illustration.png",
+      "word_count": 137,
+      "sentences": [
+        {"index": 1, "text": "Every summer, the children of Barangay Maligaya play outside all day.", "audio": "grade6_medium_passage02_s01.wav"},
+        {"index": 2, "text": "They wake up early and meet at the plaza.", "audio": "grade6_medium_passage02_s02.wav"},
+        {"index": 3, "text": "First, they play piko on the street.", "audio": "grade6_medium_passage02_s03.wav"},
+        {"index": 4, "text": "Maria hops on one foot and balances carefully.", "audio": "grade6_medium_passage02_s04.wav"},
+        {"index": 5, "text": "Your turn, Pedro! she says.", "audio": "grade6_medium_passage02_s05.wav"},
+        {"index": 6, "text": "Then they play tumbang preso with an old tin can.", "audio": "grade6_medium_passage02_s06.wav"},
+        {"index": 7, "text": "Pedro throws his slipper and hits the can.", "audio": "grade6_medium_passage02_s07.wav"},
+        {"index": 8, "text": "Everyone cheers!", "audio": "grade6_medium_passage02_s08.wav"},
+        {"index": 9, "text": "In the afternoon, the children fly a saranggola.", "audio": "grade6_medium_passage02_s09.wav"},
+        {"index": 10, "text": "The kite soars high in the blue sky.", "audio": "grade6_medium_passage02_s10.wav"},
+        {"index": 11, "text": "Some boys spin their trumpo on the ground.", "audio": "grade6_medium_passage02_s11.wav"},
+        {"index": 12, "text": "Some girls jump over a rope and sing.", "audio": "grade6_medium_passage02_s12.wav"},
+        {"index": 13, "text": "The games of our childhood are always fun.", "audio": "grade6_medium_passage02_s13.wav"},
+        {"index": 14, "text": "When the sun sets, the children go home tired but happy.", "audio": "grade6_medium_passage02_s14.wav"}
+      ],
+      "comprehension_questions": [
+        {"stem": "Where do the children of Barangay Maligaya play?", "type": "literal", "correct": "Outside all day", "distractors": ["Inside their houses", "At the mall", "In their classrooms"], "show_image": false, "stem_audio": "grade6_medium_passage02_q01_stem.wav"},
+        {"stem": "Where do the children meet?", "type": "literal", "correct": "At the plaza", "distractors": ["At the sari-sari store", "At the school", "At the church"], "show_image": false, "stem_audio": "grade6_medium_passage02_q02_stem.wav"},
+        {"stem": "What is the first game they play?", "type": "literal", "correct": "Piko", "distractors": ["Tumbang preso", "Luksong lubid", "Taguan"], "show_image": false, "stem_audio": "grade6_medium_passage02_q03_stem.wav"},
+        {"stem": "What does Maria do during the piko game?", "type": "literal", "correct": "She hops on one foot", "distractors": ["She throws a slipper", "She spins a trumpo", "She flies a kite"], "show_image": false, "stem_audio": "grade6_medium_passage02_q04_stem.wav"},
+        {"stem": "What game do they play with a tin can?", "type": "literal", "correct": "Tumbang preso", "distractors": ["Piko", "Sipa", "Saranggola"], "show_image": false, "stem_audio": "grade6_medium_passage02_q05_stem.wav"},
+        {"stem": "What does Pedro throw at the tin can?", "type": "literal", "correct": "His slipper", "distractors": ["A stone", "A ball", "A marble"], "show_image": false, "stem_audio": "grade6_medium_passage02_q06_stem.wav"},
+        {"stem": "What do the children fly in the afternoon?", "type": "literal", "correct": "A saranggola", "distractors": ["A kite balloon", "A paper plane", "A small drone"], "show_image": false, "stem_audio": "grade6_medium_passage02_q07_stem.wav"},
+        {"stem": "What do some boys spin on the ground?", "type": "literal", "correct": "Their trumpo", "distractors": ["Their marbles", "Their tops made of paper", "Their slippers"], "show_image": false, "stem_audio": "grade6_medium_passage02_q08_stem.wav"},
+        {"stem": "How do the children feel while playing?", "type": "inferential", "correct": "Joyful and full of energy", "distractors": ["Bored and quiet", "Angry and tired", "Shy and worried"], "show_image": false, "stem_audio": "grade6_medium_passage02_q09_stem.wav"},
+        {"stem": "Why are these games called the games of our childhood?", "type": "inferential", "correct": "Filipino children have played them for many years", "distractors": ["They are new games from other countries", "They can only be played in school", "They need expensive toys to play"], "show_image": false, "stem_audio": "grade6_medium_passage02_q10_stem.wav"},
+        {"stem": "How does the writer show the children's happiness?", "type": "inferential", "correct": "By describing how they play and cheer together", "distractors": ["By listing the rules of each game", "By comparing games to homework", "By describing the weather only"], "show_image": false, "stem_audio": "grade6_medium_passage02_q11_stem.wav"},
+        {"stem": "What is the passage mainly about?", "type": "critical", "correct": "The joy of playing traditional Filipino games during summer", "distractors": ["The rules of tumbang preso", "Why children dislike summer", "How to make a saranggola"], "show_image": false, "stem_audio": "grade6_medium_passage02_q12_stem.wav"}
+      ]
+    },
+    {
+      "id": "grade6_hard_passage03",
+      "difficulty": "hard",
+      "title": "Sining ni Lolo",
+      "illustration": "grade6_hard_passage03_illustration.png",
+      "word_count": 120,
+      "sentences": [
+        {"index": 1, "text": "Lolo Mario was a famous artist in his town.", "audio": "grade6_hard_passage03_s01.wav"},
+        {"index": 2, "text": "He painted beautiful pictures when he was young.", "audio": "grade6_hard_passage03_s02.wav"},
+        {"index": 3, "text": "His studio is filled with art from long ago.", "audio": "grade6_hard_passage03_s03.wav"},
+        {"index": 4, "text": "On the wall hangs a picture of an old arena.", "audio": "grade6_hard_passage03_s04.wav"},
+        {"index": 5, "text": "It reminds him of the Spoliarium.", "audio": "grade6_hard_passage03_s05.wav"},
+        {"index": 6, "text": "Beside it stands an old film projector.", "audio": "grade6_hard_passage03_s06.wav"},
+        {"index": 7, "text": "Lolo used to show movies in their plaza.", "audio": "grade6_hard_passage03_s07.wav"},
+        {"index": 8, "text": "Every night, the whole town would watch.", "audio": "grade6_hard_passage03_s08.wav"},
+        {"index": 9, "text": "Now, his three grandchildren visit him every weekend.", "audio": "grade6_hard_passage03_s09.wav"},
+        {"index": 10, "text": "Lisa, Ben, and Carla love to hear his stories.", "audio": "grade6_hard_passage03_s10.wav"},
+        {"index": 11, "text": "Lolo, teach us how to paint, Lisa says.", "audio": "grade6_hard_passage03_s11.wav"},
+        {"index": 12, "text": "Lolo smiles and gives each of them a brush.", "audio": "grade6_hard_passage03_s12.wav"},
+        {"index": 13, "text": "Art is a gift of our people, he says.", "audio": "grade6_hard_passage03_s13.wav"},
+        {"index": 14, "text": "We must never forget our culture.", "audio": "grade6_hard_passage03_s14.wav"},
+        {"index": 15, "text": "The children paint bright suns on their paper.", "audio": "grade6_hard_passage03_s15.wav"}
+      ],
+      "comprehension_questions": [
+        {"stem": "What was Lolo Mario known for in his town?", "type": "literal", "correct": "Being a famous artist", "distractors": ["Being a famous singer", "Being a famous baker", "Being a famous driver"], "show_image": false, "stem_audio": "grade6_hard_passage03_q01_stem.wav"},
+        {"stem": "What did he paint when he was young?", "type": "literal", "correct": "Beautiful pictures", "distractors": ["Clay pots", "Wooden toys", "Picture frames"], "show_image": false, "stem_audio": "grade6_hard_passage03_q02_stem.wav"},
+        {"stem": "What hangs on the wall of Lolo's studio?", "type": "literal", "correct": "A picture of an old arena", "distractors": ["A family photograph", "A map of the town", "A clock with gold hands"], "show_image": false, "stem_audio": "grade6_hard_passage03_q03_stem.wav"},
+        {"stem": "What does the picture remind Lolo of?", "type": "literal", "correct": "The Spoliarium", "distractors": ["The Mayon Volcano", "The Manila Cathedral", "The Banaue Rice Terraces"], "show_image": false, "stem_audio": "grade6_hard_passage03_q04_stem.wav"},
+        {"stem": "What stands beside the picture?", "type": "literal", "correct": "An old film projector", "distractors": ["An old radio", "A small piano", "A glass vase"], "show_image": false, "stem_audio": "grade6_hard_passage03_q05_stem.wav"},
+        {"stem": "Where did Lolo use to show movies?", "type": "literal", "correct": "In their plaza", "distractors": ["In their school", "In their church", "In their home garden"], "show_image": false, "stem_audio": "grade6_hard_passage03_q06_stem.wav"},
+        {"stem": "Who visits Lolo now?", "type": "literal", "correct": "His three grandchildren", "distractors": ["His neighbor Maria", "His friend Pedro", "His brother Juan"], "show_image": false, "stem_audio": "grade6_hard_passage03_q07_stem.wav"},
+        {"stem": "What does Lisa ask Lolo to teach her?", "type": "literal", "correct": "How to paint", "distractors": ["How to sing", "How to cook", "How to read"], "show_image": false, "stem_audio": "grade6_hard_passage03_q08_stem.wav"},
+        {"stem": "Why does Lolo say art is a gift of our people?", "type": "inferential", "correct": "Because art belongs to our Filipino culture", "distractors": ["Because only Lolo can paint", "Because art is expensive", "Because art is easy to learn"], "show_image": false, "stem_audio": "grade6_hard_passage03_q09_stem.wav"},
+        {"stem": "What does Lisa paint on her paper?", "type": "literal", "correct": "A bright sun", "distractors": ["A dark moon", "A blue star", "A green tree"], "show_image": false, "stem_audio": "grade6_hard_passage03_q10_stem.wav"},
+        {"stem": "Why is it important to remember our culture?", "type": "inferential", "correct": "So that the traditions of our people will not be lost", "distractors": ["So we can sell more paintings", "So we can forget our history", "So only Lolo will be famous"], "show_image": false, "stem_audio": "grade6_hard_passage03_q11_stem.wav"},
+        {"stem": "Why did Lolo feel sad about the old film projector?", "type": "inferential", "correct": "Because fewer people watch movies in the plaza now", "distractors": ["Because the projector is broken", "Because it is heavy to carry", "Because it belongs to someone else"], "show_image": false, "stem_audio": "grade6_hard_passage03_q12_stem.wav"},
+        {"stem": "What can you learn from Lolo and Lisa's story?", "type": "critical", "correct": "We should pass on Filipino arts and culture to the next generation", "distractors": ["Only old people can make art", "Art is only for famous painters", "Children should not learn from their elders"], "show_image": false, "stem_audio": "grade6_hard_passage03_q13_stem.wav"},
+        {"stem": "Why do you think the author wrote this passage?", "type": "critical", "correct": "To remind readers to value and continue Filipino art and culture", "distractors": ["To teach readers how to build a projector", "To describe a foreign film festival", "To convince readers to leave their hometown"], "show_image": false, "stem_audio": "grade6_hard_passage03_q14_stem.wav"}
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "difficulty": "easy",
+      "theme": "Sarap ng Pinoy",
+      "passage_id": "grade6_easy_passage01",
+      "quiz_config": {
+        "quiz_size": 8,
+        "buffer_size": 2,
+        "randomized": 1,
+        "passing_threshold": 70
+      },
+      "game_config": {
+        "game_type": "floor_is_lava",
+        "rounds": 8,
+        "points_per_correct": 5,
+        "max_points": 40,
+        "pass_threshold": 70
+      },
+      "batches": [
+        {
+          "batch_index": 1,
+          "words": [
+            {
+              "text": "Sweet",
+              "category": "flavor",
+              "image": "grade6_easy_sweet.png",
+              "audio": "grade6_easy_sweet.wav",
+              "lesson_cue": "This is sweet... S, W, E, E, T... Sweet!",
+              "lesson_cue_audio": "grade6_easy_sweet_cue.wav",
+              "definition": "Having a taste like sugar or honey.",
+              "sample_sentence": "The bibingka tastes sweet with sugar on top.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Sweet",
+                  "distractors": ["Sour", "Bitter", "Spicy"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Cold",
+              "category": "flavor",
+              "image": "grade6_easy_cold.png",
+              "audio": "grade6_easy_cold.wav",
+              "lesson_cue": "This is cold... C, O, L, D... Cold!",
+              "lesson_cue_audio": "grade6_easy_cold_cue.wav",
+              "definition": "Having a low temperature.",
+              "sample_sentence": "The halo-halo is cold and refreshing.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Cold",
+                  "distractors": ["Hot", "Warm", "Soft"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Hot",
+              "category": "flavor",
+              "image": "grade6_easy_hot.png",
+              "audio": "grade6_easy_hot.wav",
+              "lesson_cue": "This is hot... H, O, T... Hot!",
+              "lesson_cue_audio": "grade6_easy_hot_cue.wav",
+              "definition": "Having a high temperature.",
+              "sample_sentence": "The tinola is hot and smells good.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Hot",
+                  "distractors": ["Cold", "Soft", "Sweet"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Soft",
+              "category": "texture",
+              "image": "grade6_easy_soft.png",
+              "audio": "grade6_easy_soft.wav",
+              "lesson_cue": "This is soft... S, O, F, T... Soft!",
+              "lesson_cue_audio": "grade6_easy_soft_cue.wav",
+              "definition": "Easy to press or squeeze; not hard.",
+              "sample_sentence": "The puto is soft and fluffy.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Soft",
+                  "distractors": ["Hard", "Cold", "Loud"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Warm",
+              "category": "flavor",
+              "image": "grade6_easy_warm.png",
+              "audio": "grade6_easy_warm.wav",
+              "lesson_cue": "This is warm... W, A, R, M... Warm!",
+              "lesson_cue_audio": "grade6_easy_warm_cue.wav",
+              "definition": "Slightly hot in a comfortable way.",
+              "sample_sentence": "Lola's pandesal is still warm from the oven.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Warm",
+                  "distractors": ["Cold", "Freezing", "Hot"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Yellow",
+              "category": "color",
+              "image": "grade6_easy_yellow.png",
+              "audio": "grade6_easy_yellow.wav",
+              "lesson_cue": "This is yellow... Y, E, L, L, O, W... Yellow!",
+              "lesson_cue_audio": "grade6_easy_yellow_cue.wav",
+              "definition": "Having the color of a ripe mango.",
+              "sample_sentence": "The ripe mango is yellow and sweet.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Yellow",
+                  "distractors": ["Blue", "Green", "Red"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Fresh",
+              "category": "quality",
+              "image": "grade6_easy_fresh.png",
+              "audio": "grade6_easy_fresh.wav",
+              "lesson_cue": "This is fresh... F, R, E, S, H... Fresh!",
+              "lesson_cue_audio": "grade6_easy_fresh_cue.wav",
+              "definition": "Newly made or picked; not old.",
+              "sample_sentence": "Nanay buys fresh fish at the wet market.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Fresh",
+                  "distractors": ["Old", "Rotten", "Stale"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Taste",
+              "category": "action",
+              "image": "grade6_easy_taste.png",
+              "audio": "grade6_easy_taste.wav",
+              "lesson_cue": "This is taste... T, A, S, T, E... Taste!",
+              "lesson_cue_audio": "grade6_easy_taste_cue.wav",
+              "definition": "To try food to see how it is.",
+              "sample_sentence": "Can I taste the adobo, Lola?",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"to try the flavor of food\"?",
+                  "type": "inferential",
+                  "correct": "Taste",
+                  "distractors": ["Smell", "Hear", "Touch"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Smell",
+              "category": "action",
+              "image": "grade6_easy_smell.png",
+              "audio": "grade6_easy_smell.wav",
+              "lesson_cue": "This is smell... S, M, E, L, L... Smell!",
+              "lesson_cue_audio": "grade6_easy_smell_cue.wav",
+              "definition": "To notice something with your nose.",
+              "sample_sentence": "The smell of sinigang fills the kitchen.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"to notice something with your nose\"?",
+                  "type": "inferential",
+                  "correct": "Smell",
+                  "distractors": ["Taste", "See", "Hear"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Eat",
+              "category": "action",
+              "image": "grade6_easy_eat.png",
+              "audio": "grade6_easy_eat.wav",
+              "lesson_cue": "This is eat... E, A, T... Eat!",
+              "lesson_cue_audio": "grade6_easy_eat_cue.wav",
+              "definition": "To put food in your mouth and swallow it.",
+              "sample_sentence": "The family will eat dinner together.",
+              "source": "Dolch Pre-Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"to take in food\"?",
+                  "type": "inferential",
+                  "correct": "Eat",
+                  "distractors": ["Drink", "Sleep", "Play"],
+                  "show_image": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "difficulty": "medium",
+      "theme": "Laro ng Lahi",
+      "passage_id": "grade6_medium_passage02",
+      "quiz_config": {
+        "quiz_size": 12,
+        "buffer_size": 2,
+        "randomized": 1,
+        "passing_threshold": 70
+      },
+      "game_config": {
+        "game_type": "word_hunt",
+        "rounds": 6,
+        "points_per_correct": 5,
+        "max_points": 30,
+        "pass_threshold": 70,
+        "grid_size": 10,
+        "words_per_round": 6,
+        "hint_after_seconds": 60,
+        "auto_reveal_after_seconds": 120
+      },
+      "batches": [
+        {
+          "batch_index": 1,
+          "words": [
+            {
+              "text": "Jump",
+              "category": "movement",
+              "image": "grade6_medium_jump.png",
+              "audio": "grade6_medium_jump.wav",
+              "lesson_cue": "This is jump... J, U, M, P... Jump!",
+              "lesson_cue_audio": "grade6_medium_jump_cue.wav",
+              "definition": "To push yourself off the ground with your legs.",
+              "sample_sentence": "The children jump high in luksong lubid.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Jump",
+                  "distractors": ["Skip", "Walk", "Run"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Hide",
+              "category": "movement",
+              "image": "grade6_medium_hide.png",
+              "audio": "grade6_medium_hide.wav",
+              "lesson_cue": "This is hide... H, I, D, E... Hide!",
+              "lesson_cue_audio": "grade6_medium_hide_cue.wav",
+              "definition": "To go somewhere you cannot be seen.",
+              "sample_sentence": "Pedro will hide behind the jeepney.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Hide",
+                  "distractors": ["Find", "Seek", "Show"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Fly",
+              "category": "movement",
+              "image": "grade6_medium_fly.png",
+              "audio": "grade6_medium_fly.wav",
+              "lesson_cue": "This is fly... F, L, Y... Fly!",
+              "lesson_cue_audio": "grade6_medium_fly_cue.wav",
+              "definition": "To move through the air.",
+              "sample_sentence": "The kite will fly in the blue sky.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Fly",
+                  "distractors": ["Walk", "Swim", "Crawl"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Pull",
+              "category": "movement",
+              "image": "grade6_medium_pull.png",
+              "audio": "grade6_medium_pull.wav",
+              "lesson_cue": "This is pull... P, U, L, L... Pull!",
+              "lesson_cue_audio": "grade6_medium_pull_cue.wav",
+              "definition": "To move something toward you.",
+              "sample_sentence": "They pull the rope together in hatak-lubid.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Pull",
+                  "distractors": ["Push", "Lift", "Drop"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Throw",
+              "category": "action",
+              "image": "grade6_medium_throw.png",
+              "audio": "grade6_medium_throw.wav",
+              "lesson_cue": "This is throw... T, H, R, O, W... Throw!",
+              "lesson_cue_audio": "grade6_medium_throw_cue.wav",
+              "definition": "To send something through the air with your hand.",
+              "sample_sentence": "Pedro will throw his slipper at the tin can.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Throw",
+                  "distractors": ["Catch", "Push", "Roll"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Catch",
+              "category": "action",
+              "image": "grade6_medium_catch.png",
+              "audio": "grade6_medium_catch.wav",
+              "lesson_cue": "This is catch... C, A, T, C, H... Catch!",
+              "lesson_cue_audio": "grade6_medium_catch_cue.wav",
+              "definition": "To take hold of something moving through the air.",
+              "sample_sentence": "She can catch the ball in dodgeball.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Catch",
+                  "distractors": ["Throw", "Drop", "Kick"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Skip",
+              "category": "movement",
+              "image": "grade6_medium_skip.png",
+              "audio": "grade6_medium_skip.wav",
+              "lesson_cue": "This is skip... S, K, I, P... Skip!",
+              "lesson_cue_audio": "grade6_medium_skip_cue.wav",
+              "definition": "To move with light jumps on one foot.",
+              "sample_sentence": "The girls skip along the street.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Skip",
+                  "distractors": ["Crawl", "March", "Stand"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Turn",
+              "category": "movement",
+              "image": "grade6_medium_turn.png",
+              "audio": "grade6_medium_turn.wav",
+              "lesson_cue": "This is turn... T, U, R, N... Turn!",
+              "lesson_cue_audio": "grade6_medium_turn_cue.wav",
+              "definition": "To move your body or object in a circle.",
+              "sample_sentence": "Please turn around and count to ten.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Turn",
+                  "distractors": ["Stop", "Stand", "Sleep"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Race",
+              "category": "action",
+              "image": "grade6_medium_race.png",
+              "audio": "grade6_medium_race.wav",
+              "lesson_cue": "This is race... R, A, C, E... Race!",
+              "lesson_cue_audio": "grade6_medium_race_cue.wav",
+              "definition": "A contest to see who is the fastest.",
+              "sample_sentence": "The boys race to the finish line.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Race",
+                  "distractors": ["Rest", "Walk", "Wait"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Hit",
+              "category": "action",
+              "image": "grade6_medium_hit.png",
+              "audio": "grade6_medium_hit.wav",
+              "lesson_cue": "This is hit... H, I, T... Hit!",
+              "lesson_cue_audio": "grade6_medium_hit_cue.wav",
+              "definition": "To strike something with your hand or an object.",
+              "sample_sentence": "Try to hit the marble with your thumb.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"to strike a marble in the game\"?",
+                  "type": "inferential",
+                  "correct": "Hit",
+                  "distractors": ["Miss", "Catch", "Hold"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Find",
+              "category": "action",
+              "image": "grade6_medium_find.png",
+              "audio": "grade6_medium_find.wav",
+              "lesson_cue": "This is find... F, I, N, D... Find!",
+              "lesson_cue_audio": "grade6_medium_find_cue.wav",
+              "definition": "To look for and see something.",
+              "sample_sentence": "I will find you in the game of taguan!",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"to look for and see something\"?",
+                  "type": "inferential",
+                  "correct": "Find",
+                  "distractors": ["Hide", "Lose", "Throw"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Walk",
+              "category": "movement",
+              "image": "grade6_medium_walk.png",
+              "audio": "grade6_medium_walk.wav",
+              "lesson_cue": "This is walk... W, A, L, K... Walk!",
+              "lesson_cue_audio": "grade6_medium_walk_cue.wav",
+              "definition": "To move forward step by step.",
+              "sample_sentence": "We walk to the plaza every afternoon.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"to move step by step\"?",
+                  "type": "inferential",
+                  "correct": "Walk",
+                  "distractors": ["Fly", "Crawl", "Swim"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Play",
+              "category": "action",
+              "image": "grade6_medium_play.png",
+              "audio": "grade6_medium_play.wav",
+              "lesson_cue": "This is play... P, L, A, Y... Play!",
+              "lesson_cue_audio": "grade6_medium_play_cue.wav",
+              "definition": "To do something fun with other people.",
+              "sample_sentence": "The children play in the street together.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What is the best reason to play traditional games with friends?",
+                  "type": "critical",
+                  "correct": "To have fun and keep our culture alive",
+                  "distractors": ["To win a prize", "To finish homework", "To stay quiet"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Kick",
+              "category": "action",
+              "image": "grade6_medium_kick.png",
+              "audio": "grade6_medium_kick.wav",
+              "lesson_cue": "This is kick... K, I, C, K... Kick!",
+              "lesson_cue_audio": "grade6_medium_kick_cue.wav",
+              "definition": "To hit something with your foot.",
+              "sample_sentence": "Kick the ball with your right foot.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Kick",
+                  "distractors": ["Throw", "Catch", "Pull"],
+                  "show_image": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "difficulty": "hard",
+      "theme": "Sining at Kultura",
+      "passage_id": "grade6_hard_passage03",
+      "quiz_config": {
+        "quiz_size": 16,
+        "buffer_size": 2,
+        "randomized": 1,
+        "passing_threshold": 70
+      },
+      "game_config": {
+        "game_type": "category_sort",
+        "rounds": 12,
+        "points_per_correct": 5,
+        "max_points": 60,
+        "pass_threshold": 70,
+        "categories_per_round": 3,
+        "words_per_round": 12,
+        "hint_after_seconds": 60,
+        "auto_complete_after_seconds": 180
+      },
+      "batches": [
+        {
+          "batch_index": 1,
+          "words": [
+            {
+              "text": "Sing",
+              "category": "music",
+              "image": "grade6_hard_sing.png",
+              "audio": "grade6_hard_sing.wav",
+              "lesson_cue": "This is sing... S, I, N, G... Sing!",
+              "lesson_cue_audio": "grade6_hard_sing_cue.wav",
+              "definition": "To make music with your voice.",
+              "sample_sentence": "We sing karaoke at Lola's birthday.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Sing",
+                  "distractors": ["Dance", "Play", "Read"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Sound",
+              "category": "music",
+              "image": "grade6_hard_sound.png",
+              "audio": "grade6_hard_sound.wav",
+              "lesson_cue": "This is sound... S, O, U, N, D... Sound!",
+              "lesson_cue_audio": "grade6_hard_sound_cue.wav",
+              "definition": "Something that you can hear.",
+              "sample_sentence": "The rondalla plays a beautiful sound.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Sound",
+                  "distractors": ["Silence", "Color", "Light"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Voice",
+              "category": "music",
+              "image": "grade6_hard_voice.png",
+              "audio": "grade6_hard_voice.wav",
+              "lesson_cue": "This is voice... V, O, I, C, E... Voice!",
+              "lesson_cue_audio": "grade6_hard_voice_cue.wav",
+              "definition": "The sound you make when you speak or sing.",
+              "sample_sentence": "Her voice is soft and sweet.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Voice",
+                  "distractors": ["Hand", "Foot", "Face"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Beat",
+              "category": "music",
+              "image": "grade6_hard_beat.png",
+              "audio": "grade6_hard_beat.wav",
+              "lesson_cue": "This is beat... B, E, A, T... Beat!",
+              "lesson_cue_audio": "grade6_hard_beat_cue.wav",
+              "definition": "The steady rhythm in music.",
+              "sample_sentence": "The kulintang has a warm beat.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Beat",
+                  "distractors": ["Stop", "Sleep", "Quiet"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Loud",
+              "category": "music",
+              "image": "grade6_hard_loud.png",
+              "audio": "grade6_hard_loud.wav",
+              "lesson_cue": "This is loud... L, O, U, D... Loud!",
+              "lesson_cue_audio": "grade6_hard_loud_cue.wav",
+              "definition": "Making a lot of noise.",
+              "sample_sentence": "The drums are loud at the fiesta.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Loud",
+                  "distractors": ["Quiet", "Soft", "Slow"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Bell",
+              "category": "music",
+              "image": "grade6_hard_bell.png",
+              "audio": "grade6_hard_bell.wav",
+              "lesson_cue": "This is a bell... B, E, L, L... Bell!",
+              "lesson_cue_audio": "grade6_hard_bell_cue.wav",
+              "definition": "A metal object that makes a ringing sound.",
+              "sample_sentence": "The church bell rings at six in the morning.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Bell",
+                  "distractors": ["Drum", "Flute", "Guitar"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Paint",
+              "category": "visual_arts",
+              "image": "grade6_hard_paint.png",
+              "audio": "grade6_hard_paint.wav",
+              "lesson_cue": "This is paint... P, A, I, N, T... Paint!",
+              "lesson_cue_audio": "grade6_hard_paint_cue.wav",
+              "definition": "A colored liquid used to make pictures.",
+              "sample_sentence": "Lolo will paint a picture of the sea.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Paint",
+                  "distractors": ["Write", "Sing", "Play"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Picture",
+              "category": "visual_arts",
+              "image": "grade6_hard_picture.png",
+              "audio": "grade6_hard_picture.wav",
+              "lesson_cue": "This is a picture... P, I, C, T, U, R, E... Picture!",
+              "lesson_cue_audio": "grade6_hard_picture_cue.wav",
+              "definition": "A drawing, painting, or photo.",
+              "sample_sentence": "The family picture hangs on the wall.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Picture",
+                  "distractors": ["Song", "Story", "Letter"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Paper",
+              "category": "visual_arts",
+              "image": "grade6_hard_paper.png",
+              "audio": "grade6_hard_paper.wav",
+              "lesson_cue": "This is paper... P, A, P, E, R... Paper!",
+              "lesson_cue_audio": "grade6_hard_paper_cue.wav",
+              "definition": "A thin material used for writing or drawing.",
+              "sample_sentence": "She writes a poem on the paper.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Paper",
+                  "distractors": ["Wood", "Stone", "Metal"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Shape",
+              "category": "visual_arts",
+              "image": "grade6_hard_shape.png",
+              "audio": "grade6_hard_shape.wav",
+              "lesson_cue": "This is a shape... S, H, A, P, E... Shape!",
+              "lesson_cue_audio": "grade6_hard_shape_cue.wav",
+              "definition": "The form of an object, like a circle or square.",
+              "sample_sentence": "He draws a circle shape on the board.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"the form of an object\"?",
+                  "type": "inferential",
+                  "correct": "Shape",
+                  "distractors": ["Color", "Sound", "Smell"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Cut",
+              "category": "visual_arts",
+              "image": "grade6_hard_cut.png",
+              "audio": "grade6_hard_cut.wav",
+              "lesson_cue": "This is cut... C, U, T... Cut!",
+              "lesson_cue_audio": "grade6_hard_cut_cue.wav",
+              "definition": "To divide something with scissors or a knife.",
+              "sample_sentence": "Lola cuts the banderitas for the fiesta.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Cut",
+                  "distractors": ["Fold", "Tear", "Draw"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Crayons",
+              "category": "visual_arts",
+              "image": "grade6_hard_crayons.png",
+              "audio": "grade6_hard_crayons.wav",
+              "lesson_cue": "These are crayons... C, R, A, Y, O, N, S... Crayons!",
+              "lesson_cue_audio": "grade6_hard_crayons_cue.wav",
+              "definition": "Colorful sticks used for drawing.",
+              "sample_sentence": "The children color with crayons.",
+              "source": "Team-authored, MELC EN6VC-Ia-6.2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"colorful sticks used for drawing\"?",
+                  "type": "inferential",
+                  "correct": "Crayons",
+                  "distractors": ["Pencils", "Erasers", "Rulers"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Poem",
+              "category": "storytelling",
+              "image": "grade6_hard_poem.png",
+              "audio": "grade6_hard_poem.wav",
+              "lesson_cue": "This is a poem... P, O, E, M... Poem!",
+              "lesson_cue_audio": "grade6_hard_poem_cue.wav",
+              "definition": "A piece of writing with rhythm and feeling.",
+              "sample_sentence": "Lola reads a poem about the sea.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"a piece of writing with rhythm\"?",
+                  "type": "inferential",
+                  "correct": "Poem",
+                  "distractors": ["Song", "Letter", "Recipe"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Stage",
+              "category": "storytelling",
+              "image": "grade6_hard_stage.png",
+              "audio": "grade6_hard_stage.wav",
+              "lesson_cue": "This is a stage... S, T, A, G, E... Stage!",
+              "lesson_cue_audio": "grade6_hard_stage_cue.wav",
+              "definition": "A raised floor where performers act.",
+              "sample_sentence": "The actors perform on the stage.",
+              "source": "Dolch Grade 3",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word matches this picture?",
+                  "type": "literal",
+                  "correct": "Stage",
+                  "distractors": ["Screen", "Book", "Frame"],
+                  "show_image": true
+                }
+              ]
+            },
+            {
+              "text": "Cinema",
+              "category": "storytelling",
+              "image": "grade6_hard_cinema.png",
+              "audio": "grade6_hard_cinema.wav",
+              "lesson_cue": "This is a cinema... C, I, N, E, M, A... Cinema!",
+              "lesson_cue_audio": "grade6_hard_cinema_cue.wav",
+              "definition": "A place where people watch movies.",
+              "sample_sentence": "We watch a movie at the cinema.",
+              "source": "Team-authored, MELC EN6VC-Ia-6.2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Why might some people choose to watch a movie at home instead of at a cinema?",
+                  "type": "critical",
+                  "correct": "Home viewing is cheaper and more convenient",
+                  "distractors": ["Home viewing has a bigger screen", "Home viewing is always more fun", "Home viewing is required by law"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Write",
+              "category": "storytelling",
+              "image": "grade6_hard_write.png",
+              "audio": "grade6_hard_write.wav",
+              "lesson_cue": "This is write... W, R, I, T, E... Write!",
+              "lesson_cue_audio": "grade6_hard_write_cue.wav",
+              "definition": "To make letters and words on paper.",
+              "sample_sentence": "I will write a letter to Lolo.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Which word means \"to make letters and words on paper\"?",
+                  "type": "inferential",
+                  "correct": "Write",
+                  "distractors": ["Draw", "Read", "Speak"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Read",
+              "category": "storytelling",
+              "image": "grade6_hard_read.png",
+              "audio": "grade6_hard_read.wav",
+              "lesson_cue": "This is read... R, E, A, D... Read!",
+              "lesson_cue_audio": "grade6_hard_read_cue.wav",
+              "definition": "To look at words and understand their meaning.",
+              "sample_sentence": "Nanay likes to read at night.",
+              "source": "Dolch Primer",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "Why is reading a book important for a young learner?",
+                  "type": "critical",
+                  "correct": "It helps build knowledge and imagination",
+                  "distractors": ["It is required for watching TV", "It replaces playing outside", "It is only for adults"],
+                  "show_image": false
+                }
+              ]
+            },
+            {
+              "text": "Book",
+              "category": "storytelling",
+              "image": "grade6_hard_book.png",
+              "audio": "grade6_hard_book.wav",
+              "lesson_cue": "This is a book... B, O, O, K... Book!",
+              "lesson_cue_audio": "grade6_hard_book_cue.wav",
+              "definition": "A set of pages with words and pictures.",
+              "sample_sentence": "This book is about our heroes.",
+              "source": "Dolch Grade 2",
+              "sensitivity_reviewed": 1,
+              "sensitivity_notes": "Reviewed — no issues.",
+              "quiz_questions": [
+                {
+                  "stem": "What makes a book like Noli Me Tangere important to Filipinos?",
+                  "type": "critical",
+                  "correct": "It teaches us about our history and heroes",
+                  "distractors": ["It is a foreign story", "It is only for older readers", "It is difficult to read"],
+                  "show_image": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

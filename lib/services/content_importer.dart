@@ -19,8 +19,7 @@ class ContentImporter {
     await importGradeIfNeeded(3);
     await importGradeIfNeeded(4);
     await importGradeIfNeeded(5);
-    // await importGradeIfNeeded(5);
-    // ...
+    await importGradeIfNeeded(6);
   }
 
   /// Import content for a single grade if not already up to date.

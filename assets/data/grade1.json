@@ -1,5 +1,5 @@
 {
-  "content_version": "1.0.7",
+  "content_version": "1.0.8",
   "grade": 1,
   "lesson_intros": [
     {
@@ -72,12 +72,12 @@
       "audio_asset": "game_intro_sentence_builder.wav"
     },
     {
-      "game_type": "hangman",
+      "game_type": "floor_is_lava",
       "header": "Guess the Word!",
       "body": "Guess the word letter by letter.",
       "button_label": "I'M READY!",
       "pose_asset": "yse_um_actually.png",
-      "audio_asset": "game_intro_hangman.wav"
+      "audio_asset": "game_intro_floor_is_lava.wav"
     },
     {
       "game_type": "word_hunt",

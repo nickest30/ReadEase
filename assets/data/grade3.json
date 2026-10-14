@@ -1,5 +1,5 @@
 {
-  "content_version": "1.0.1",
+  "content_version": "1.0.2",
   "grade": 3,
   "lesson_intros": [
     {
@@ -36,7 +36,7 @@
     {"game_type": "drag_drop", "header": "Drag the Word!", "body": "Drag the word to the matching picture.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_drag_drop.wav"},
     {"game_type": "word_scramble", "header": "Spell the Word!", "body": "Rearrange the letters to spell the word.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_word_scramble.wav"},
     {"game_type": "sentence_builder", "header": "Build a Sentence!", "body": "Put the words in order to make a sentence.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_sentence_builder.wav"},
-    {"game_type": "hangman", "header": "Guess the Word!", "body": "Guess the word letter by letter.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_hangman.wav"},
+    {"game_type": "floor_is_lava", "header": "Guess the Word!", "body": "Guess the word letter by letter.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_floor_is_lava.wav"},
     {"game_type": "word_hunt", "header": "Find the Words!", "body": "Find the hidden words in the letter grid.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_word_hunt.wav"},
     {"game_type": "category_sort", "header": "Sort the Words!", "body": "Drag each word into the correct group.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_category_sort.wav"},
     {"game_type": "crossword_lite", "header": "Fill the Boxes!", "body": "Fill the boxes with the correct words.", "button_label": "I'M READY!", "pose_asset": "yse_um_actually.png", "audio_asset": "game_intro_crossword_lite.wav"},

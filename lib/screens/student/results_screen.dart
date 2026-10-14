@@ -90,6 +90,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
   bool get _isPassing =>
       _totalQuestions > 0 && (_score / _totalQuestions) >= 0.70;
 
+  /// True only when the student is on the final level of the final grade.
+  /// Used to celebrate completion of the entire app.
+  bool get _isFinalLevel => _gradeLevel == 6 && _difficulty == 'hard';
+
   String get _yseAsset {
     if (_starsEarned >= 5) return 'assets/images/mascot/yse_celebrate.png';
     if (_starsEarned >= 4) return 'assets/images/mascot/yse_salute.png';
@@ -115,6 +119,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 
   String get _nextButtonLabel {
+    if (_isFinalLevel) return 'Back to Home';
     if (_difficulty == 'easy' || _difficulty == 'medium') {
       return 'Next Level';
     }
@@ -130,6 +135,15 @@ class _ResultsScreenState extends State<ResultsScreen> {
         arguments: {
           'gradeLevel': _gradeLevel,
         },
+      );
+      return;
+    }
+
+    // Final level — celebrate and go home.
+    if (_isFinalLevel) {
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/student-home',
+        ModalRoute.withName('/role-selection'),
       );
       return;
     }
@@ -425,6 +439,51 @@ class _ResultsScreenState extends State<ResultsScreen> {
                 const SizedBox(height: AppSpacing.md),
               ],
 
+              // Completion banner — only on G6 Hard + passing
+              if (_isFinalLevel && _isPassing) ...[
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.md,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.accentYellow.withValues(alpha: 0.25),
+                          AppColors.accentTeal.withValues(alpha: 0.25),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                      border:
+                          Border.all(color: AppColors.accentYellow, width: 2),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.emoji_events_rounded,
+                          color: AppColors.accentYellow,
+                          size: 40,
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          'You finished all grades!',
+                          style: AppText.h2.copyWith(fontSize: 18),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Grade 1 through Grade 6 complete.',
+                          style: AppText.caption,
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+              ],
+
               // Badge chip (if passing)
               if (_isPassing)
                 Center(
@@ -535,8 +594,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     ),
                   ),
 
-                  // Next Level / Next Grade — only shown when the
-                  // student actually passed this level.
+                  // Next Level / Next Grade / Back to Home — only when passed
                   if (_isPassing) ...[
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
