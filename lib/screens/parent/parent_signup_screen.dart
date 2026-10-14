@@ -10,6 +10,7 @@ import '../../services/firestore_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/parent_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../widgets/terms_modal.dart';
 import '../../utils/backup_code.dart';
 import '../../utils/validators.dart';
 import '../../widgets/app_form.dart';
@@ -61,7 +62,10 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final agreed = await _showTermsModal();
+    final agreed = await TermsModal.show(
+      context,
+      intro: 'ReadEase keeps your child\'s data private and safe.',
+    );
     if (!agreed || !mounted) return;
 
     final authProvider = context.read<AuthProvider>();
@@ -276,114 +280,7 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
     Navigator.of(context).pushReplacementNamed('/parent-dashboard');
   }
 
-  Future<bool> _showTermsModal() async {
-    final result = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-        ),
-        backgroundColor: AppColors.surface,
-        title: const Text(
-          'Terms and Data Privacy',
-          style: TextStyle(
-            fontFamily: 'Nunito',
-            fontWeight: FontWeight.w800,
-            fontSize: 17,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        content: const SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'ReadEase keeps your child\'s data private and safe.',
-                style: TextStyle(fontFamily: 'Nunito', fontSize: 13),
-              ),
-              SizedBox(height: 12),
-              Text(
-                'What we collect:',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
-              Text(
-                '• Name and grade (to personalize lessons)\n'
-                '• Reading progress and badges\n'
-                '• Email and optional phone number (for account security)',
-                style: TextStyle(fontFamily: 'Nunito', fontSize: 13),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'Where it stays:',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
-              Text(
-                '• On this device by default. Cloud sync activates '
-                'when you register.',
-                style: TextStyle(fontFamily: 'Nunito', fontSize: 13),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'Your consent:',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
-              Text(
-                'By tapping "I Agree", you confirm that you are the '
-                'parent or guardian and agree to storage of this data. '
-                'This app complies with Republic Act 10173 '
-                '(Data Privacy Act of 2012).',
-                style: TextStyle(fontFamily: 'Nunito', fontSize: 13),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                color: AppColors.textMuted,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentPurple,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text(
-              'I Agree',
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
-  }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(

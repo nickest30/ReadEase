@@ -9,6 +9,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/validators.dart';
+import '../../widgets/terms_modal.dart';
 import '../../widgets/app_form.dart';
 
 class SoloSignupScreen extends StatefulWidget {
@@ -37,6 +38,11 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
 
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Terms & Data Privacy — required before account creation.
+    final agreed = await TermsModal.show(context);
+    if (!agreed) return;
+    if (!mounted) return;
 
     final authProvider = context.read<AuthProvider>();
     final studentProvider = context.read<StudentProvider>();

@@ -48,7 +48,6 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> signIn(String email, String password) async {
     final ok = await AuthService.instance.signIn(email, password);
     if (ok) {
-      // Save credentials keyed by the newly signed-in user's UID
       final uid = AuthService.instance.currentUid;
       if (uid != null) {
         await CredentialStorage.instance.save(
@@ -56,6 +55,7 @@ class AuthProvider extends ChangeNotifier {
           email: email,
           password: password,
         );
+        await CredentialStorage.instance.touchSession();
       }
     }
     return ok;
@@ -113,6 +113,9 @@ class AuthProvider extends ChangeNotifier {
         creds['password']!,
       );
       debugPrint('🔑 tryRestoreSessionFor: signIn result = $ok');
+      if (ok) {
+        await CredentialStorage.instance.touchSession();
+      }
       return ok;
     } catch (e) {
       debugPrint('🔑 tryRestoreSessionFor: ERROR = $e');
@@ -160,6 +163,18 @@ class AuthProvider extends ChangeNotifier {
     }
     _sessionState = SessionState.offline;
     notifyListeners();
+  }
+
+  Future<bool> checkSessionExpiry() async {
+    final expired = await CredentialStorage.instance.isSessionExpired();
+    if (!expired) return false;
+
+    debugPrint('🔐 Session expired — forcing sign-out');
+    await AuthService.instance.signOut();
+    await CredentialStorage.instance.clearSessionMarker();
+    _sessionState = SessionState.offline;
+    notifyListeners();
+    return true;
   }
 
   // ────────────────────────────────────────────────────────────────

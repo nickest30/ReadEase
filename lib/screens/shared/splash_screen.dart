@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/student_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../utils/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -34,10 +37,10 @@ class _SplashScreenState extends State<SplashScreen>
     _bootstrap();
   }
 
-  /// Loads the last-active student in parallel with the minimum
-  /// splash duration, then routes accordingly.
+
   Future<void> _bootstrap() async {
     final studentProvider = context.read<StudentProvider>();
+    final authProvider = context.read<AuthProvider>();
 
     await Future.wait([
       studentProvider.init(),
@@ -45,6 +48,18 @@ class _SplashScreenState extends State<SplashScreen>
     ]);
 
     if (!mounted) return;
+
+        // Session expiry — force re-auth if the last activity was too long ago.
+    final expired = await authProvider.checkSessionExpiry();
+    if (!mounted) return;
+
+    if (expired) {
+      // Fire-and-forget — logout() resets state synchronously via
+      // notifyListeners; the prefs cleanup can finish in the background.
+      unawaited(studentProvider.logout());
+      Navigator.of(context).pushReplacementNamed('/role-selection');
+      return;
+    }
 
     final student = studentProvider.currentStudent;
     if (student != null) {

@@ -13,6 +13,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/backup_code.dart';
 import '../../utils/validators.dart';
 import '../../widgets/app_form.dart';
+import '../../widgets/terms_modal.dart';
 import '../shared/backup_code_screen.dart';
 import '../shared/otp_verification_screen.dart';
 
@@ -62,6 +63,11 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
 
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Terms & Data Privacy — required before account creation.
+    final agreed = await TermsModal.show(context);
+    if (!agreed) return;
+    if (!mounted) return;
 
     final authProvider = context.read<AuthProvider>();
     final teacherProvider = context.read<TeacherProvider>();

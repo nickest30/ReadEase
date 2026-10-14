@@ -10,6 +10,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
+import '../../services/credential_storage.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/number_pad.dart';
 import '../../widgets/pin_dots.dart';
@@ -161,6 +162,10 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
     if (id != null) {
       await DatabaseService.instance.clearPinAttempts(id);
     }
+
+    // Record activity — extends the 30-day session TTL.
+    await CredentialStorage.instance.touchSession();
+
     setState(() => _dotState = PinDotState.success);
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;

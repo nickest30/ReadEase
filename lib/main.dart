@@ -71,6 +71,8 @@ import 'screens/games/floor_is_lava_screen.dart';
 import 'screens/games/passage_screen.dart';
 import 'screens/games/word_hunt_screen.dart';
 import 'screens/games/category_sort_screen.dart';
+import 'services/credential_storage.dart';
+
 
 
 
@@ -106,8 +108,40 @@ class ReadEaseApp extends StatefulWidget {
   State<ReadEaseApp> createState() => _ReadEaseAppState();
 }
 
-class _ReadEaseAppState extends State<ReadEaseApp> {
+class _ReadEaseAppState extends State<ReadEaseApp>
+    with WidgetsBindingObserver {
   bool _syncWired = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkSessionOnResume();
+    }
+  }
+
+  Future<void> _checkSessionOnResume() async {
+    try {
+      final expired = await CredentialStorage.instance.isSessionExpired();
+      if (!expired) {
+        // Touch on resume so the TTL rolls forward while the app is in use.
+        await CredentialStorage.instance.touchSession();
+      }
+    } catch (e) {
+      debugPrint('🔐 Resume session check failed: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

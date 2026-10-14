@@ -116,6 +116,49 @@ class CredentialStorage {
     }
   }
 
+  // ────────────────────────────────────────────────────────────────
+  // SESSION EXPIRY
+  // ────────────────────────────────────────────────────────────────
 
+  /// How long a session stays valid without re-authentication.
+  static const _sessionTtl = Duration(days: 30);
+  static const _keyLastActiveAt = 'session.last_active_at';
+
+  /// Record that the app was actively used just now.
+  /// Called on sign-in, PIN entry, and session restore.
+  Future<void> touchSession() async {
+    try {
+      await _storage.write(
+        key: _keyLastActiveAt,
+        value: DateTime.now().toIso8601String(),
+      );
+    } catch (e) {
+      debugPrint('🔐 touchSession ERROR: $e');
+    }
+  }
+
+  /// True if the last recorded activity is older than [_sessionTtl].
+  /// Returns false when no session has ever been recorded (fresh install).
+  Future<bool> isSessionExpired() async {
+    try {
+      final raw = await _storage.read(key: _keyLastActiveAt);
+      if (raw == null || raw.isEmpty) return false;
+      final last = DateTime.tryParse(raw);
+      if (last == null) return false;
+      return DateTime.now().difference(last) > _sessionTtl;
+    } catch (e) {
+      debugPrint('🔐 isSessionExpired ERROR: $e');
+      return false;
+    }
+  }
+
+  /// Remove the session-activity marker (used after forcing sign-out).
+  Future<void> clearSessionMarker() async {
+    try {
+      await _storage.delete(key: _keyLastActiveAt);
+    } catch (e) {
+      debugPrint('🔐 clearSessionMarker ERROR: $e');
+    }
+  }
 
 }
