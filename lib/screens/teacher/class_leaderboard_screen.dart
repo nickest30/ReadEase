@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/class_group.dart';
 import '../../models/student.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/avatar_helper.dart';
 
 class ClassLeaderboardScreen extends StatelessWidget {
   const ClassLeaderboardScreen({super.key});
@@ -142,10 +143,6 @@ class _RankRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial = student.displayName.isNotEmpty
-        ? student.displayName[0].toUpperCase()
-        : '?';
-
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       padding: const EdgeInsets.symmetric(
@@ -172,25 +169,31 @@ class _RankRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
+
+          // Avatar — falls back to a placeholder if the image is missing
           Container(
             width: 38,
             height: 38,
-            decoration: const BoxDecoration(
-              color: AppColors.accentYellow,
+            decoration: BoxDecoration(
+              color: AppColors.studentBg,
               shape: BoxShape.circle,
+              border: Border.all(
+                color: _rankColor,
+                width: rank <= 3 ? 2.5 : 1.5,
+              ),
             ),
-            child: Center(
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  fontFamily: 'Nunito',
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
-                ),
+            clipBehavior: Clip.antiAlias,
+            child: Image.asset(
+              avatarAssetPath(student.avatarIndex),
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => const Icon(
+                Icons.person_rounded,
+                size: 22,
+                color: AppColors.textMuted,
               ),
             ),
           ),
+
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
