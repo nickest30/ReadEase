@@ -8,7 +8,6 @@ import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/email_verification_banner.dart';
-import '../shared/account_security_screen.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({super.key});
@@ -295,24 +294,17 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
                 ),
               ),
 
-              const SizedBox(height: AppSpacing.sm),
+                            const SizedBox(height: AppSpacing.sm),
 
-              // ── Account & Security ──
+              // ── Settings ──
               SizedBox(
                 height: 46,
                 child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const AccountSecurityScreen(
-                          role: 'teacher',
-                        ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.shield_outlined, size: 18),
+                  onPressed: () =>
+                      Navigator.of(context).pushNamed('/teacher-settings'),
+                  icon: const Icon(Icons.settings_outlined, size: 18),
                   label: const Text(
-                    'Account & Security',
+                    'Settings',
                     style: TextStyle(
                       fontFamily: 'Nunito',
                       fontWeight: FontWeight.w700,
