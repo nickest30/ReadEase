@@ -710,6 +710,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 // Podium entry
 // ─────────────────────────────────────────────────────────
 
+int fallbackAvatarIndex(String name) {
+  if (name.isEmpty) return 1;
+  return (name.toLowerCase().hashCode.abs() % 12) + 1;
+}
+
 class _PodiumEntry extends StatelessWidget {
   final int rank;
   final Map<String, dynamic> data;
@@ -728,7 +733,8 @@ class _PodiumEntry extends StatelessWidget {
     final name = (data['displayName'] as String?) ?? 'Unknown';
     final points = data['totalPoints'] ?? 0;
     final isCurrentUser = data['isCurrentUser'] == true;
-    final avatarIndex = (data['avatarIndex'] as int?) ?? 1;
+    final avatarIndex =
+        (data['avatarIndex'] as int?) ?? fallbackAvatarIndex(name);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -862,7 +868,8 @@ class _RankRow extends StatelessWidget {
     final grade = data['gradeLevel'] ?? '?';
     final badgeCount = data['badgeCount'] ?? 0;
     final isCurrentUser = data['isCurrentUser'] == true;
-    final avatarIndex = (data['avatarIndex'] as int?) ?? 1;
+    final avatarIndex =
+        (data['avatarIndex'] as int?) ?? fallbackAvatarIndex(name);
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
