@@ -1,42 +1,44 @@
 class Student {
   final int? id;
   final String username;
-  final String? passwordHash;                  // ← was required, now nullable
+  final String? passwordHash;                  // nullable — linked children have no password
   final String displayName;
   final int gradeLevel;
   final String? pinHash;
   final bool isLinked;
   final int? parentId;
-  final String? parentFirebaseUid;             // NEW — string, replaces hash hack
+  final String? parentFirebaseUid;             // string, replaces hash hack
   final int totalPoints;
-  final String? recoveryEmail;                 // NEW
-  final bool recoveryEmailVerified;            // NEW
+  final String? recoveryEmail;
+  final bool recoveryEmailVerified;
   final String createdAt;
   final String? firebaseUid;
   final String? classFirestoreId;
   final String? className;
   final String? lastSyncedAt;
   final bool pendingSync;
+  final int avatarIndex;                       // 1–12, default 1 (Yse)
 
   Student({
     this.id,
     required this.username,
-    this.passwordHash,                          // ← not required anymore
+    this.passwordHash,
     required this.displayName,
     required this.gradeLevel,
     this.pinHash,
     this.isLinked = false,
     this.parentId,
-    this.parentFirebaseUid,                     // NEW
+    this.parentFirebaseUid,
     this.totalPoints = 0,
-    this.recoveryEmail,                         // NEW
-    this.recoveryEmailVerified = false,         // NEW
+    this.recoveryEmail,
+    this.recoveryEmailVerified = false,
     required this.createdAt,
     this.firebaseUid,
     this.classFirestoreId,
     this.className,
     this.lastSyncedAt,
     this.pendingSync = false,
+    this.avatarIndex = 1,
   });
 
   Map<String, dynamic> toMap() {
@@ -59,6 +61,7 @@ class Student {
       'class_name': className,
       'last_synced_at': lastSyncedAt,
       'pending_sync': pendingSync ? 1 : 0,
+      'avatar_index': avatarIndex,
     };
   }
 
@@ -83,6 +86,7 @@ class Student {
       className: map['class_name'] as String?,
       lastSyncedAt: map['last_synced_at'] as String?,
       pendingSync: ((map['pending_sync'] as int?) ?? 0) == 1,
+      avatarIndex: (map['avatar_index'] as int?) ?? 1,
     );
   }
 
@@ -98,6 +102,7 @@ class Student {
     String? className,
     String? lastSyncedAt,
     bool? pendingSync,
+    int? avatarIndex,
   }) {
     return Student(
       id: id,
@@ -119,6 +124,7 @@ class Student {
       className: className ?? this.className,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       pendingSync: pendingSync ?? this.pendingSync,
+      avatarIndex: avatarIndex ?? this.avatarIndex,
     );
   }
 }

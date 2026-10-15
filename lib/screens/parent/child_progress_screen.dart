@@ -4,6 +4,7 @@ import '../../models/student.dart';
 import '../../models/word.dart';
 import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/avatar_helper.dart';
 import '../../widgets/analytics_widgets.dart';
 
 class ChildProgressScreen extends StatefulWidget {
@@ -114,6 +115,28 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
                     padding: EdgeInsets.zero,
                   ),
                   const SizedBox(width: AppSpacing.sm),
+                  // Child avatar with purple ring (matches parent theme)
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentPurple.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.accentPurple.withValues(alpha: 0.5),
+                        width: 2,
+                      ),
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: ClipOval(
+                      child: Image.asset(
+                        avatarAssetPath(child.avatarIndex),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _initialFallback(child),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,6 +162,26 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
                       : _buildContent(),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _initialFallback(Student child) {
+    final initial = child.displayName.isNotEmpty
+        ? child.displayName[0].toUpperCase()
+        : '?';
+    return Container(
+      color: AppColors.accentPurple,
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            fontFamily: 'Nunito',
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+          ),
         ),
       ),
     );

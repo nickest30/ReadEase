@@ -7,6 +7,7 @@ import '../../providers/student_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../services/firestore_service.dart';
 import '../../services/database_service.dart';
+import '../../utils/avatar_helper.dart';
 
 class StudentSettingsScreen extends StatefulWidget {
   const StudentSettingsScreen({super.key});
@@ -527,6 +528,42 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                       onTap: () => settings.setTextScale(1.15),
                     ),
                   ],
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
+              // AVATAR
+              _SettingCard(
+                icon: Icons.face_rounded,
+                iconColor: AppColors.accentOrange,
+                label: 'Avatar',
+                subtitle: 'Choose your look',
+                trailing: InkWell(
+                  onTap: () async {
+                    final changed = await Navigator.of(context)
+                        .pushNamed('/avatar-picker');
+                    if (changed == true && mounted) {
+                      // Settings reads currentStudent from provider,
+                      // which the picker already refreshed.
+                      setState(() {});
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(AppRadius.small),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Image.asset(
+                      avatarAssetPath(student.avatarIndex),
+                      width: 44,
+                      height: 44,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, _, _) => const Icon(
+                        Icons.face_rounded,
+                        size: 32,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ),
                 ),
               ),
 

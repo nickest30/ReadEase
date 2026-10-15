@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/student.dart';
 import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/avatar_helper.dart';
 
 class ProfileListScreen extends StatefulWidget {
   const ProfileListScreen({super.key});
@@ -69,7 +70,7 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
                       ],
                     ),
                   ),
-                  _YseImage(
+                  const _YseImage(
                     assetPath: 'assets/images/mascot/yse_thinking.png',
                     size: 90,
                   ),
@@ -210,10 +211,6 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial = student.displayName.isNotEmpty
-        ? student.displayName[0].toUpperCase()
-        : '?';
-
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.large),
@@ -227,22 +224,43 @@ class _ProfileCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Avatar — replaces the initial-letter circle.
             Container(
-              width: 64,
-              height: 64,
-              decoration: const BoxDecoration(
-                color: AppColors.accentTeal,
+              width: 68,
+              height: 68,
+              decoration: BoxDecoration(
+                color: AppColors.accentTeal.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.accentTeal.withValues(alpha: 0.4),
+                  width: 2,
+                ),
               ),
-              child: Center(
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
+              padding: const EdgeInsets.all(4),
+              child: ClipOval(
+                child: Image.asset(
+                  avatarAssetPath(student.avatarIndex),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) {
+                    // Fallback — initial letter if the PNG is missing.
+                    final initial = student.displayName.isNotEmpty
+                        ? student.displayName[0].toUpperCase()
+                        : '?';
+                    return Container(
+                      color: AppColors.accentTeal,
+                      child: Center(
+                        child: Text(
+                          initial,
+                          style: const TextStyle(
+                            fontFamily: 'Nunito',
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

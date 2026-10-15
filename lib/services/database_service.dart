@@ -28,14 +28,14 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 21,
+      version: 22,
       onCreate: _createTables,
       onUpgrade: _upgradeTables,
     );
   }
 
   Future<void> _createTables(Database db, int version) async {
-    await db.execute('''
+        await db.execute('''
       CREATE TABLE students (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
@@ -54,7 +54,8 @@ class DatabaseService {
         class_name TEXT,
         last_synced_at TEXT,
         pending_sync INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        avatar_index INTEGER NOT NULL DEFAULT 1
       )
     ''');
 
@@ -1186,6 +1187,14 @@ class DatabaseService {
         await db.execute('DROP TABLE IF EXISTS story_frames');
       } catch (_) {}
     }
+
+    if (oldVersion < 22) {
+      try {
+        await db.execute(
+          'ALTER TABLE students ADD COLUMN avatar_index INTEGER NOT NULL DEFAULT 1',
+        );
+      } catch (_) {}
+    }
   }
 
   // ---------- Student methods ----------
@@ -1229,6 +1238,18 @@ class DatabaseService {
     final rows = await db.update(
       'students',
       {'display_name': displayName},
+      where: 'id = ?',
+      whereArgs: [studentId],
+    );
+    return rows > 0;
+  }
+
+  Future<bool> updateStudentAvatar(int studentId, int avatarIndex) async {
+    final db = await database;
+    final safe = avatarIndex.clamp(1, 12);
+    final rows = await db.update(
+      'students',
+      {'avatar_index': safe},
       where: 'id = ?',
       whereArgs: [studentId],
     );

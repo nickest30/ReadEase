@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/class_group.dart';
-import '../../models/student.dart'; 
+import '../../models/student.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
-import 'package:provider/provider.dart';
+import '../../utils/avatar_helper.dart';
 
 class ClassOverviewScreen extends StatefulWidget {
   const ClassOverviewScreen({super.key});
@@ -63,6 +64,7 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
         totalPoints: (m['totalPoints'] ?? 0) as int,
         firebaseUid: m['uid'] as String?,
         createdAt: '',
+        avatarIndex: (m['avatarIndex'] as int?) ?? 1,
       );
     }).toList();
 
@@ -458,7 +460,6 @@ class _StudentRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = student.displayName;
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     final grade = student.gradeLevel;
     final points = student.totalPoints;
 
@@ -478,22 +479,24 @@ class _StudentRow extends StatelessWidget {
         ),
         child: Row(
           children: [
+            // Avatar with yellow ring (matches teacher theme)
             Container(
-              width: 40,
-              height: 40,
-              decoration: const BoxDecoration(
-                color: AppColors.accentYellow,
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: AppColors.accentYellow.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.accentYellow.withValues(alpha: 0.5),
+                  width: 1.5,
+                ),
               ),
-              child: Center(
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    fontFamily: 'Nunito',
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
+              padding: const EdgeInsets.all(2),
+              child: ClipOval(
+                child: Image.asset(
+                  avatarAssetPath(student.avatarIndex),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => _initialFallback(name),
                 ),
               ),
             ),
@@ -532,6 +535,24 @@ class _StudentRow extends StatelessWidget {
               size: 18,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _initialFallback(String name) {
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    return Container(
+      color: AppColors.accentYellow,
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            fontFamily: 'Nunito',
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: 16,
+          ),
         ),
       ),
     );

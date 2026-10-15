@@ -7,6 +7,7 @@ import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/avatar_helper.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
 
@@ -59,6 +60,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           'totalPoints': s.totalPoints,
           'gradeLevel': s.gradeLevel,
           'badgeCount': 0,
+          'avatarIndex': s.avatarIndex,
           'isCurrentUser': false,
         };
       }).toList()
@@ -85,7 +87,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final student = context.read<StudentProvider>().currentStudent;
     if (student == null) return;
 
-    // No class joined yet — clear and bail.
     if (student.classFirestoreId == null ||
         student.classFirestoreId!.isEmpty) {
       if (!mounted) return;
@@ -166,7 +167,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     }
   }
 
-  // Reset flags when switching tabs so offline → online recovers.
   void _onTabSelected(int index) {
     if (_selectedTab == index) return;
     setState(() => _selectedTab = index);
@@ -726,9 +726,9 @@ class _PodiumEntry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = (data['displayName'] as String?) ?? 'Unknown';
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     final points = data['totalPoints'] ?? 0;
     final isCurrentUser = data['isCurrentUser'] == true;
+    final avatarIndex = (data['avatarIndex'] as int?) ?? 1;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -742,26 +742,24 @@ class _PodiumEntry extends StatelessWidget {
         else
           const SizedBox(height: 28),
         const SizedBox(height: 4),
+        // Avatar circle — soft colored ring with the PNG inside
         Container(
-          width: 48,
-          height: 48,
+          width: 52,
+          height: 52,
           decoration: BoxDecoration(
-            color: color,
+            color: color.withValues(alpha: 0.15),
             shape: BoxShape.circle,
             border: Border.all(
-              color: isCurrentUser ? AppColors.accentTeal : Colors.white,
+              color: isCurrentUser ? AppColors.accentTeal : color,
               width: isCurrentUser ? 3 : 2,
             ),
           ),
-          child: Center(
-            child: Text(
-              initial,
-              style: const TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-              ),
+          padding: const EdgeInsets.all(3),
+          child: ClipOval(
+            child: Image.asset(
+              avatarAssetPath(avatarIndex),
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => _initialFallback(name, color),
             ),
           ),
         ),
@@ -820,6 +818,24 @@ class _PodiumEntry extends StatelessWidget {
       ],
     );
   }
+
+  Widget _initialFallback(String name, Color bg) {
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    return Container(
+      color: bg,
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            fontFamily: 'Nunito',
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────
@@ -842,11 +858,11 @@ class _RankRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = (data['displayName'] as String?) ?? 'Unknown';
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     final points = data['totalPoints'] ?? 0;
     final grade = data['gradeLevel'] ?? '?';
     final badgeCount = data['badgeCount'] ?? 0;
     final isCurrentUser = data['isCurrentUser'] == true;
+    final avatarIndex = (data['avatarIndex'] as int?) ?? 1;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -879,22 +895,24 @@ class _RankRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
+          // Avatar circle with PNG
           Container(
-            width: 38,
-            height: 38,
-            decoration: const BoxDecoration(
-              color: AppColors.accentTeal,
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.accentTeal.withValues(alpha: 0.12),
               shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.accentTeal.withValues(alpha: 0.4),
+                width: 1.5,
+              ),
             ),
-            child: Center(
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                ),
+            padding: const EdgeInsets.all(2),
+            child: ClipOval(
+              child: Image.asset(
+                avatarAssetPath(avatarIndex),
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => _initialFallback(name),
               ),
             ),
           ),
@@ -949,6 +967,24 @@ class _RankRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _initialFallback(String name) {
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    return Container(
+      color: AppColors.accentTeal,
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            fontFamily: 'Nunito',
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ),
       ),
     );
   }

@@ -9,6 +9,7 @@ import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/avatar_helper.dart';
 import '../../providers/auth_provider.dart';
 
 
@@ -50,7 +51,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     SyncService.instance.syncAll(
       student: student,
       connectivity: connectivity,
-      authProvider: context.read<AuthProvider>(),   // ← ADD THIS
+      authProvider: context.read<AuthProvider>(),
     );
 
     // Load Word of the Day
@@ -316,7 +317,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 }
 
 // ─────────────────────────────────────────────────────────
-// Header with online/offline chip
+// Header with avatar + online/offline chip
 // ─────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
@@ -331,10 +332,30 @@ class _Header extends StatelessWidget {
       children: [
         Row(
           children: [
-            const CircleAvatar(
-              radius: 22,
-              backgroundColor: AppColors.accentTeal,
-              child: Icon(Icons.person, color: Colors.white),
+            // Avatar with soft teal ring
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.accentTeal.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.accentTeal.withValues(alpha: 0.4),
+                  width: 2,
+                ),
+              ),
+              padding: const EdgeInsets.all(3),
+              child: ClipOval(
+                child: Image.asset(
+                  avatarAssetPath(student.avatarIndex),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const Icon(
+                    Icons.person,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(

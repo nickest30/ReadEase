@@ -74,6 +74,8 @@ import 'screens/games/category_sort_screen.dart';
 import 'services/credential_storage.dart';
 import 'screens/parent/parent_settings_screen.dart';
 import 'screens/teacher/teacher_settings_screen.dart';
+import 'screens/student/avatar_picker_screen.dart';
+
 
 
 
@@ -240,6 +242,7 @@ class _ReadEaseAppState extends State<ReadEaseApp>
               '/category-sort': (context) => const CategorySortScreen(),
               '/parent-settings': (context) => const ParentSettingsScreen(),
               '/teacher-settings': (context) => const TeacherSettingsScreen(),
+              '/avatar-picker': (context) => const AvatarPickerScreen(),
             },
           );
         },
