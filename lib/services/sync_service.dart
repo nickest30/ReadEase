@@ -57,6 +57,7 @@ class SyncService {
 
     _running = true;
     try {
+      await _pushProfile(student);
       await _pushQuizAttempts(student);
       await _pushBadges(student);
       await _pushMastery(student);
@@ -128,6 +129,31 @@ class SyncService {
       }
     }
   }
+
+
+  // ──────────────────────────────────────────────────────────────
+  // Profile — keeps students/{uid} fresh (name, grade, avatar).
+  // ──────────────────────────────────────────────────────────────
+
+  Future<void> _pushProfile(Student student) async {
+    final uid = student.firebaseUid!;
+    final localId = student.id!;
+
+    // Refresh from DB so we push the latest values.
+    final fresh = await DatabaseService.instance.getStudentById(localId);
+    final source = fresh ?? student;
+
+    await FirestoreService.instance.saveStudent(
+      uid,
+      source.displayName,
+      source.gradeLevel,
+      username: source.username,
+      avatarIndex: source.avatarIndex,
+      includePoints: false,
+    );
+    debugPrint('🔄 Sync: profile pushed (avatar=${source.avatarIndex})');
+  }
+
 
   List<int> _parseWrongWordIds(String? json) {
     if (json == null || json.isEmpty) return [];
@@ -271,6 +297,7 @@ class SyncService {
       gradeLevel: source.gradeLevel,
       badgeCount: badges.length,
       classId: source.classFirestoreId,
+      avatarIndex: source.avatarIndex,
     );
   }
 

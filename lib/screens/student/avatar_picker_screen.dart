@@ -1,8 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../providers/auth_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
+import '../../services/firestore_service.dart';
+import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/avatar_helper.dart';
 
@@ -39,8 +45,40 @@ class _AvatarPickerScreenState extends State<AvatarPickerScreen> {
 
     if (refreshed != null) {
       context.read<StudentProvider>().updateStudent(refreshed);
+
+      if (refreshed.firebaseUid != null && refreshed.firebaseUid!.isNotEmpty) {
+        // 1. Push avatar to students/{uid} doc.
+        try {
+          await FirestoreService.instance.saveStudent(
+            refreshed.firebaseUid!,
+            refreshed.displayName,
+            refreshed.gradeLevel,
+            username: refreshed.username,
+            avatarIndex: refreshed.avatarIndex,
+            includePoints: false,
+          );
+        } catch (e) {
+          debugPrint('🔥 avatar students-doc push failed: $e');
+        }
+
+        // 2. Trigger a full sync so leaderboard/{uid} picks up the new
+        //    avatarIndex too. Without this, Class + Global tabs would
+        //    still show the old value until the next quiz.
+        if (mounted) {
+          final connectivity = context.read<ConnectivityProvider>();
+          final authProvider = context.read<AuthProvider>();
+          unawaited(
+            SyncService.instance.syncAll(
+              student: refreshed,
+              connectivity: connectivity,
+              authProvider: authProvider,
+            ),
+          );
+        }
+      }
     }
 
+    if (!mounted) return;
     Navigator.of(context).pop(true);
   }
 

@@ -100,17 +100,18 @@ class FirestoreService {
 
   /// Save or update a student's basic profile in Firestore.
   /// Called after signup so teacher enrollment rules can verify identity.
-  Future<bool> saveStudent(
+    Future<bool> saveStudent(
     String studentUid,
     String displayName,
     int gradeLevel, {
-    String? username,             // NEW — required for cross-device lookup
-    String? parentId,             // legacy int-hash form (kept for compat)
-    String? parentFirebaseUid,    // NEW — real Firestore UID
-    String? pinHash,              // NEW — for new-device PIN verification
+    String? username,
+    String? parentId,
+    String? parentFirebaseUid,
+    String? pinHash,
     int totalPoints = 0,
     int badgeCount = 0,
-    bool includePoints = true,    // NEW — set false if using incrementStudentPoints
+    bool includePoints = true,
+    int? avatarIndex,
   }) async {
     try {
       final data = <String, dynamic>{
@@ -122,6 +123,7 @@ class FirestoreService {
 
       if (username != null) data['username'] = username.toLowerCase();
       if (pinHash != null) data['pinHash'] = pinHash;
+      if (avatarIndex != null) data['avatarIndex'] = avatarIndex;
 
       if (includePoints) {
         data['totalPoints'] = totalPoints;
@@ -621,6 +623,7 @@ class FirestoreService {
           'gradeLevel': e['gradeLevel'] ?? profile?['gradeLevel'] ?? 0,
           'totalPoints': profile?['totalPoints'] ?? e['totalPoints'] ?? 0,
           'badgeCount': profile?['badgeCount'] ?? 0,
+          'avatarIndex': (profile?['avatarIndex'] as int?) ?? 1,
           'enrolledAt': e['enrolledAt'],
         });
       }
@@ -733,6 +736,10 @@ class FirestoreService {
       try {
         await _db.collection('students').doc(studentUid).set({
           'classId': newClassId,
+          'displayName': studentName,
+          'gradeLevel': gradeLevel,
+          'totalPoints': totalPoints,
+          'firebaseUid': studentUid,
           'lastUpdated': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
         debugPrint('🔥 [4/5] Student record updated ✓');
@@ -793,6 +800,7 @@ class FirestoreService {
     required int gradeLevel,
     required int badgeCount,
     String? classId,
+    int? avatarIndex,
   }) async {
     try {
       final data = <String, dynamic>{
@@ -803,6 +811,7 @@ class FirestoreService {
         'lastUpdated': FieldValue.serverTimestamp(),
       };
       if (classId != null) data['classId'] = classId;
+      if (avatarIndex != null) data['avatarIndex'] = avatarIndex;
 
       await _db.collection('leaderboard').doc(studentUid).set(
             data,

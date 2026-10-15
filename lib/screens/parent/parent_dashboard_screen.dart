@@ -9,6 +9,7 @@ import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/email_verification_banner.dart';
+import '../../utils/avatar_helper.dart';
 
 class ParentDashboardScreen extends StatefulWidget {
   const ParentDashboardScreen({super.key});
@@ -673,10 +674,6 @@ class _ChildCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial = child.displayName.isNotEmpty
-        ? child.displayName[0].toUpperCase()
-        : '?';
-
     return InkWell(
       onTap: onTap,
       onLongPress: onLongPress,
@@ -698,22 +695,42 @@ class _ChildCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Avatar with purple ring
             Container(
-              width: 56,
-              height: 56,
-              decoration: const BoxDecoration(
-                color: AppColors.accentPurple,
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: AppColors.accentPurple.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.accentPurple.withValues(alpha: 0.5),
+                  width: 2,
+                ),
               ),
-              child: Center(
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    fontFamily: 'Nunito',
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 22,
-                  ),
+              padding: const EdgeInsets.all(3),
+              child: ClipOval(
+                child: Image.asset(
+                  avatarAssetPath(child.avatarIndex),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) {
+                    final initial = child.displayName.isNotEmpty
+                        ? child.displayName[0].toUpperCase()
+                        : '?';
+                    return Container(
+                      color: AppColors.accentPurple,
+                      child: Center(
+                        child: Text(
+                          initial,
+                          style: const TextStyle(
+                            fontFamily: 'Nunito',
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 22,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
