@@ -332,6 +332,39 @@ class FirestoreService {
     }
   }
 
+  Future<bool> deleteStudentCascade(String studentUid) async {
+    try {
+      final docRef = _db.collection('students').doc(studentUid);
+
+      const subcollections = [
+        'results',
+        'badges',
+        'mastery',
+        'encounters',
+        'starred',
+      ];
+
+      for (final sub in subcollections) {
+        try {
+          final snap = await docRef.collection(sub).get();
+          for (final doc in snap.docs) {
+            await doc.reference.delete();
+          }
+        } catch (e) {
+          // Continue with other subcollections even if one fails.
+          debugPrint('🔥 cascade: $sub delete failed: $e');
+        }
+      }
+
+      await docRef.delete();
+      debugPrint('🔥 Firestore: deleteStudentCascade($studentUid) OK');
+      return true;
+    } catch (e) {
+      debugPrint('🔥 deleteStudentCascade ERROR: $e');
+      return false;
+    }
+  }
+
   String _generateCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     final seed = DateTime.now().millisecondsSinceEpoch;

@@ -72,7 +72,8 @@ import 'screens/games/passage_screen.dart';
 import 'screens/games/word_hunt_screen.dart';
 import 'screens/games/category_sort_screen.dart';
 import 'services/credential_storage.dart';
-
+import 'screens/parent/parent_settings_screen.dart';
+import 'screens/teacher/teacher_settings_screen.dart';
 
 
 
@@ -237,6 +238,8 @@ class _ReadEaseAppState extends State<ReadEaseApp>
               '/passage': (context) => const PassageScreen(),
               '/word-hunt': (context) => const WordHuntScreen(),
               '/category-sort': (context) => const CategorySortScreen(),
+              '/parent-settings': (context) => const ParentSettingsScreen(),
+              '/teacher-settings': (context) => const TeacherSettingsScreen(),
             },
           );
         },

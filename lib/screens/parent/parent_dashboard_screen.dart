@@ -9,7 +9,6 @@ import '../../services/firestore_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/email_verification_banner.dart';
-import '../shared/account_security_screen.dart';
 
 class ParentDashboardScreen extends StatefulWidget {
   const ParentDashboardScreen({super.key});
@@ -210,6 +209,108 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
     );
   }
 
+  Future<void> _deleteChild(Student child) async {
+    // Confirmation
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
+        backgroundColor: AppColors.surface,
+        title: Row(
+          children: [
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: AppColors.accentCoral,
+              size: 26,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                'Delete ${child.displayName}?',
+                style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 17,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'This will permanently remove the child profile, reading '
+          'progress, badges, points, and weak-word history from this '
+          'device and the cloud.\n\n'
+          'This cannot be undone.',
+          style: TextStyle(fontFamily: 'Nunito', fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentCoral,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    // Cloud cascade first — if it fails, we still proceed with local delete.
+    if (child.firebaseUid != null && child.firebaseUid!.isNotEmpty) {
+      try {
+        await FirestoreService.instance
+            .deleteStudentCascade(child.firebaseUid!);
+      } catch (e) {
+        debugPrint('🔥 cascade failed (continuing): $e');
+      }
+    }
+
+    // Local SQLite delete — requires a local id.
+    if (child.id != null) {
+      await DatabaseService.instance.deleteStudent(child.id!);
+    }
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${child.displayName} removed.',
+          style: const TextStyle(fontFamily: 'Nunito'),
+        ),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+
+    await _loadChildren();
+  }
+
   @override
   Widget build(BuildContext context) {
     final parent = context.watch<ParentProvider>().currentParent;
@@ -349,6 +450,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
               '/child-progress',
               arguments: {'child': child},
             ),
+            onLongPress: () => _deleteChild(child),
           );
         },
       ),
@@ -419,22 +521,15 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
                     const SizedBox(height: AppSpacing.sm),
         ],
 
-        // Account & Security
+        // Settings
         SizedBox(
           height: 46,
           child: OutlinedButton.icon(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const AccountSecurityScreen(
-                    role: 'parent',
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.shield_outlined, size: 18),
+            onPressed: () =>
+                Navigator.of(context).pushNamed('/parent-settings'),
+            icon: const Icon(Icons.settings_outlined, size: 18),
             label: const Text(
-              'Account & Security',
+              'Settings',
               style: TextStyle(
                 fontFamily: 'Nunito',
                 fontWeight: FontWeight.w700,
@@ -568,8 +663,13 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
 class _ChildCard extends StatelessWidget {
   final Student child;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
-  const _ChildCard({required this.child, required this.onTap});
+  const _ChildCard({
+    required this.child,
+    required this.onTap,
+    this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -579,6 +679,7 @@ class _ChildCard extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       borderRadius: BorderRadius.circular(AppRadius.large),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
