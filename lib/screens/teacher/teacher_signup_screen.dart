@@ -172,8 +172,10 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
           authProvider: authProvider,
         );
       } else {
-        if (!mounted) return;
-        Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
+        await _generateAndShowBackupCode(
+          teacher: createdTeacher,
+          authProvider: authProvider,
+        );
       }
     } catch (e) {
       debugPrint('👩‍🏫 Teacher signup ERROR: $e');
@@ -225,6 +227,18 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
       await completer.future;
     } catch (e) {
       if (!mounted) return;
+      final raw = e.toString().toLowerCase();
+      final isBilling =
+          raw.contains('billing_not_enabled') || raw.contains('billing');
+
+      if (isBilling) {
+        await _showPhoneUnavailableAndContinue(
+          teacher: teacher,
+          authProvider: authProvider,
+        );
+        return;
+      }
+
       setState(() {
         _errorMessage = 'Could not send code: $e';
         _isSubmitting = false;
@@ -247,9 +261,30 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
       ),
     );
 
+        if (!mounted) return;
+
+    // Mark phone verified in Firestore (OTP was just passed)
+    if (teacher.firebaseUid != null) {
+      await FirestoreService.instance
+          .markPhoneVerified(teacher.firebaseUid!, 'teacher');
+    }
+
     if (!mounted) return;
 
-    // OTP done → generate + show backup code
+    await _generateAndShowBackupCode(
+      teacher: teacher,
+      authProvider: authProvider,
+    );
+  }
+
+  /// Generate, save, and display a one-time backup code.
+  /// Called at the end of signup regardless of whether a phone was
+  /// provided — ensures every teacher account has a second-factor
+  /// recovery path even without SMS verification.
+  Future<void> _generateAndShowBackupCode({
+    required Teacher teacher,
+    required AuthProvider authProvider,
+  }) async {
     final backupCode = BackupCode.generate();
     final hashedBackup = BCrypt.hashpw(backupCode, BCrypt.gensalt());
 
@@ -264,12 +299,6 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
       );
     }
 
-    // Mark phone verified in Firestore
-    if (teacher.firebaseUid != null) {
-      await FirestoreService.instance
-          .markPhoneVerified(teacher.firebaseUid!, 'teacher');
-    }
-
     if (!mounted) return;
 
     final saved = await BackupCodeDialog.show(
@@ -280,13 +309,79 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
 
     if (!saved || !mounted) return;
 
-    // Trust this device for 30 days
     if (teacher.firebaseUid != null) {
       await authProvider.trustCurrentDevice(teacher.firebaseUid!);
     }
 
     if (!mounted) return;
     Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
+  }
+
+  /// Called when phone OTP fails due to Firebase billing being disabled.
+  Future<void> _showPhoneUnavailableAndContinue({
+    required Teacher teacher,
+    required AuthProvider authProvider,
+  }) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline_rounded,
+                color: AppColors.accentOrange, size: 24),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Phone verification unavailable',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'We can\'t send SMS codes right now. We\'ll continue with a '
+          'backup code instead — you can use it to log in on a new device. '
+          'You can add a phone number later in Settings → Account & Security.',
+          style: TextStyle(fontFamily: 'Nunito', fontSize: 14),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentYellow,
+              foregroundColor: AppColors.textPrimary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Continue',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+
+    await _generateAndShowBackupCode(
+      teacher: teacher,
+      authProvider: authProvider,
+    );
   }
 
   @override

@@ -205,7 +205,8 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
       if (mounted) {
         setState(() {
           _busy = false;
-          _errorMessage = 'Could not send code. Try again.';
+          _errorMessage = 'Phone verification is currently unavailable. '
+              'Please try again later.';
         });
       }
       return;

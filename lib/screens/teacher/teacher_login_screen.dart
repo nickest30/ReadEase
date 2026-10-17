@@ -203,15 +203,21 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
 
     final phoneVerified = cloudDoc?['phoneVerified'] == true;
     final backupHash = cloudDoc?['backupCodeHash'] as String?;
+    final hasPhone = phoneVerified &&
+        (cloudDoc?['phoneNumber'] as String?)?.isNotEmpty == true;
+    final hasBackup = backupHash != null && backupHash.isNotEmpty;
+    final hasSecondFactor = hasPhone || hasBackup;
 
-    if (phoneVerified) {
+    if (hasSecondFactor) {
       final trusted = await authProvider.isCurrentDeviceTrusted(uid);
       if (!trusted) {
-        final verified = await _runLoginOtpFlow(
+        final verified = await _runLogin2FAFlow(
           authProvider: authProvider,
-          phoneNumber: (cloudDoc?['phoneNumber'] as String?) ?? '',
+          phoneNumber: hasPhone
+              ? (cloudDoc?['phoneNumber'] as String?)
+              : null,
+          backupHash: hasBackup ? backupHash : null,
           uid: uid,
-          backupHash: backupHash,
         );
         if (!verified || !mounted) {
           setState(() => _isSubmitting = false);
@@ -316,15 +322,76 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
     Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
   }
 
-  /// Show OTP screen with backup-code fallback.
-  /// Returns true if user successfully passed 2FA.
-  Future<bool> _runLoginOtpFlow({
+  Future<bool> _runLogin2FAFlow({
+    required AuthProvider authProvider,
+    required String? phoneNumber,
+    required String? backupHash,
+    required String uid,
+  }) async {
+    // ── Try OTP first, if a phone is available ──
+    if (phoneNumber != null && phoneNumber.isNotEmpty) {
+      final otpOk = await _tryOtpFlow(
+        authProvider: authProvider,
+        phoneNumber: phoneNumber,
+        uid: uid,
+      );
+      if (otpOk) {
+        await authProvider.trustCurrentDevice(uid);
+        return true;
+      }
+
+      // OTP failed. Fall through to backup code if we have one.
+      if (!mounted) return false;
+
+      if (backupHash != null && backupHash.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'SMS code couldn\'t be sent. Using backup code instead.',
+              style: TextStyle(fontFamily: 'Nunito'),
+            ),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 4),
+          ),
+        );
+        await Future.delayed(const Duration(milliseconds: 1200));
+        if (!mounted) return false;
+        // fall through to backup code
+      } else {
+        if (!mounted) return false;
+        setState(() {
+          _errorMessage =
+              'Phone verification is unavailable and no backup code is '
+              'saved. Use "Forgot password" to recover.';
+        });
+        return false;
+      }
+    }
+
+    // ── Backup code path ──
+    if (backupHash == null || backupHash.isEmpty) {
+      if (!mounted) return false;
+      setState(() {
+        _errorMessage =
+            'No second factor available. Use "Forgot password" to recover.';
+      });
+      return false;
+    }
+
+    return await _runBackupCodeFlow(
+      authProvider: authProvider,
+      uid: uid,
+      backupHash: backupHash,
+    );
+  }
+
+  /// Try to run the OTP flow. Returns true on successful verification.
+  /// Returns false on any failure (billing, network, user cancel).
+  Future<bool> _tryOtpFlow({
     required AuthProvider authProvider,
     required String phoneNumber,
     required String uid,
-    required String? backupHash,
   }) async {
-    // Kick off OTP send
     final completer = Completer<bool>();
     bool codeSent = false;
 
@@ -346,7 +413,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
     final sent = await completer.future;
     if (!sent || !mounted || !codeSent) return false;
 
-    // Show OTP screen. onVerified pops with true.
     final verified = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => OtpVerificationScreen(
@@ -355,35 +421,27 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
           backgroundColor: AppColors.teacherBg,
           isSignup: false,
           onVerified: () => Navigator.of(context).pop(true),
-          onNoPhoneFallback: () {
-            // Handled by the screen — it pops with false
-          },
+          onNoPhoneFallback: () => Navigator.of(context).pop(false),
         ),
       ),
     );
 
-    if (verified == true) {
-      // Trust this device for 30 days
-      await authProvider.trustCurrentDevice(uid);
-      return true;
-    }
+    return verified == true;
+  }
 
-    // User cancelled OTP (probably tapped "I don't have my phone")
+  /// Prompt for backup code entry. On success, rotates the code, shows
+  /// the new code to the user, and trusts the device.
+  Future<bool> _runBackupCodeFlow({
+    required AuthProvider authProvider,
+    required String uid,
+    required String backupHash,
+  }) async {
     if (!mounted) return false;
 
-    if (backupHash == null || backupHash.isEmpty) {
-      setState(() {
-        _errorMessage =
-            'No backup code saved for this account. '
-            'Use "Forgot password" to recover.';
-      });
-      return false;
-    }
-
-    // Backup code entry
     final newCode = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (_) => BackupCodeEntryScreen(
+          uid: uid,
           backupCodeHash: backupHash,
           accentColor: AppColors.accentYellow,
           backgroundColor: AppColors.teacherBg,
@@ -394,20 +452,19 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
 
     if (newCode == null || !mounted) return false;
 
-    // Rotate backup code — hash + push to cloud
+    // Rotate — hash + push to cloud
     final newHash = BCrypt.hashpw(newCode, BCrypt.gensalt());
     await FirestoreService.instance.rotateBackupCode(uid, 'teacher', newHash);
 
     if (!mounted) return false;
 
-    // Show new code to user
+    // Show the new code (single-use pattern)
     await BackupCodeDialog.show(
       context,
       code: newCode,
       accentColor: AppColors.accentYellow,
     );
 
-    // Trust device
     await authProvider.trustCurrentDevice(uid);
     return true;
   }

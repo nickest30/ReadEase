@@ -155,15 +155,19 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
 
       // ── Phone path or skip ──
       if (normalizedPhone != null) {
+        // Phone provided — OTP flow, then backup code, then dashboard.
         await _runPhoneVerificationFlow(
           normalizedPhone: normalizedPhone,
           parent: createdParent,
           authProvider: authProvider,
         );
       } else {
-        // No phone — straight to dashboard
-        if (!mounted) return;
-        Navigator.of(context).pushReplacementNamed('/parent-dashboard');
+        // No phone — skip OTP, but still generate a backup code so the
+        // user has a second-factor option on a new device.
+        await _generateAndShowBackupCode(
+          parent: createdParent,
+          authProvider: authProvider,
+        );
       }
     } catch (e) {
       debugPrint('👨‍👩‍👧 Signup ERROR: $e');
@@ -215,6 +219,20 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
       await completer.future;
     } catch (e) {
       if (!mounted) return;
+      final raw = e.toString().toLowerCase();
+      final isBilling =
+          raw.contains('billing_not_enabled') || raw.contains('billing');
+
+      if (isBilling) {
+        // Firebase billing isn't enabled on the project.
+        // Fall through to backup-code-only signup with a friendly message.
+        await _showPhoneUnavailableAndContinue(
+          parent: parent,
+          authProvider: authProvider,
+        );
+        return;
+      }
+
       setState(() {
         _errorMessage = 'Could not send code: $e';
         _isSubmitting = false;
@@ -239,7 +257,33 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
 
     if (!mounted) return;
 
-    // OTP done → generate + show backup code
+    // Mark phone verified in Firestore (OTP was just passed)
+    if (parent.firebaseUid != null) {
+      await FirestoreService.instance
+          .markPhoneVerified(parent.firebaseUid!, 'parent');
+    }
+
+    if (!mounted) return;
+
+    // Generate + show backup code, trust device, go to dashboard.
+    await _generateAndShowBackupCode(
+      parent: parent,
+      authProvider: authProvider,
+    );
+  }
+
+  /// Generate, save, and display a one-time backup code.
+  ///
+  /// Called at the end of signup regardless of whether a phone number was
+  /// provided. This ensures every parent account has a second-factor
+  /// recovery path (backup code) even if they didn't link a phone.
+  ///
+  /// On success: saves the bcrypt-hashed code to SQLite + Firestore,
+  /// shows the modal, and trusts the device for 30 days.
+  Future<void> _generateAndShowBackupCode({
+    required Parent parent,
+    required AuthProvider authProvider,
+  }) async {
     final backupCode = BackupCode.generate();
     final hashedBackup = BCrypt.hashpw(backupCode, BCrypt.gensalt());
 
@@ -253,12 +297,6 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
         'parent',
         hashedBackup,
       );
-    }
-
-    // Mark phone verified in Firestore
-    if (parent.firebaseUid != null) {
-      await FirestoreService.instance
-          .markPhoneVerified(parent.firebaseUid!, 'parent');
     }
 
     if (!mounted) return;
@@ -281,6 +319,74 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
   }
 
   
+    /// Called when phone OTP fails due to Firebase billing being disabled.
+  /// Shows a friendly dialog, then continues with backup-code-only signup.
+  Future<void> _showPhoneUnavailableAndContinue({
+    required Parent parent,
+    required AuthProvider authProvider,
+  }) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline_rounded,
+                color: AppColors.accentOrange, size: 24),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Phone verification unavailable',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'We can\'t send SMS codes right now. We\'ll continue with a '
+          'backup code instead — you can use it to log in on a new device. '
+          'You can add a phone number later in Settings → Account & Security.',
+          style: TextStyle(fontFamily: 'Nunito', fontSize: 14),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentPurple,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Continue',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+
+    await _generateAndShowBackupCode(
+      parent: parent,
+      authProvider: authProvider,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
