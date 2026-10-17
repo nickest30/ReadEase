@@ -1,5 +1,5 @@
 {
-  "content_version": "1.0.8",
+  "content_version": "1.0.9",
   "grade": 1,
   "lesson_intros": [
     {
@@ -9,7 +9,7 @@
       "body": "Let's learn about animals in Lola's courtyard. You can do this!",
       "button_label": "LET'S GO!",
       "pose_asset": "yse_nerd.png",
-      "audio_asset": "lesson_intro_g1_easy.wav"
+      "audio_asset": "lesson_intro_g1_easy.mp3"
     },
     {
       "grade": 1,
@@ -18,7 +18,7 @@
       "body": "More animal friends are waiting for you. Let's take our time!",
       "button_label": "LET'S GO!",
       "pose_asset": "yse_nerd.png",
-      "audio_asset": "lesson_intro_g1_medium.wav"
+      "audio_asset": "lesson_intro_g1_medium.mp3"
     },
     {
       "grade": 1,
@@ -27,7 +27,7 @@
       "body": "Let's practice tricky words together. I believe in you!",
       "button_label": "LET'S GO!",
       "pose_asset": "yse_nerd.png",
-      "audio_asset": "lesson_intro_g1_hard.wav"
+      "audio_asset": "lesson_intro_g1_hard.mp3"
     }
   ],
   "game_intros": [
@@ -37,7 +37,7 @@
       "body": "Tap two cards to find the matching pairs.",
       "button_label": "I'M READY!",
       "pose_asset": "yse_um_actually.png",
-      "audio_asset": "game_intro_memory_match.wav"
+      "audio_asset": "game_intro_memory_match.mp3"
     },
     {
       "game_type": "bubble_pop",
@@ -45,7 +45,7 @@
       "body": "Tap the bubble with the correct picture.",
       "button_label": "I'M READY!",
       "pose_asset": "yse_um_actually.png",
-      "audio_asset": "game_intro_bubble_pop.wav"
+      "audio_asset": "game_intro_bubble_pop.mp3"
     },
     {
       "game_type": "drag_drop",
@@ -53,7 +53,7 @@
       "body": "Drag the word to the matching picture.",
       "button_label": "I'M READY!",
       "pose_asset": "yse_um_actually.png",
-      "audio_asset": "game_intro_drag_drop.wav"
+      "audio_asset": "game_intro_drag_drop.mp3"
     },
     {
       "game_type": "word_scramble",
@@ -61,7 +61,7 @@
       "body": "Rearrange the letters to spell the word.",
       "button_label": "I'M READY!",
       "pose_asset": "yse_um_actually.png",
-      "audio_asset": "game_intro_word_scramble.wav"
+      "audio_asset": "game_intro_word_scramble.mp3"
     },
     {
       "game_type": "sentence_builder",
@@ -69,7 +69,7 @@
       "body": "Put the words in order to make a sentence.",
       "button_label": "I'M READY!",
       "pose_asset": "yse_um_actually.png",
-      "audio_asset": "game_intro_sentence_builder.wav"
+      "audio_asset": "game_intro_sentence_builder.mp3"
     },
     {
       "game_type": "floor_is_lava",
@@ -77,7 +77,7 @@
       "body": "Guess the word letter by letter.",
       "button_label": "I'M READY!",
       "pose_asset": "yse_um_actually.png",
-      "audio_asset": "game_intro_floor_is_lava.wav"
+      "audio_asset": "game_intro_floor_is_lava.mp3"
     },
     {
       "game_type": "word_hunt",
@@ -85,7 +85,7 @@
       "body": "Find the hidden words in the letter grid.",
       "button_label": "I'M READY!",
       "pose_asset": "yse_um_actually.png",
-      "audio_asset": "game_intro_word_hunt.wav"
+      "audio_asset": "game_intro_word_hunt.mp3"
     },
     {
       "game_type": "category_sort",
@@ -93,7 +93,7 @@
       "body": "Drag each word into the correct group.",
       "button_label": "I'M READY!",
       "pose_asset": "yse_um_actually.png",
-      "audio_asset": "game_intro_category_sort.wav"
+      "audio_asset": "game_intro_category_sort.mp3"
     },
     {
       "game_type": "crossword_lite",
@@ -101,7 +101,7 @@
       "body": "Fill the boxes with the correct words.",
       "button_label": "I'M READY!",
       "pose_asset": "yse_um_actually.png",
-      "audio_asset": "game_intro_crossword_lite.wav"
+      "audio_asset": "game_intro_crossword_lite.mp3"
     },
     {
       "game_type": "timed_blitz",
@@ -109,7 +109,7 @@
       "body": "Answer as fast as you can before time runs out.",
       "button_label": "I'M READY!",
       "pose_asset": "yse_um_actually.png",
-      "audio_asset": "game_intro_timed_blitz.wav"
+      "audio_asset": "game_intro_timed_blitz.mp3"
     }
   ],
   "lessons": [
@@ -136,9 +136,9 @@
               "text": "Cat",
               "category": "animal",
               "image": "grade1_easy_cat.png",
-              "audio": "grade1_easy_cat.wav",
+              "audio": "grade1_easy_cat.mp3",
               "lesson_cue": "This is a cat... C, A, T... Cat!",
-              "lesson_cue_audio": "grade1_easy_cat_cue.wav",
+              "lesson_cue_audio": "grade1_easy_cat_cue.mp3",
               "definition": "A small furry pet animal.",
               "sample_sentence": "The cat sleeps on the bench.",
               "source": "Dolch Pre-Primer",
@@ -158,9 +158,9 @@
               "text": "Dog",
               "category": "animal",
               "image": "grade1_easy_dog.png",
-              "audio": "grade1_easy_dog.wav",
+              "audio": "grade1_easy_dog.mp3",
               "lesson_cue": "This is a dog... D, O, G... Dog!",
-              "lesson_cue_audio": "grade1_easy_dog_cue.wav",
+              "lesson_cue_audio": "grade1_easy_dog_cue.mp3",
               "definition": "A furry pet animal that barks.",
               "sample_sentence": "The dog runs in the yard.",
               "source": "Dolch Pre-Primer",
@@ -180,9 +180,9 @@
               "text": "Pig",
               "category": "animal",
               "image": "grade1_easy_pig.png",
-              "audio": "grade1_easy_pig.wav",
+              "audio": "grade1_easy_pig.mp3",
               "lesson_cue": "This is a pig... P, I, G... Pig!",
-              "lesson_cue_audio": "grade1_easy_pig_cue.wav",
+              "lesson_cue_audio": "grade1_easy_pig_cue.mp3",
               "definition": "A pink farm animal with a flat nose.",
               "sample_sentence": "The pig is in the pen.",
               "source": "Dolch Primer",
@@ -202,9 +202,9 @@
               "text": "Hen",
               "category": "animal",
               "image": "grade1_easy_hen.png",
-              "audio": "grade1_easy_hen.wav",
+              "audio": "grade1_easy_hen.mp3",
               "lesson_cue": "This is a hen... H, E, N... Hen!",
-              "lesson_cue_audio": "grade1_easy_hen_cue.wav",
+              "lesson_cue_audio": "grade1_easy_hen_cue.mp3",
               "definition": "A female chicken that lays eggs.",
               "sample_sentence": "The hen pecks at the ground.",
               "source": "Dolch Primer",
@@ -224,9 +224,9 @@
               "text": "Bug",
               "category": "animal",
               "image": "grade1_easy_bug.png",
-              "audio": "grade1_easy_bug.wav",
+              "audio": "grade1_easy_bug.mp3",
               "lesson_cue": "This is a bug... B, U, G... Bug!",
-              "lesson_cue_audio": "grade1_easy_bug_cue.wav",
+              "lesson_cue_audio": "grade1_easy_bug_cue.mp3",
               "definition": "A small insect.",
               "sample_sentence": "The bug sits on a leaf.",
               "source": "Dolch Primer",
@@ -246,9 +246,9 @@
               "text": "Ant",
               "category": "animal",
               "image": "grade1_easy_ant.png",
-              "audio": "grade1_easy_ant.wav",
+              "audio": "grade1_easy_ant.mp3",
               "lesson_cue": "This is an ant... A, N, T... Ant!",
-              "lesson_cue_audio": "grade1_easy_ant_cue.wav",
+              "lesson_cue_audio": "grade1_easy_ant_cue.mp3",
               "definition": "A small insect that lives in groups.",
               "sample_sentence": "The ant walks on the ground.",
               "source": "Dolch Primer",
@@ -292,9 +292,9 @@
               "text": "Duck",
               "category": "animal",
               "image": "grade1_medium_duck.png",
-              "audio": "grade1_medium_duck.wav",
+              "audio": "grade1_medium_duck.mp3",
               "lesson_cue": "This is a duck... D, U, C, K... Duck!",
-              "lesson_cue_audio": "grade1_medium_duck_cue.wav",
+              "lesson_cue_audio": "grade1_medium_duck_cue.mp3",
               "definition": "A bird that swims in water.",
               "sample_sentence": "The duck paddles on the pond.",
               "source": "Dolch Primer",
@@ -314,9 +314,9 @@
               "text": "Frog",
               "category": "animal",
               "image": "grade1_medium_frog.png",
-              "audio": "grade1_medium_frog.wav",
+              "audio": "grade1_medium_frog.mp3",
               "lesson_cue": "This is a frog... F, R, O, G... Frog!",
-              "lesson_cue_audio": "grade1_medium_frog_cue.wav",
+              "lesson_cue_audio": "grade1_medium_frog_cue.mp3",
               "definition": "A green animal that jumps and lives near water.",
               "sample_sentence": "The frog sits on a lily pad.",
               "source": "Dolch Primer",
@@ -336,9 +336,9 @@
               "text": "Bird",
               "category": "animal",
               "image": "grade1_medium_bird.png",
-              "audio": "grade1_medium_bird.wav",
+              "audio": "grade1_medium_bird.mp3",
               "lesson_cue": "This is a bird... B, I, R, D... Bird!",
-              "lesson_cue_audio": "grade1_medium_bird_cue.wav",
+              "lesson_cue_audio": "grade1_medium_bird_cue.mp3",
               "definition": "An animal with wings that can fly.",
               "sample_sentence": "The bird sits on the fence.",
               "source": "Dolch Primer",
@@ -358,9 +358,9 @@
               "text": "Fish",
               "category": "animal",
               "image": "grade1_medium_fish.png",
-              "audio": "grade1_medium_fish.wav",
+              "audio": "grade1_medium_fish.mp3",
               "lesson_cue": "This is a fish... F, I, S, H... Fish!",
-              "lesson_cue_audio": "grade1_medium_fish_cue.wav",
+              "lesson_cue_audio": "grade1_medium_fish_cue.mp3",
               "definition": "An animal that lives and swims in water.",
               "sample_sentence": "The fish swims in the pond.",
               "source": "Dolch Primer",
@@ -380,9 +380,9 @@
               "text": "Goat",
               "category": "animal",
               "image": "grade1_medium_goat.png",
-              "audio": "grade1_medium_goat.wav",
+              "audio": "grade1_medium_goat.mp3",
               "lesson_cue": "This is a goat... G, O, A, T... Goat!",
-              "lesson_cue_audio": "grade1_medium_goat_cue.wav",
+              "lesson_cue_audio": "grade1_medium_goat_cue.mp3",
               "definition": "A farm animal with horns that eats grass.",
               "sample_sentence": "The goat eats grass in the garden.",
               "source": "Dolch Primer",
@@ -402,9 +402,9 @@
               "text": "Cow",
               "category": "animal",
               "image": "grade1_medium_cow.png",
-              "audio": "grade1_medium_cow.wav",
+              "audio": "grade1_medium_cow.mp3",
               "lesson_cue": "This is a cow... C, O, W... Cow!",
-              "lesson_cue_audio": "grade1_medium_cow_cue.wav",
+              "lesson_cue_audio": "grade1_medium_cow_cue.mp3",
               "definition": "A large farm animal that gives milk.",
               "sample_sentence": "The cow stands behind the fence.",
               "source": "Dolch Primer",
@@ -424,9 +424,9 @@
               "text": "Owl",
               "category": "animal",
               "image": "grade1_medium_owl.png",
-              "audio": "grade1_medium_owl.wav",
+              "audio": "grade1_medium_owl.mp3",
               "lesson_cue": "This is an owl... O, W, L... Owl!",
-              "lesson_cue_audio": "grade1_medium_owl_cue.wav",
+              "lesson_cue_audio": "grade1_medium_owl_cue.mp3",
               "definition": "A bird with big eyes that stays awake at night.",
               "sample_sentence": "The owl sits on the window sill.",
               "source": "Dolch Primer",
@@ -470,9 +470,9 @@
               "text": "Big",
               "category": "sight_word",
               "image": "grade1_hard_big.png",
-              "audio": "grade1_hard_big.wav",
+              "audio": "grade1_hard_big.mp3",
               "lesson_cue": "This is big... B, I, G... Big!",
-              "lesson_cue_audio": "grade1_hard_big_cue.wav",
+              "lesson_cue_audio": "grade1_hard_big_cue.mp3",
               "definition": "Large in size.",
               "sample_sentence": "The bear is big.",
               "source": "Dolch Pre-Primer",
@@ -492,9 +492,9 @@
               "text": "Ball",
               "category": "sight_word",
               "image": "grade1_hard_ball.png",
-              "audio": "grade1_hard_ball.wav",
+              "audio": "grade1_hard_ball.mp3",
               "lesson_cue": "This is a ball... B, A, L, L... Ball!",
-              "lesson_cue_audio": "grade1_hard_ball_cue.wav",
+              "lesson_cue_audio": "grade1_hard_ball_cue.mp3",
               "definition": "A round toy you can bounce or throw.",
               "sample_sentence": "The ball rolls on the ground.",
               "source": "Dolch Primer",
@@ -514,9 +514,9 @@
               "text": "Bag",
               "category": "sight_word",
               "image": "grade1_hard_bag.png",
-              "audio": "grade1_hard_bag.wav",
+              "audio": "grade1_hard_bag.mp3",
               "lesson_cue": "This is a bag... B, A, G... Bag!",
-              "lesson_cue_audio": "grade1_hard_bag_cue.wav",
+              "lesson_cue_audio": "grade1_hard_bag_cue.mp3",
               "definition": "A soft container you carry things in.",
               "sample_sentence": "The bag is on the bench.",
               "source": "Dolch Primer",
@@ -536,9 +536,9 @@
               "text": "Run",
               "category": "sight_word",
               "image": "grade1_hard_run.png",
-              "audio": "grade1_hard_run.wav",
+              "audio": "grade1_hard_run.mp3",
               "lesson_cue": "This is run... R, U, N... Run!",
-              "lesson_cue_audio": "grade1_hard_run_cue.wav",
+              "lesson_cue_audio": "grade1_hard_run_cue.mp3",
               "definition": "To move fast with your legs.",
               "sample_sentence": "The boy runs on the grass.",
               "source": "Dolch Pre-Primer",
@@ -558,9 +558,9 @@
               "text": "Pin",
               "category": "sight_word",
               "image": "grade1_hard_pin.png",
-              "audio": "grade1_hard_pin.wav",
+              "audio": "grade1_hard_pin.mp3",
               "lesson_cue": "This is pin... P, I, N... Pin!",
-              "lesson_cue_audio": "grade1_hard_pin_cue.wav",
+              "lesson_cue_audio": "grade1_hard_pin_cue.mp3",
               "definition": "A small sharp object used to hold cloth.",
               "sample_sentence": "The pin is on the cloth.",
               "source": "Dolch Primer",
@@ -580,9 +580,9 @@
               "text": "Pen",
               "category": "sight_word",
               "image": "grade1_hard_pen.png",
-              "audio": "grade1_hard_pen.wav",
+              "audio": "grade1_hard_pen.mp3",
               "lesson_cue": "This is pen... P, E, N... Pen!",
-              "lesson_cue_audio": "grade1_hard_pen_cue.wav",
+              "lesson_cue_audio": "grade1_hard_pen_cue.mp3",
               "definition": "A tool used for writing.",
               "sample_sentence": "The pen is on the notebook.",
               "source": "Dolch Primer",
@@ -602,9 +602,9 @@
               "text": "Cup",
               "category": "sight_word",
               "image": "grade1_hard_cup.png",
-              "audio": "grade1_hard_cup.wav",
+              "audio": "grade1_hard_cup.mp3",
               "lesson_cue": "This is a cup... C, U, P... Cup!",
-              "lesson_cue_audio": "grade1_hard_cup_cue.wav",
+              "lesson_cue_audio": "grade1_hard_cup_cue.mp3",
               "definition": "A small container for drinking.",
               "sample_sentence": "The cup is on the table.",
               "source": "Dolch Primer",
@@ -624,9 +624,9 @@
               "text": "Map",
               "category": "sight_word",
               "image": "grade1_hard_map.png",
-              "audio": "grade1_hard_map.wav",
+              "audio": "grade1_hard_map.mp3",
               "lesson_cue": "This is a map... M, A, P... Map!",
-              "lesson_cue_audio": "grade1_hard_map_cue.wav",
+              "lesson_cue_audio": "grade1_hard_map_cue.mp3",
               "definition": "A picture that shows where places are.",
               "sample_sentence": "The map is on the wall.",
               "source": "Dolch Primer",
@@ -646,9 +646,9 @@
               "text": "Cap",
               "category": "sight_word",
               "image": "grade1_hard_cap.png",
-              "audio": "grade1_hard_cap.wav",
+              "audio": "grade1_hard_cap.mp3",
               "lesson_cue": "This is a cap... C, A, P... Cap!",
-              "lesson_cue_audio": "grade1_hard_cap_cue.wav",
+              "lesson_cue_audio": "grade1_hard_cap_cue.mp3",
               "definition": "A soft hat you wear on your head.",
               "sample_sentence": "The cap is on the boy's head.",
               "source": "Dolch Primer",
@@ -668,9 +668,9 @@
               "text": "Box",
               "category": "sight_word",
               "image": "grade1_hard_box.png",
-              "audio": "grade1_hard_box.wav",
+              "audio": "grade1_hard_box.mp3",
               "lesson_cue": "This is a box... B, O, X... Box!",
-              "lesson_cue_audio": "grade1_hard_box_cue.wav",
+              "lesson_cue_audio": "grade1_hard_box_cue.mp3",
               "definition": "A container with flat sides.",
               "sample_sentence": "The toy is in the box.",
               "source": "Dolch Primer",

@@ -47,3 +47,8 @@ app.*.map.json
 # Android build artifacts
 android/build/
 android/.gradle/
+
+# Audio WAV backup (large files, not committed)
+assets/audio_wav_backup/
+assets/**/audio_wav_backup/
+*.wav.bak
