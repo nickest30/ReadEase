@@ -170,7 +170,7 @@ class _RankRow extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
 
-          // Avatar — falls back to a placeholder if the image is missing
+          // Avatar, falls back to a placeholder if the image is missing
           Container(
             width: 38,
             height: 38,

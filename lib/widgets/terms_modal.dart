@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/app_theme.dart';
 
-/// Reusable Terms & Data Privacy modal — shown before account creation
+/// Reusable Terms & Data Privacy modal, shown before account creation
 /// for parent, solo student, and teacher signups.
 ///
 /// Returns `true` if the user tapped "I Agree", `false` or `null` otherwise.

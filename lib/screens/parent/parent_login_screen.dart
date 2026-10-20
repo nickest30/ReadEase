@@ -114,7 +114,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
         try {
           await authProvider.signIn(localParent.email, password);
         } catch (_) {
-          // Offline — proceed
+          // Offline, proceed
         }
 
         await DatabaseService.instance.clearLoginAttempts(identifier);
@@ -168,7 +168,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       return;
     }
 
-    // Fast path — already local
+    // Fast path, already local
     Parent? localParent;
     final allParents = await DatabaseService.instance.getAllParents();
     for (final p in allParents) {
@@ -246,7 +246,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       return;
     }
 
-    // Not local — create from cloud doc
+    // Not local, create from cloud doc
     if (cloudDoc == null) {
       if (!mounted) return;
       setState(() {
@@ -306,7 +306,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
   /// Order of preference:
   ///   1. If a phone is set AND verified, try OTP first.
   ///   2. If OTP fails (billing disabled, network, etc.), silently fall
-  ///      through to backup code — with a friendly snackbar.
+  ///      through to backup code, with a friendly snackbar.
   ///   3. If only a backup code is available, prompt for it directly.
   ///
   /// Returns true if the user successfully completed 2FA.
@@ -440,7 +440,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
 
     if (newCode == null || !mounted) return false;
 
-    // Rotate — hash + save locally + push to cloud
+    // Rotate, hash + save locally + push to cloud
     final newHash = BCrypt.hashpw(newCode, BCrypt.gensalt());
     await FirestoreService.instance.rotateBackupCode(uid, 'parent', newHash);
 

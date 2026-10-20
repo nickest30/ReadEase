@@ -115,7 +115,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
         try {
           await authProvider.signIn(localTeacher.email, password);
         } catch (_) {
-          // Offline — proceed
+          // Offline, proceed
         }
 
         // Refresh classes from cloud (so classes created on other
@@ -139,7 +139,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
         return;
       }
 
-      // Local miss — username not found
+      // Local miss, username not found
       await DatabaseService.instance.recordLoginAttempt(
         identifier: identifier,
         success: false,
@@ -228,7 +228,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
 
     if (!mounted) return;
 
-    // Fast path — already local
+    // Fast path, already local
     Teacher? localTeacher;
     final allTeachers = await DatabaseService.instance.getAllTeachers();
     for (final t in allTeachers) {
@@ -264,7 +264,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
       return;
     }
 
-    // Not local — fetch from Firestore
+    // Not local, fetch from Firestore
     if (cloudDoc == null) {
       await DatabaseService.instance.recordLoginAttempt(
         identifier: identifier,
@@ -308,7 +308,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
       return;
     }
 
-    debugPrint('🔑 Teacher cloud login OK — local profile created');
+    debugPrint('🔑 Teacher cloud login OK, local profile created');
 
     await CloudSyncService.instance.downloadTeacherClasses(
       localTeacherId: created.id!,
@@ -452,7 +452,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
 
     if (newCode == null || !mounted) return false;
 
-    // Rotate — hash + push to cloud
+    // Rotate, hash + push to cloud
     final newHash = BCrypt.hashpw(newCode, BCrypt.gensalt());
     await FirestoreService.instance.rotateBackupCode(uid, 'teacher', newHash);
 

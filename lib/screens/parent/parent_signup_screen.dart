@@ -155,14 +155,14 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
 
       // ── Phone path or skip ──
       if (normalizedPhone != null) {
-        // Phone provided — OTP flow, then backup code, then dashboard.
+        // Phone provided, OTP flow, then backup code, then dashboard.
         await _runPhoneVerificationFlow(
           normalizedPhone: normalizedPhone,
           parent: createdParent,
           authProvider: authProvider,
         );
       } else {
-        // No phone — skip OTP, but still generate a backup code so the
+        // No phone, skip OTP, but still generate a backup code so the
         // user has a second-factor option on a new device.
         await _generateAndShowBackupCode(
           parent: createdParent,
@@ -194,7 +194,7 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
     required Parent parent,
     required AuthProvider authProvider,
   }) async {
-    // Kick off phone verification — the pending verification ID is
+    // Kick off phone verification, the pending verification ID is
     // stored inside AuthService, OTP screen reads from there.
     final completer = Completer<void>();
     bool codeSent = false;
@@ -352,7 +352,7 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
         ),
         content: const Text(
           'We can\'t send SMS codes right now. We\'ll continue with a '
-          'backup code instead — you can use it to log in on a new device. '
+          'backup code instead, you can use it to log in on a new device. '
           'You can add a phone number later in Settings → Account & Security.',
           style: TextStyle(fontFamily: 'Nunito', fontSize: 14),
         ),

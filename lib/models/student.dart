@@ -1,7 +1,7 @@
 class Student {
   final int? id;
   final String username;
-  final String? passwordHash;                  // nullable — linked children have no password
+  final String? passwordHash;                  // nullable, linked children have no password
   final String displayName;
   final int gradeLevel;
   final String? pinHash;

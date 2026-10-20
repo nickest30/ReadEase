@@ -18,13 +18,13 @@ import '../../utils/app_theme.dart';
 import 'yse_reaction.dart';
 import '../../utils/game_score.dart';
 
-/// Floor is Lava — Grade 4 Hard.
+/// Floor is Lava, Grade 4 Hard.
 ///
 /// Mechanic: letter-guessing with a persistent lava pool.
 ///   - 5 wrong letters on a word = word fails (auto-reveal)
 ///   - Each failed word raises the lava 1 step
 ///   - 4 failed words = lava reaches Yse = game over
-///   - Correct words never lower the lava — pressure builds cumulatively
+///   - Correct words never lower the lava, pressure builds cumulatively
 ///
 /// Kid-safe: no hanging imagery. Aligns with DepEd Child Protection
 /// Policy (DO No. 40, s. 2012).
@@ -331,7 +331,7 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
 
     setState(() {
       _roundResolved = true;
-      _lavaSurge = true; // spike the lava to Yse — visual "you lost this word"
+      _lavaSurge = true; // spike the lava to Yse, visual "you lost this word"
       _glowState = _GlowState.wrong;
       _correctGuesses.addAll(_currentWord.split('').toSet());
     });
@@ -653,7 +653,7 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
                           ),
                         ),
 
-                        // Word slots — single row, auto-scaled
+                        // Word slots, single row, auto-scaled
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           child: _buildWordSlots(),
@@ -754,7 +754,7 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
   }
 
   // ────────────────────────────────────────────────────────────
-  // Word slots — single row
+  // Word slots, single row
   // ────────────────────────────────────────────────────────────
 
   Widget _buildWordSlots() {
@@ -828,7 +828,7 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
   }
 
   // ────────────────────────────────────────────────────────────
-  // Keyboard — 7 cols × 4 rows
+  // Keyboard, 7 cols × 4 rows
   // ────────────────────────────────────────────────────────────
 
   Widget _buildIndicators() {

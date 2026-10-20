@@ -111,7 +111,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
           return;
         }
 
-        // Local login succeeded — try Firebase restore silently
+        // Local login succeeded, try Firebase restore silently
         if (localStudent.firebaseUid != null) {
           try {
             await authProvider.signIn(
@@ -119,7 +119,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
               password,
             );
           } catch (_) {
-            // Offline — proceed
+            // Offline, proceed
           }
         }
 
@@ -132,7 +132,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
       }
 
       // ── STEP 2: Not found locally → try cloud login ──
-      debugPrint('🔑 Local miss — trying cloud for "$username"');
+      debugPrint('🔑 Local miss, trying cloud for "$username"');
 
       // 2a. Firebase Auth with synthetic email
       final syntheticEmail = '$username@readease.app';
@@ -218,7 +218,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
       }
 
       debugPrint(
-        '🔑 Cloud login succeeded — local profile created ($newLocalId)',
+        '🔑 Cloud login succeeded, local profile created ($newLocalId)',
       );
 
       // Hydrate cloud data (results, badges, mastery, encounters, starred)

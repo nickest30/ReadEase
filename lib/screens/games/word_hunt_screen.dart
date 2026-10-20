@@ -19,7 +19,7 @@ import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/game_score.dart';
 
-/// Word Hunt — Grade 5 Hard.
+/// Word Hunt, Grade 5 Hard.
 class WordHuntScreen extends StatefulWidget {
   const WordHuntScreen({super.key});
 
@@ -733,7 +733,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
             ),
             child: Column(
               children: [
-                // Yse — pose depends on game state
+                // Yse, pose depends on game state
                 Flexible(
                   flex: 2,
                   child: Image.asset(

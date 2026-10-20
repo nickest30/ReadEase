@@ -70,7 +70,7 @@ class AuthService {
   // ────────────────────────────────────────────────────────────────
 
   /// Send a verification email to the currently signed-in user.
-  /// Safe to call multiple times — Firebase rate-limits.
+  /// Safe to call multiple times, Firebase rate-limits.
   Future<void> sendEmailVerification() async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -122,7 +122,7 @@ class AuthService {
         phoneNumber: phoneNumber,
 
         verificationCompleted: (PhoneAuthCredential credential) async {
-          // Android auto-retrieval — link immediately if signed in,
+          // Android auto-retrieval, link immediately if signed in,
           // otherwise sign in with the credential.
           try {
             final user = _auth.currentUser;

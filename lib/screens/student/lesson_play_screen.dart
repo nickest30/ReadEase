@@ -4,12 +4,13 @@ import 'package:provider/provider.dart';
 
 import '../../models/content_models.dart';
 import '../../models/word.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
+import 'pronunciation_modal.dart';
 
-/// Orchestrates the Introduce phase for a single batch.
-/// Flow: Lesson Intro → Introduce → Game Intro → Game
+
 class LessonPlayScreen extends StatefulWidget {
   const LessonPlayScreen({super.key});
 
@@ -118,6 +119,28 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
     }
   }
 
+  Future<void> _openPractice(Word word) async {
+    final student = context.read<StudentProvider>().currentStudent;
+    if (student?.id == null) return;
+
+    final isOnline = context.read<ConnectivityProvider>().isOnline;
+
+    // Stop any playing cue audio before opening the modal.
+    try {
+      await _audioPlayer.stop();
+    } catch (_) {}
+
+    if (!mounted) return;
+
+    await PronunciationModal.show(
+      context,
+      word: word,
+      studentId: student!.id!,
+      isOnline: isOnline,
+      updateMastery: false,
+    );
+  }
+
   void _nextWord() {
     _audioPlayer.stop();
     if (_currentWordIndex < _words.length - 1) {
@@ -216,13 +239,15 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────
-  // INTRODUCE PHASE
-  // ─────────────────────────────────────────────────────────
 
   Widget _buildIntroduce() {
     final word = _words[_currentWordIndex];
     final isLast = _currentWordIndex == _words.length - 1;
+
+    // Responsive image size — bigger on taller screens, clamped so
+    // the layout never overflows.
+    final screenH = MediaQuery.of(context).size.height;
+    final imageSize = (screenH * 0.30).clamp(200.0, 260.0);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -263,23 +288,25 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
           const Spacer(),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(AppSpacing.xl),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(AppRadius.xl),
               border: Border.all(color: AppColors.border),
             ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
+                // ── Bigger image ──
                 SizedBox(
-                  width: 180,
-                  height: 180,
+                  width: imageSize,
+                  height: imageSize,
                   child: Image.asset(
                     word.imageAsset,
                     fit: BoxFit.contain,
                     errorBuilder: (_, _, _) => Container(
-                      width: 180,
-                      height: 180,
+                      width: imageSize,
+                      height: imageSize,
                       decoration: BoxDecoration(
                         color:
                             AppColors.studentBg.withValues(alpha: 0.6),
@@ -294,16 +321,29 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  word.text,
-                  style: AppText.display.copyWith(
-                    fontSize: 48,
-                    letterSpacing: 1.5,
-                    color: AppColors.textPrimary,
+                const SizedBox(height: AppSpacing.md),
+
+                // ── Word: single row, auto-scaling to fit ──
+                SizedBox(
+                  width: double.infinity,
+                  height: 72,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      word.text,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 56,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: AppSpacing.sm),
                 if (word.category.isNotEmpty)
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -326,30 +366,69 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
                       ),
                     ),
                   ),
-                const SizedBox(height: AppSpacing.lg),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _playWordAudio(word),
-                    icon: const Icon(Icons.volume_up_rounded),
-                    label: const Text(
-                      'LISTEN',
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
+                const SizedBox(height: AppSpacing.md),
+
+                // ── LISTEN + PRACTICE, side by side ──
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 52,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _playWordAudio(word),
+                          icon: const Icon(Icons.volume_up_rounded,
+                              size: 20),
+                          label: const Text(
+                            'LISTEN',
+                            style: TextStyle(
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accentTeal,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.large),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentTeal,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.large),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: SizedBox(
+                        height: 52,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _openPractice(word),
+                          icon: const Icon(Icons.mic_rounded, size: 20),
+                          label: const Text(
+                            'PRACTICE',
+                            style: TextStyle(
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.accentTeal,
+                            side: const BorderSide(
+                              color: AppColors.accentTeal,
+                              width: 2,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.large),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),

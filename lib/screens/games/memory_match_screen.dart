@@ -17,7 +17,7 @@ import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import 'yse_reaction.dart';
 
-/// Memory Match game — replaces the MCQ quiz for Grade 1 Easy.
+/// Memory Match game, replaces the MCQ quiz for Grade 1 Easy.
 class MemoryMatchScreen extends StatefulWidget {
   const MemoryMatchScreen({super.key});
 
@@ -141,7 +141,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
       });
 
       // [GAME-LAYER] Show LET'S GO! once cards are visible.
-      // Persistent — stays until the user's first pair attempt.
+      // Persistent, stays until the user's first pair attempt.
       await Future.delayed(const Duration(milliseconds: 400));
       if (!mounted) return;
       _reaction.show(YseReaction.letsGo, persistent: true);
@@ -450,7 +450,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
         _buildHeader(matchedPairs, totalPairs),
         const SizedBox(height: AppSpacing.sm),
         Expanded(child: _buildGrid()),
-        // Yse bottom bar — reserved space, cards are sized to fit above
+        // Yse bottom bar, reserved space, cards are sized to fit above
         Container(
           height: 130,
           alignment: Alignment.center,
@@ -514,7 +514,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
               ],
             ),
           ),
-          // Note: Yse slot removed from header — she now floats
+          // Note: Yse slot removed from header, she now floats
           // top-center via the overlay above. Header right side blank.
         ],
       ),

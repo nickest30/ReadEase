@@ -39,7 +39,7 @@ class _SoloSignupScreenState extends State<SoloSignupScreen> {
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Terms & Data Privacy — required before account creation.
+    // Terms & Data Privacy, required before account creation.
     final agreed = await TermsModal.show(context);
     if (!agreed) return;
     if (!mounted) return;

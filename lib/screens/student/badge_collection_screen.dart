@@ -158,7 +158,7 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Grade $gradeLevel — $diffLabel',
+                'Grade $gradeLevel - $diffLabel',
                 style: AppText.caption,
               ),
               const SizedBox(height: AppSpacing.md),
@@ -337,7 +337,7 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
     );
   }
 
-  // ── Hero — Yse + encouraging line ────────────────────────────────
+  // ── Hero, Yse + encouraging line ────────────────────────────────
 
   Widget _buildHero() {
     // Swap the message based on badge count. Same image either way.
@@ -424,7 +424,7 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
   }
 }
 
-// _BadgeTile unchanged — keep as-is from your original.
+// _BadgeTile unchanged, keep as-is from your original.
 class _BadgeTile extends StatelessWidget {
   final int gradeLevel;
   final String difficulty;

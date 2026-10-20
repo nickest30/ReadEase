@@ -293,7 +293,7 @@ class _TeacherStudentProgressScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Grade $grade — $diffLabel',
+                          'Grade $grade - $diffLabel',
                           style: const TextStyle(
                             fontFamily: 'Nunito',
                             fontWeight: FontWeight.w700,

@@ -45,7 +45,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final authProvider = context.read<AuthProvider>();
     final email = _emailController.text.trim().toLowerCase();
 
-    // Fire and forget — we always show success to avoid leaking
+    // Fire and forget, we always show success to avoid leaking
     // whether the email is registered.
     await authProvider.sendPasswordResetEmail(email);
 

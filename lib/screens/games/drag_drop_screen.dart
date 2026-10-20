@@ -18,7 +18,7 @@ import '../../utils/app_theme.dart';
 import 'yse_reaction.dart';
 import '../../utils/game_score.dart';
 
-/// Drag & Drop — replaces the MCQ quiz for Grade 1 Hard.
+/// Drag & Drop, replaces the MCQ quiz for Grade 1 Hard.
 ///
 /// 10 rounds. Each round: an image shown large in the center, 4 word
 /// tiles below. Drag the correct word onto the image.
@@ -184,7 +184,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
         _roundStart = DateTime.now();
       });
 
-      // LET'S GO — persistent
+      // LET'S GO, persistent
       await Future.delayed(const Duration(milliseconds: 400));
       if (!mounted) return;
       _reaction.show(YseReaction.letsGo, persistent: true);
@@ -229,7 +229,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
           _reaction.show(YseReaction.nice, persistent: true);
         }
       } else {
-        // Correct but after wrong attempts — still celebrate, no points
+        // Correct but after wrong attempts, still celebrate, no points
         _currentStreak = 0;
         _reaction.show(YseReaction.nice, persistent: true);
       }
@@ -245,7 +245,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
       _reaction.show(YseReaction.tryAgain, persistent: true);
 
       if (_wrongAttemptsThisRound >= _maxWrongAttempts) {
-        // Give up on this round — show the answer, advance, 0 points
+        // Give up on this round, show the answer, advance, 0 points
         setState(() => _roundResolved = true);
         _wrongWordIds.add(round.correctWordId);
 
@@ -503,7 +503,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
           child: Text(
             _wrongAttemptsThisRound == 0
                 ? 'Drag the word onto the picture'
-                : 'Try again — which word is this?',
+                : 'Try again, which word is this?',
             style: AppText.caption.copyWith(
               fontSize: 13,
               fontWeight: FontWeight.w700,

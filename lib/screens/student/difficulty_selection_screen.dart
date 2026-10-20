@@ -149,7 +149,7 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _DifficultyCard(
-                  emoji: '😈',
+                  emoji: '😤',
                   label: 'Hard',
                   sublabel:
                       _hardUnlocked ? 'Unlocked' : 'Complete Medium first',

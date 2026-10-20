@@ -14,7 +14,7 @@ import '../../utils/app_theme.dart';
 import 'package:provider/provider.dart';
 import '../../providers/student_provider.dart';
 
-/// PassageScreen — Grade 4+.
+/// PassageScreen, Grade 4+.
 ///
 /// Flow:
 ///   1. Illustration + title
@@ -48,7 +48,7 @@ class _PassageScreenState extends State<PassageScreen> {
   bool _answered = false;
   int _passageCorrect = 0;
 
-  // Cached choices per question — prevents reshuffle on rebuild.
+  // Cached choices per question, prevents reshuffle on rebuild.
   List<String>? _cachedChoices;
   int _cachedChoicesForIndex = -1;
 
@@ -61,7 +61,7 @@ class _PassageScreenState extends State<PassageScreen> {
   final AudioPlayer _popupAudioPlayer = AudioPlayer();
   bool _isPlayingQuestion = false;
 
-  // Tappable words (G5+) — populated from passage.tappableWords on load.
+  // Tappable words (G5+), populated from passage.tappableWords on load.
   Set<String> _tappableWords = <String>{};
   final Map<String, TapGestureRecognizer> _tappableRecognizers = {};
 
@@ -355,13 +355,13 @@ class _PassageScreenState extends State<PassageScreen> {
   Future<void> _onButtonPressed() async {
     if (_isPlaying) return;
 
-    // First tap — "READY?" — start sentence 0.
+    // First tap, "READY?", start sentence 0.
     if (!_hasStartedReading) {
       await _playSentence(0);
       return;
     }
 
-    // Subsequent taps — advance to next sentence, or go to questions.
+    // Subsequent taps, advance to next sentence, or go to questions.
     if (_activeSentenceIndex < _sentences.length - 1) {
       await _playSentence(_activeSentenceIndex + 1);
     } else {
@@ -569,7 +569,7 @@ class _PassageScreenState extends State<PassageScreen> {
 
           const SizedBox(height: AppSpacing.sm),
 
-          // Big illustration — full width, cover fit
+          // Big illustration, full width, cover fit
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.xl),
             child: Container(
@@ -590,7 +590,7 @@ class _PassageScreenState extends State<PassageScreen> {
 
           const SizedBox(height: AppSpacing.sm),
 
-          // Sentences — auto-scrolling
+          // Sentences, auto-scrolling
           Expanded(
             child: Scrollbar(
               controller: _sentenceScroll,
@@ -696,7 +696,7 @@ class _PassageScreenState extends State<PassageScreen> {
     final choices = _choicesForCurrentQuestion();
 
     return Container(
-      // Slightly warmer background than the reading phase — visually refreshing.
+      // Slightly warmer background than the reading phase, visually refreshing.
       color: AppColors.accentYellow.withValues(alpha: 0.10),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -733,7 +733,7 @@ class _PassageScreenState extends State<PassageScreen> {
 
             const SizedBox(height: AppSpacing.md),
 
-            // Mascot — top area
+            // Mascot, top area
             Expanded(
               flex: 3,
               child: Center(
@@ -749,8 +749,8 @@ class _PassageScreenState extends State<PassageScreen> {
               ),
             ),
 
-            // Question stem — middle
-                        // Question stem — middle, with a replay button
+            // Question stem, middle
+                        // Question stem, middle, with a replay button
             Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
@@ -791,7 +791,7 @@ class _PassageScreenState extends State<PassageScreen> {
 
             const SizedBox(height: AppSpacing.md),
 
-            // Answers — bottom thumb zone
+            // Answers, bottom thumb zone
             ...choices.map((choice) {
               final isCorrect = choice == q.correctAnswer;
               final isSelected = choice == _selectedAnswer;
@@ -895,7 +895,7 @@ class _WordPopupCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header row — word + close
+          // Header row, word + close
           Row(
             children: [
               Expanded(

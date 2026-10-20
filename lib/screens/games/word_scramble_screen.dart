@@ -18,7 +18,7 @@ import '../../utils/app_theme.dart';
 import 'yse_reaction.dart';
 import '../../utils/game_score.dart';
 
-/// Word Scramble — Grade 2 Hard.
+/// Word Scramble, Grade 2 Hard.
 ///
 /// Layout: header → Yse → big image → definition → target slots →
 /// consistent-size letter pool at the bottom (thumb-reachable).
@@ -280,7 +280,7 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
       _reaction.show(YseReaction.tryAgain, persistent: true);
 
       if (_wrongAttemptsThisRound >= _maxWrongAttempts) {
-        // Reveal correct after 3 wrongs — glow green
+        // Reveal correct after 3 wrongs, glow green
         _wrongWordIds.add(round.wordId);
         setState(() {
           _roundResolved = true;
@@ -577,7 +577,7 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
               children: [
                 const SizedBox(height: 4),
 
-                // Yse — big, top
+                // Yse, big, top
                 YseReactionOverlay(
                   controller: _reaction,
                   size: 150,
@@ -636,7 +636,7 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
                 Text(
                   _wrongAttemptsThisRound == 0
                       ? 'Tap the letters to spell the word'
-                      : 'Try again — you can do this!',
+                      : 'Try again, you can do this!',
                   textAlign: TextAlign.center,
                   style: AppText.caption.copyWith(
                     fontSize: 13,
@@ -655,7 +655,7 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
           ),
         ),
 
-        // Letter pool — fixed at bottom, thumb-reachable
+        // Letter pool, fixed at bottom, thumb-reachable
         Container(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,

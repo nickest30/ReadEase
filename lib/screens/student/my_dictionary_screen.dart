@@ -680,7 +680,7 @@ class _WordDetailSheet extends StatelessWidget {
               ],
             ),
 
-            // PRACTICE SPEAKING — only for weak, un-mastered words
+            // PRACTICE SPEAKING, only for weak, un-mastered words
             if (isWeak && !isMastered) ...[
               const SizedBox(height: AppSpacing.md),
               SizedBox(

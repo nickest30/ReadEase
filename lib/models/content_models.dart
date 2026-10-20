@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-// Content-side models — bundled with app, seeded from JSON.
+// Content-side models, bundled with app, seeded from JSON.
 // These represent the DATABANK, not user progress.
 
 /// A small batch of 3-5 words within a level.
@@ -90,7 +90,7 @@ class OpeningFrame {
       );
 }
 
-/// Grade 2+ story frame — 2-3 screens before lesson.
+/// Grade 2+ story frame, 2-3 screens before lesson.
 class StoryFrame {
   final int? id;
   final int gradeLevel;
@@ -589,7 +589,7 @@ class LessonIntro {
       );
 }
 
-/// Game Intro — shown before each game session.
+/// Game Intro, shown before each game session.
 class GameIntro {
   final int? id;
   final String gameType;
@@ -651,7 +651,7 @@ class Passage {
     this.tappableWordsJson,
   });
 
-  /// Convenience accessor — returns lowercase tappable words, or empty list.
+  /// Convenience accessor, returns lowercase tappable words, or empty list.
   List<String> get tappableWords {
     final raw = tappableWordsJson;
     if (raw == null || raw.isEmpty) return const [];

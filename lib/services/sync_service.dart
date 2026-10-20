@@ -18,10 +18,10 @@ class SyncService {
   bool _running = false;
 
   /// Push everything pending for this student to Firestore.
-  /// Safe to call multiple times — guarded against concurrent runs.
+  /// Safe to call multiple times, guarded against concurrent runs.
   ///
   /// Ensures the Firebase Auth session is active for this student before
-  /// writing — without it, all Firestore writes fail with PERMISSION_DENIED.
+  /// writing, without it, all Firestore writes fail with PERMISSION_DENIED.
   Future<void> syncAll({
     required Student student,
     required ConnectivityProvider connectivity,
@@ -50,7 +50,7 @@ class SyncService {
       debugPrint('🔄 Sync: restoring session for $uid');
       final restored = await authProvider.tryRestoreSessionFor(uid: uid);
       if (!restored) {
-        debugPrint('🔄 Sync: could not restore session — aborting');
+        debugPrint('🔄 Sync: could not restore session, aborting');
         return;
       }
     }
@@ -97,7 +97,7 @@ class SyncService {
       final batch = await DatabaseService.instance
           .getBatchById(attempt.batchId);
       if (batch == null) {
-        debugPrint('🔄 Sync: batch ${attempt.batchId} not found — skipping');
+        debugPrint('🔄 Sync: batch ${attempt.batchId} not found, skipping');
         continue;
       }
 
@@ -132,7 +132,7 @@ class SyncService {
 
 
   // ──────────────────────────────────────────────────────────────
-  // Profile — keeps students/{uid} fresh (name, grade, avatar).
+  // Profile, keeps students/{uid} fresh (name, grade, avatar).
   // ──────────────────────────────────────────────────────────────
 
   Future<void> _pushProfile(Student student) async {
@@ -281,7 +281,7 @@ class SyncService {
   Future<void> _updateLeaderboard(Student student) async {
     final uid = student.firebaseUid!;
 
-    // Refresh from DB — the passed-in `student` may be a stale snapshot
+    // Refresh from DB, the passed-in `student` may be a stale snapshot
     // from before this sync's `incrementStudentPoints` calls landed.
     final fresh =
         await DatabaseService.instance.getStudentById(student.id!);

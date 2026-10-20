@@ -418,7 +418,7 @@ class _Header extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  isOnline ? 'Online — all features' : 'Offline — practice only',
+                  isOnline ? 'Online, all features' : 'Offline, practice only',
                   style: TextStyle(
                     fontFamily: 'Nunito',
                     fontSize: 11,

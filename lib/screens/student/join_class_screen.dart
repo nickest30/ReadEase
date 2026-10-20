@@ -518,7 +518,7 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
                   ),
                 ),
 
-              // Found class — show details + confirm
+              // Found class, show details + confirm
               if (_foundClass != null) ...[
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.lg),

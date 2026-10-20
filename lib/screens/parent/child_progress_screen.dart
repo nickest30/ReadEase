@@ -363,7 +363,7 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Grade $grade — $diffLabel',
+                          'Grade $grade - $diffLabel',
                           style: const TextStyle(
                             fontFamily: 'Nunito',
                             fontWeight: FontWeight.w700,

@@ -49,12 +49,12 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
 
-        // Session expiry — force re-auth if the last activity was too long ago.
+        // Session expiry, force re-auth if the last activity was too long ago.
     final expired = await authProvider.checkSessionExpiry();
     if (!mounted) return;
 
     if (expired) {
-      // Fire-and-forget — logout() resets state synchronously via
+      // Fire-and-forget, logout() resets state synchronously via
       // notifyListeners; the prefs cleanup can finish in the background.
       unawaited(studentProvider.logout());
       Navigator.of(context).pushReplacementNamed('/role-selection');
@@ -87,7 +87,7 @@ class _SplashScreenState extends State<SplashScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Yse mascot — waving pose
+              // Yse mascot, waving pose
               const _YseImage(
                 assetPath: 'assets/images/mascot/yse_wave.png',
                 size: 180,

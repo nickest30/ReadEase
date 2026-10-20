@@ -383,7 +383,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Grade $grade — $diffLabel',
+                            'Grade $grade - $diffLabel',
                             style: const TextStyle(
                               fontFamily: 'Nunito',
                               fontWeight: FontWeight.w700,
@@ -508,7 +508,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
-                        'No tricky words yet — you\'re doing great!',
+                        'No tricky words yet, you\'re doing great!',
                         style: AppText.caption.copyWith(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,

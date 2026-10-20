@@ -748,7 +748,7 @@ class _PodiumEntry extends StatelessWidget {
         else
           const SizedBox(height: 28),
         const SizedBox(height: 4),
-        // Avatar circle — soft colored ring with the PNG inside
+        // Avatar circle, soft colored ring with the PNG inside
         Container(
           width: 52,
           height: 52,

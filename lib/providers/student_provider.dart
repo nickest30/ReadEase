@@ -16,7 +16,7 @@ class StudentProvider extends ChangeNotifier {
 
   /// Loads the last-active student from disk so a cold start can route
   /// directly to PIN entry instead of the role selection.
-  /// Safe to call multiple times — no-ops after the first run.
+  /// Safe to call multiple times, no-ops after the first run.
   Future<void> init() async {
     if (_initialized) return;
     try {
@@ -27,7 +27,7 @@ class StudentProvider extends ChangeNotifier {
         if (student != null) {
           _currentStudent = student;
         } else {
-          // Record was deleted — clear the stale key.
+          // Record was deleted, clear the stale key.
           await prefs.remove(_keyLastStudentId);
         }
       }

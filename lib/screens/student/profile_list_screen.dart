@@ -90,7 +90,7 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
 
               const SizedBox(height: AppSpacing.md),
 
-              // Primary CTA — Register
+              // Primary CTA, Register
               SizedBox(
                 height: 56,
                 child: ElevatedButton.icon(
@@ -116,7 +116,7 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
 
               const SizedBox(height: AppSpacing.md),
 
-              // Secondary CTA — Login
+              // Secondary CTA, Login
               SizedBox(
                 height: 52,
                 child: OutlinedButton.icon(
@@ -224,7 +224,7 @@ class _ProfileCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Avatar — replaces the initial-letter circle.
+            // Avatar, replaces the initial-letter circle.
             Container(
               width: 68,
               height: 68,
@@ -242,7 +242,7 @@ class _ProfileCard extends StatelessWidget {
                   avatarAssetPath(student.avatarIndex),
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) {
-                    // Fallback — initial letter if the PNG is missing.
+                    // Fallback, initial letter if the PNG is missing.
                     final initial = student.displayName.isNotEmpty
                         ? student.displayName[0].toUpperCase()
                         : '?';

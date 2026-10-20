@@ -18,7 +18,7 @@ import '../../utils/app_theme.dart';
 import 'yse_reaction.dart';
 import '../../utils/game_score.dart';
 
-/// Bubble Pop — replaces the MCQ quiz for Grade 1 Medium.
+/// Bubble Pop, replaces the MCQ quiz for Grade 1 Medium.
 ///
 /// 7 rounds. Each round: word shown at top, 4 floating bubbles with
 /// images below. Tap the bubble matching the word. Correct → +5 pts.
@@ -130,7 +130,7 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
 
         // Should always have 3, since we required >=4 words
         while (distractors.length < 3) {
-          // Safety fallback — duplicate a distractor rather than crash
+          // Safety fallback, duplicate a distractor rather than crash
           distractors.add(pool[rnd.nextInt(pool.length)]);
         }
 
@@ -165,7 +165,7 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
         _roundStart = DateTime.now();
       });
 
-      // [GAME-LAYER] LET'S GO — persistent
+      // [GAME-LAYER] LET'S GO, persistent
       await Future.delayed(const Duration(milliseconds: 400));
       if (!mounted) return;
       _reaction.show(YseReaction.letsGo, persistent: true);
@@ -249,7 +249,7 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
   }
 
   // ────────────────────────────────────────────────────────────
-  // Finish — same DB writes as quiz/memory-match
+  // Finish, same DB writes as quiz/memory-match
   // ────────────────────────────────────────────────────────────
 
   Future<void> _finishGame() async {

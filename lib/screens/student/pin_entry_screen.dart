@@ -163,7 +163,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
       await DatabaseService.instance.clearPinAttempts(id);
     }
 
-    // Record activity — extends the 30-day session TTL.
+    // Record activity, extends the 30-day session TTL.
     await CredentialStorage.instance.touchSession();
 
     setState(() => _dotState = PinDotState.success);
@@ -233,7 +233,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
           children: [
             Text(
               'Hi ${student.displayName}! Please enter your password once. '
-              'You won\'t need to do this again — just PIN from now on.',
+              'You won\'t need to do this again, just PIN from now on.',
               style: const TextStyle(
                 fontFamily: 'Nunito',
                 fontSize: 13,

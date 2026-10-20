@@ -184,7 +184,7 @@ class DatabaseService {
     // Content Pipeline Tables
     // ============================================================
 
-    // batches — small groups of 3-5 words
+    // batches, small groups of 3-5 words
     await db.execute('''
       CREATE TABLE batches (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -198,7 +198,7 @@ class DatabaseService {
       )
     ''');
 
-    // quiz_questions — separate from words
+    // quiz_questions, separate from words
     await db.execute('''
       CREATE TABLE quiz_questions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -213,7 +213,7 @@ class DatabaseService {
       )
     ''');
 
-    // quiz_config — per-level quiz rules
+    // quiz_config, per-level quiz rules
     await db.execute('''
       CREATE TABLE quiz_config (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -226,7 +226,7 @@ class DatabaseService {
       )
     ''');
 
-    // word_encounters — Pokédex "seen"
+    // word_encounters, Pokédex "seen"
     await db.execute('''
       CREATE TABLE word_encounters (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -238,7 +238,7 @@ class DatabaseService {
       )
     ''');
 
-    // word_mastery — Pokédex "mastered"
+    // word_mastery, Pokédex "mastered"
     await db.execute('''
       CREATE TABLE word_mastery (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -262,7 +262,7 @@ class DatabaseService {
       )
     ''');
 
-    // batch_visits — for Yse Opening Frame
+    // batch_visits, for Yse Opening Frame
     await db.execute('''
       CREATE TABLE batch_visits (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -273,7 +273,7 @@ class DatabaseService {
       )
     ''');
 
-    // lesson_progress — for resume
+    // lesson_progress, for resume
     await db.execute('''
       CREATE TABLE lesson_progress (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -286,7 +286,7 @@ class DatabaseService {
       )
     ''');
 
-    // quiz_attempts — replaces quiz_results for new flow
+    // quiz_attempts, replaces quiz_results for new flow
     await db.execute('''
       CREATE TABLE quiz_attempts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -301,7 +301,7 @@ class DatabaseService {
       )
     ''');
 
-    // quiz_question_responses — analytics
+    // quiz_question_responses, analytics
     await db.execute('''
       CREATE TABLE quiz_question_responses (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -313,7 +313,7 @@ class DatabaseService {
       )
     ''');
 
-    // daily_word_log — Word of the Day
+    // daily_word_log, Word of the Day
     await db.execute('''
       CREATE TABLE daily_word_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -325,7 +325,7 @@ class DatabaseService {
       )
     ''');
 
-    // content_versions — track JSON imports
+    // content_versions, track JSON imports
     await db.execute('''
       CREATE TABLE content_versions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -470,7 +470,7 @@ class DatabaseService {
           'ALTER TABLE quiz_results ADD COLUMN wrong_word_ids TEXT',
         );
       } catch (_) {
-        // Column already exists — ignore
+        // Column already exists, ignore
       }
     }
     if (oldVersion < 6) {
@@ -769,17 +769,17 @@ class DatabaseService {
   }
 
   if (oldVersion < 11) {
-    // students — new columns
+    // students, new columns
     try { await db.execute('ALTER TABLE students ADD COLUMN parent_firebase_uid TEXT'); } catch (_) {}
     try { await db.execute('ALTER TABLE students ADD COLUMN recovery_email TEXT'); } catch (_) {}
     try { await db.execute('ALTER TABLE students ADD COLUMN recovery_email_verified INTEGER DEFAULT 0'); } catch (_) {}
 
-    // students — password_hash becomes nullable (SQLite doesn't support column
+    // students, password_hash becomes nullable (SQLite doesn't support column
     // type changes directly, but since it was TEXT NOT NULL, we can leave it
     // NOT NULL physically and just always write '' for linked children.
     // No migration needed for existing rows.)
 
-    // parents — new columns
+    // parents, new columns
     try { await db.execute('ALTER TABLE parents ADD COLUMN email_verified INTEGER DEFAULT 0'); } catch (_) {}
     try { await db.execute('ALTER TABLE parents ADD COLUMN phone_number TEXT'); } catch (_) {}
     try { await db.execute('ALTER TABLE parents ADD COLUMN phone_verified INTEGER DEFAULT 0'); } catch (_) {}
@@ -789,7 +789,7 @@ class DatabaseService {
     try { await db.execute('ALTER TABLE parents ADD COLUMN last_synced_at TEXT'); } catch (_) {}
     try { await db.execute('ALTER TABLE parents ADD COLUMN pending_sync INTEGER DEFAULT 0'); } catch (_) {}
 
-    // teachers — new columns
+    // teachers, new columns
     try { await db.execute('ALTER TABLE teachers ADD COLUMN email_verified INTEGER DEFAULT 0'); } catch (_) {}
     try { await db.execute('ALTER TABLE teachers ADD COLUMN phone_number TEXT'); } catch (_) {}
     try { await db.execute('ALTER TABLE teachers ADD COLUMN phone_verified INTEGER DEFAULT 0'); } catch (_) {}
@@ -2217,7 +2217,7 @@ class DatabaseService {
   }
 
   // ============================================================
-  // M5.1 — PROGRESS METHODS
+  // M5.1, PROGRESS METHODS
   // ============================================================
 
   /// Record a word encounter (Pokédex "seen").
@@ -2294,7 +2294,7 @@ class DatabaseService {
   }
 
 
-    /// Force-master a word. Used after a successful pronunciation practice —
+    /// Force-master a word. Used after a successful pronunciation practice,
   /// hearing the reference audio and then pronouncing the word correctly
   /// is treated as sufficient evidence of mastery for that word.
   Future<void> markWordMastered({
@@ -2586,7 +2586,7 @@ class DatabaseService {
   }
 
   // ============================================================
-  // M5.1 — CONTENT INSERT METHODS (used by importer)
+  // M5.1, CONTENT INSERT METHODS (used by importer)
   // ============================================================
 
   Future<int> insertBatch(LessonBatch batch) async {
@@ -2610,7 +2610,7 @@ class DatabaseService {
   }
 
   // ============================================================
-  // M5.2e — PROGRESS QUERIES (read from quiz_attempts)
+  // M5.2e, PROGRESS QUERIES (read from quiz_attempts)
   // ============================================================
 
   /// Get all quiz attempts with joined batch info (grade, difficulty, theme).
@@ -2764,7 +2764,7 @@ class DatabaseService {
   }
 
   // ============================================================
-  // M5.3 — MY DICTIONARY (Pokédex)
+  // M5.3, MY DICTIONARY (Pokédex)
   // ============================================================
 
   /// Get all words for a grade (or all grades if null).
@@ -2836,7 +2836,7 @@ class DatabaseService {
 
 
   // ============================================================
-  // M5.3b — WORD OF THE DAY
+  // M5.3b, WORD OF THE DAY
   // ============================================================
 
   /// Get today's Word of the Day for a student.
@@ -2936,7 +2936,7 @@ class DatabaseService {
         'created_at': DateTime.now().toIso8601String(),
       });
     } else {
-      // UPSERT — refresh points, name, grade
+      // UPSERT, refresh points, name, grade
       await db.update(
         'students',
         {
@@ -2952,7 +2952,7 @@ class DatabaseService {
 
 
   // ============================================================
-  // SYNC — Word analytics queries
+  // SYNC, Word analytics queries
   // ============================================================
 
   /// Get every word_mastery row for a student (for cloud push).
@@ -3260,7 +3260,7 @@ class DatabaseService {
     );
   }
 
-  /// Housekeeping — delete attempts older than 24 hours.
+  /// Housekeeping, delete attempts older than 24 hours.
   /// Call once on app launch.
   Future<void> pruneOldAttempts() async {
     final db = await database;
@@ -3312,7 +3312,7 @@ class DatabaseService {
   // ============================================================
 
   /// Get the lesson intro for a (grade, difficulty).
-  /// Returns null if none exists — caller should skip the screen.
+  /// Returns null if none exists, caller should skip the screen.
   Future<LessonIntro?> getLessonIntro(int grade, String difficulty) async {
     final db = await database;
     final maps = await db.query(
@@ -3326,7 +3326,7 @@ class DatabaseService {
   }
 
   /// Get the game intro for a game_type.
-  /// Returns null if none exists — caller should skip the screen.
+  /// Returns null if none exists, caller should skip the screen.
   Future<GameIntro?> getGameIntro(String gameType) async {
     final db = await database;
     final maps = await db.query(
@@ -3367,6 +3367,6 @@ class DatabaseService {
       where: 'grade = ?',
       whereArgs: [grade],
     );
-    // game_intros are shared across grades — don't delete on grade re-import
+    // game_intros are shared across grades, don't delete on grade re-import
   }
 }

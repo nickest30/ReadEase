@@ -7,7 +7,7 @@ import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
 
-/// Lesson Intro — shown before the Introduce phase every session.
+/// Lesson Intro, shown before the Introduce phase every session.
 /// Layout: header + body + button centered vertically. Yse large
 /// in the bottom-left corner.
 class LessonIntroScreen extends StatefulWidget {

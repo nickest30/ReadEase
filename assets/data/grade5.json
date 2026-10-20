@@ -1,5 +1,5 @@
 {
-  "content_version": "1.0.3",
+  "content_version": "1.0.5",
   "grade": 5,
   "lesson_intros": [
     {
@@ -52,8 +52,8 @@
       "tappable_words": ["lazy", "sick", "disappeared"],
       "sentences": [
         {"index": 1, "text": "Long ago, a mother named Rosa lived with her daughter, Pinang.", "audio": "grade5_easy_passage01_s01.mp3"},
-        {"index": 2, "text": "Pinang was very lazy.", "audio": "grade5_easy_passage01_s02.mp3"},
-        {"index": 3, "text": "She always asked, \"Where are my clothes? Where is my food?\"", "audio": "grade5_easy_passage01_s03.mp3"},
+        {"index": 2, "text": "The daughter was very lazy.", "audio": "grade5_easy_passage01_s02.mp3"},
+        {"index": 3, "text": "She always asked, \"Where is my dress? Where is my food?\"", "audio": "grade5_easy_passage01_s03.mp3"},
         {"index": 4, "text": "One day, the mother became very sick.", "audio": "grade5_easy_passage01_s04.mp3"},
         {"index": 5, "text": "She asked her daughter to cook rice.", "audio": "grade5_easy_passage01_s05.mp3"},
         {"index": 6, "text": "But Pinang would not look around the kitchen.", "audio": "grade5_easy_passage01_s06.mp3"},
@@ -66,7 +66,7 @@
         {"stem": "What was the daughter like?", "type": "literal", "correct": "Lazy", "distractors": ["Kind", "Brave", "Helpful"], "show_image": false, "stem_audio": "grade5_easy_passage01_q02_stem.mp3"},
         {"stem": "What did the mother ask the daughter to cook?", "type": "literal", "correct": "Rice", "distractors": ["Soup", "Bread", "Fish"], "show_image": false, "stem_audio": "grade5_easy_passage01_q03_stem.mp3"},
         {"stem": "Where could the daughter not find anything?", "type": "literal", "correct": "In the kitchen", "distractors": ["In the garden", "In the bedroom", "In the market"], "show_image": false, "stem_audio": "grade5_easy_passage01_q04_stem.mp3"},
-        {"stem": "What did the mother whisper to her daughter?", "type": "literal", "correct": "\"I hope you grow many eyes to look around.\"", "distractors": ["\"Please cook me dinner.\"", "\"Come here, my child.\"", "\"I love you very much.\""], "show_image": false, "stem_audio": "grade5_easy_passage01_q05_stem.mp3"},
+        {"stem": "What did the mother whisper to her daughter?", "type": "literal", "correct": "I wish you had many eyes to see", "distractors": ["Please cook me dinner", "Come here, my child", "I love you very much"], "show_image": false, "stem_audio": "grade5_easy_passage01_q05_stem.mp3"},
         {"stem": "What happened to the daughter at the end of the story?", "type": "inferential", "correct": "She disappeared and became a fruit.", "distractors": ["She became rich.", "She went to the market.", "She found a new home."], "show_image": false, "stem_audio": "grade5_easy_passage01_q06_stem.mp3"},
         {"stem": "Why did the mother wish her daughter had many eyes?", "type": "inferential", "correct": "Because the daughter could not see what she needed to do.", "distractors": ["Because the mother wanted a pet.", "Because the daughter liked insects.", "Because the mother was angry at the world."], "show_image": false, "stem_audio": "grade5_easy_passage01_q07_stem.mp3"},
         {"stem": "What does the story teach us?", "type": "inferential", "correct": "We should help our parents and not be lazy.", "distractors": ["We should eat more fruit.", "We should live in a small house.", "We should always cook rice."], "show_image": false, "stem_audio": "grade5_easy_passage01_q08_stem.mp3"}
@@ -179,7 +179,7 @@
               "sample_sentence": "Lola tells us a legend about the volcano.",
               "source": "Dolch Grade 3",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "What is a legend?",
@@ -201,7 +201,7 @@
               "sample_sentence": "The lazy cat sleeps all day on the banig.",
               "source": "Dolch Grade 2",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word means \"not wanting to work\"?",
@@ -223,7 +223,7 @@
               "sample_sentence": "The hungry boy asks Nanay for rice.",
               "source": "Dolch Grade 2",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "How does a person feel when they need food?",
@@ -245,7 +245,7 @@
               "sample_sentence": "Mother cooks dinner for our family.",
               "source": "Dolch Pre-Primer",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -267,7 +267,7 @@
               "sample_sentence": "The daughter helps her mother at home.",
               "source": "Dolch Grade 2",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -289,7 +289,7 @@
               "sample_sentence": "Her kindness makes everyone smile.",
               "source": "Dolch Grade 3",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "What is the word for being nice to others?",
@@ -311,7 +311,7 @@
               "sample_sentence": "The patient girl waits for her turn.",
               "source": "Dolch Grade 3",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word describes waiting calmly?",
@@ -333,7 +333,7 @@
               "sample_sentence": "He is gentle with the baby bird.",
               "source": "Dolch Grade 3",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -355,7 +355,7 @@
               "sample_sentence": "The helpful boy carries the heavy bag.",
               "source": "Dolch Grade 3",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word means \"always ready to help\"?",
@@ -377,7 +377,7 @@
               "sample_sentence": "We are grateful for our family.",
               "source": "Dolch Grade 3",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word means \"feeling thankful\"?",
@@ -424,7 +424,7 @@
               "sample_sentence": "Our community works together on Saturday.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -446,7 +446,7 @@
               "sample_sentence": "Our neighbor shares mangoes with us.",
               "source": "Dolch Grade 3",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -468,7 +468,7 @@
               "sample_sentence": "Unity makes our barangay strong.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word means \"being together as one\"?",
@@ -490,7 +490,7 @@
               "sample_sentence": "Bayanihan means helping each other.",
               "source": "MELC G5 / Cultural",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — cultural term, appropriate.",
+              "sensitivity_notes": "Reviewed, cultural term, appropriate.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -512,7 +512,7 @@
               "sample_sentence": "The family eats dinner together.",
               "source": "Dolch Grade 2",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -534,7 +534,7 @@
               "sample_sentence": "Please share your baon with your friend.",
               "source": "Dolch Primer",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -556,7 +556,7 @@
               "sample_sentence": "We cooperate to clean the classroom.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word means \"to work together\"?",
@@ -578,7 +578,7 @@
               "sample_sentence": "The farmers celebrate a good harvest.",
               "source": "Dolch Grade 3",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -600,7 +600,7 @@
               "sample_sentence": "The generous man gives rice to the poor.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word describes someone happy to give?",
@@ -622,7 +622,7 @@
               "sample_sentence": "Show respect to your elders.",
               "source": "Dolch Grade 3",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -644,7 +644,7 @@
               "sample_sentence": "Their friendship started in grade one.",
               "source": "Dolch Grade 3",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word means \"a close bond between friends\"?",
@@ -666,7 +666,7 @@
               "sample_sentence": "The barangay helper sweeps the street.",
               "source": "Dolch Grade 2",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -688,7 +688,7 @@
               "sample_sentence": "The volunteer packs relief goods.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Who helps without expecting payment?",
@@ -710,7 +710,7 @@
               "sample_sentence": "A reliable child does their chores.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "What is the best way to show you are reliable?",
@@ -761,7 +761,7 @@
               "sample_sentence": "The landscape is full of green hills.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -779,11 +779,11 @@
               "audio": "grade5_hard_nature.mp3",
               "lesson_cue": "This is nature... N, A, T, U, R, E... Nature!",
               "lesson_cue_audio": "grade5_hard_nature_cue.mp3",
-              "definition": "The natural world — plants, animals, and landscapes.",
+              "definition": "The natural world, plants, animals, and landscapes.",
               "sample_sentence": "Nature gives us fresh air and water.",
               "source": "Dolch Grade 3",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -805,7 +805,7 @@
               "sample_sentence": "The climate is changing around the world.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -827,7 +827,7 @@
               "sample_sentence": "The weather is sunny today.",
               "source": "Dolch Grade 2",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -849,7 +849,7 @@
               "sample_sentence": "Pollution makes the river dirty.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -871,7 +871,7 @@
               "sample_sentence": "A coral reef is a rich ecosystem.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -893,7 +893,7 @@
               "sample_sentence": "Protection keeps our forests safe.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -915,7 +915,7 @@
               "sample_sentence": "The clean river has many fish.",
               "source": "Dolch Grade 2",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -937,7 +937,7 @@
               "sample_sentence": "We preserve our old churches.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -959,7 +959,7 @@
               "sample_sentence": "We recycle plastic bottles at home.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word means \"turning old things into new ones\"?",
@@ -981,7 +981,7 @@
               "sample_sentence": "Do not waste water and food.",
               "source": "Dolch Grade 3",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "What do we call things we throw away?",
@@ -1003,7 +1003,7 @@
               "sample_sentence": "Do not litter in the park.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "What do we call trash that is left in the wrong place?",
@@ -1025,7 +1025,7 @@
               "sample_sentence": "A typhoon is a natural disaster.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word matches this picture?",
@@ -1047,7 +1047,7 @@
               "sample_sentence": "The flood covered the streets.",
               "source": "Dolch Grade 3",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word means \"water covering the land\"?",
@@ -1069,7 +1069,7 @@
               "sample_sentence": "The drought dried up the river.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word means \"a long time with no rain\"?",
@@ -1091,7 +1091,7 @@
               "sample_sentence": "It is our commitment to care for nature.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which word describes sticking to a promise or a duty?",
@@ -1113,7 +1113,7 @@
               "sample_sentence": "Balance keeps the ecosystem healthy.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Which best describes balance in nature?",
@@ -1135,7 +1135,7 @@
               "sample_sentence": "Awareness helps people protect the planet.",
               "source": "MELC G5",
               "sensitivity_reviewed": 1,
-              "sensitivity_notes": "Reviewed — no issues.",
+              "sensitivity_notes": "Reviewed, no issues.",
               "quiz_questions": [
                 {
                   "stem": "Why is environmental awareness important?",

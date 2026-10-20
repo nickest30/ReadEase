@@ -56,7 +56,7 @@ class QuizResult {
     );
   }
 
-  /// Copy with new id — used after DB insert
+  /// Copy with new id, used after DB insert
   QuizResult copyWith({int? id, bool? syncedToCloud}) {
     return QuizResult(
       id: id ?? this.id,

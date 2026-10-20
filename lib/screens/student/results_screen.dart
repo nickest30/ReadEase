@@ -26,19 +26,19 @@ class _ResultsScreenState extends State<ResultsScreen> {
   static const Map<int, List<String>> _commentsByStars = {
     1: [
       'Every detective starts somewhere!',
-      "It's okay — let's try again together.",
+      "It's okay, let's try again together.",
       'Every missed word is a clue to learn.',
       'Not bad for a first attempt!',
     ],
     2: [
       'You\'re warming up! Keep going.',
-      'Getting there — one more try!',
+      'Getting there, one more try!',
       'Nice effort! Let\'s do it again.',
       'Progress is progress. Try again!',
     ],
     3: [
       'So close! You\'ve got this.',
-      'Almost there — one more shot!',
+      'Almost there, one more shot!',
       'Great effort! Just a few more words.',
       'You\'re nearly a Word Detective!',
     ],
@@ -139,7 +139,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
       return;
     }
 
-    // Final level — celebrate and go home.
+    // Final level, celebrate and go home.
     if (_isFinalLevel) {
       Navigator.of(context).pushNamedAndRemoveUntil(
         '/student-home',
@@ -259,7 +259,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Grade $_gradeLevel — ${_difficulty[0].toUpperCase()}${_difficulty.substring(1)}',
+                'Grade $_gradeLevel - ${_difficulty[0].toUpperCase()}${_difficulty.substring(1)}',
                 style: AppText.caption,
               ),
               const SizedBox(height: AppSpacing.md),
@@ -325,7 +325,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
             children: [
               const SizedBox(height: AppSpacing.md),
 
-              // Yse — star-tiered
+              // Yse, star-tiered
               Center(
                 child: SizedBox(
                   width: 180,
@@ -439,7 +439,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                 const SizedBox(height: AppSpacing.md),
               ],
 
-              // Completion banner — only on G6 Hard + passing
+              // Completion banner, only on G6 Hard + passing
               if (_isFinalLevel && _isPassing) ...[
                 Center(
                   child: Container(
@@ -554,7 +554,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
               const SizedBox(height: AppSpacing.xl),
 
-              // Buttons — row 1: retry (+ next level, only if passed)
+              // Buttons, row 1: retry (+ next level, only if passed)
               Row(
                 children: [
                   // Try Again
@@ -594,7 +594,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     ),
                   ),
 
-                  // Next Level / Next Grade / Back to Home — only when passed
+                  // Next Level / Next Grade / Back to Home, only when passed
                   if (_isPassing) ...[
                     const SizedBox(width: AppSpacing.md),
                     Expanded(

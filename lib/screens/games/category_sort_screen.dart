@@ -19,7 +19,7 @@ import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/game_score.dart';
 
-/// Category Sort — Grade 6 Hard.
+/// Category Sort, Grade 6 Hard.
 ///
 /// 12 words, 3 category bins, drag-and-drop. 5 pts per correct.
 /// 3-strike rule auto-places a word after 3 wrong attempts (0 pts).

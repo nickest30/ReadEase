@@ -19,7 +19,7 @@ class ParentWelcomeScreen extends StatelessWidget {
             children: [
               const SizedBox(height: AppSpacing.xl),
 
-              // Motter — centered, 200px (matches Yse pattern)
+              // Motter, centered, 200px (matches Yse pattern)
               Center(
                 child: Image.asset(
                   'assets/images/mascot/motter_base.png',

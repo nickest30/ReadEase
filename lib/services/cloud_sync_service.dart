@@ -7,7 +7,7 @@ import 'database_service.dart';
 import 'firestore_service.dart';
 
 /// Downloads a student's cloud data into local SQLite
-/// after cross-device login. Idempotent — safe to call repeatedly.
+/// after cross-device login. Idempotent, safe to call repeatedly.
 class CloudSyncService {
   static final CloudSyncService instance = CloudSyncService._internal();
   CloudSyncService._internal();
@@ -96,7 +96,7 @@ class CloudSyncService {
           .get(const GetOptions(source: Source.server))
           .timeout(const Duration(seconds: 15));
 
-      // Fetch batch mapping once — keyed by remote batchId
+      // Fetch batch mapping once, keyed by remote batchId
       final localBatchIds = await _getLocalBatchIds();
 
       for (final doc in snap.docs) {
@@ -349,7 +349,7 @@ class CloudSyncService {
 
       for (final doc in snap.docs) {
         final data = doc.data();
-        // Now uses UPSERT — updates points if child already exists
+        // Now uses UPSERT, updates points if child already exists
         await DatabaseService.instance.insertLinkedChildIfMissing(
           parentId: localParentId,
           firebaseUid: doc.id,

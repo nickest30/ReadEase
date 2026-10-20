@@ -19,7 +19,7 @@ class TeacherWelcomeScreen extends StatelessWidget {
             children: [
               const SizedBox(height: AppSpacing.xl),
 
-              // Groo — centered, 200px
+              // Groo, centered, 200px
               Center(
                 child: Image.asset(
                   'assets/images/mascot/groo_base.png',

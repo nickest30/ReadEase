@@ -65,7 +65,7 @@ class ContentImporter {
       debugPrint('📚 Lesson intros: ${lessonIntros.length}');
 
       // ── 2. Game Intros ──
-      // Shared across grades — INSERT OR REPLACE, no clear.
+      // Shared across grades, INSERT OR REPLACE, no clear.
       final gameIntros = (data['game_intros'] as List<dynamic>?) ?? [];
       for (final introData in gameIntros) {
         final intro = GameIntro(

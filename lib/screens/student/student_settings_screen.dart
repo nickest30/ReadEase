@@ -168,10 +168,10 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     final student = context.read<StudentProvider>().currentStudent;
     if (student == null) return false;
 
-    // Solo student — no warning needed
+    // Solo student, no warning needed
     if (!student.isLinked) return true;
 
-    // Linked student — show warning dialog
+    // Linked student, show warning dialog
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -311,7 +311,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    // Firestore — only if we have a UID and are online
+    // Firestore, only if we have a UID and are online
     if (student.firebaseUid != null) {
       try {
         await FirestoreService.instance
@@ -321,7 +321,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       }
     }
 
-    // SQLite — clear parent link locally
+    // SQLite, clear parent link locally
     await DatabaseService.instance.updateStudentParentUid(
       student.id!,
       '',

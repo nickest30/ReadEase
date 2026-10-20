@@ -160,7 +160,7 @@ class _GradeSelectionScreenState extends State<GradeSelectionScreen> {
   }
 
   void _showLockedMessage(int grade) {
-    // Friendly hint — tells the learner what to do to unlock.
+    // Friendly hint, tells the learner what to do to unlock.
     final hint = grade == _highestUnlocked + 1
         ? 'Finish Grade $_highestUnlocked (Easy, Medium, and Hard) to unlock Grade $grade.'
         : 'Grade $grade is locked for now.';

@@ -89,7 +89,7 @@ void main() async {
   // Import bundled JSON content into SQLite
   await ContentImporter.instance.importAllGrades();
 
-  // Housekeeping — prune stale login/PIN attempts (>24h old)
+  // Housekeeping, prune stale login/PIN attempts (>24h old)
   try {
     await DatabaseService.instance.pruneOldAttempts();
   } catch (e) {
@@ -260,7 +260,7 @@ class _ReadEaseAppState extends State<ReadEaseApp>
     connectivity.onWentOnline = () {
       final student = studentProvider.currentStudent;
       if (student == null) return;
-      debugPrint('🔄 Connectivity restored — triggering sync');
+      debugPrint('🔄 Connectivity restored, triggering sync');
       SyncService.instance.syncAll(
         student: student,
         connectivity: connectivity,

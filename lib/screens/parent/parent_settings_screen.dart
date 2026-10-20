@@ -199,7 +199,7 @@ class ParentSettingsScreen extends StatelessWidget {
   }
 
     Future<void> _confirmLogout(BuildContext context) async {
-    // Capture providers before any await — no context reads after this.
+    // Capture providers before any await, no context reads after this.
     final authProvider = context.read<AuthProvider>();
     final parentProvider = context.read<ParentProvider>();
     final navigator = Navigator.of(context);

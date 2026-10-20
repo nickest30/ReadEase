@@ -64,7 +64,7 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Terms & Data Privacy — required before account creation.
+    // Terms & Data Privacy, required before account creation.
     final agreed = await TermsModal.show(context);
     if (!agreed) return;
     if (!mounted) return;
@@ -202,7 +202,7 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
     required Teacher teacher,
     required AuthProvider authProvider,
   }) async {
-    // Kick off phone verification — the pending verification ID is
+    // Kick off phone verification, the pending verification ID is
     // stored inside AuthService, OTP screen reads from there.
     final completer = Completer<void>();
     bool codeSent = false;
@@ -279,7 +279,7 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
 
   /// Generate, save, and display a one-time backup code.
   /// Called at the end of signup regardless of whether a phone was
-  /// provided — ensures every teacher account has a second-factor
+  /// provided, ensures every teacher account has a second-factor
   /// recovery path even without SMS verification.
   Future<void> _generateAndShowBackupCode({
     required Teacher teacher,
@@ -349,7 +349,7 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
         ),
         content: const Text(
           'We can\'t send SMS codes right now. We\'ll continue with a '
-          'backup code instead — you can use it to log in on a new device. '
+          'backup code instead, you can use it to log in on a new device. '
           'You can add a phone number later in Settings → Account & Security.',
           style: TextStyle(fontFamily: 'Nunito', fontSize: 14),
         ),

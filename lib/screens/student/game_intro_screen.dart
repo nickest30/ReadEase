@@ -7,7 +7,7 @@ import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
 
-/// Game Intro — shown before each game session.
+/// Game Intro, shown before each game session.
 /// Layout: everything centered vertically (Yse, header, body, button).
 class GameIntroScreen extends StatefulWidget {
   const GameIntroScreen({super.key});
@@ -49,7 +49,7 @@ class _GameIntroScreenState extends State<GameIntroScreen> {
     }
 
     if (gameType == null) {
-      // No game configured — jump straight to MCQ fallback.
+      // No game configured, jump straight to MCQ fallback.
       _navigateToGame(gameType, args);
       return;
     }

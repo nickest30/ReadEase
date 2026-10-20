@@ -1,4 +1,4 @@
-/// Word content model — bundled with app, seeded from JSON.
+/// Word content model, bundled with app, seeded from JSON.
 class Word {
   final int? id;
   final String text;
@@ -17,7 +17,7 @@ class Word {
   final bool sensitivityReviewed;
   final String? sensitivityNotes;
 
-  // Legacy fields — kept until M5.2 rebuilds Lesson/Quiz screens.
+  // Legacy fields, kept until M5.2 rebuilds Lesson/Quiz screens.
   // These will be removed once quiz_questions takes over.
   final List<String> quizChoices;
   final String correctAnswer;

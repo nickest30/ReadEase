@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../utils/app_theme.dart';
 
 // ═══════════════════════════════════════════════════════════════
-// Question type breakdown — horizontal bars
+// Question type breakdown, horizontal bars
 // ═══════════════════════════════════════════════════════════════
 
 class QuestionTypeBreakdown extends StatelessWidget {
@@ -163,7 +163,7 @@ class _TypeRow extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Mastery donut — 3-way split
+// Mastery donut, 3-way split
 // ═══════════════════════════════════════════════════════════════
 
 class MasteryDonut extends StatelessWidget {

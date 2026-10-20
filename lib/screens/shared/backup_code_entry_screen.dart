@@ -14,7 +14,7 @@ import '../../widgets/app_form.dart';
 ///
 /// Rate-limited: 5 failed attempts → 15-minute lockout, keyed by
 /// `backup:{uid}` in the login_attempts table. Re-entering the password
-/// does NOT reset this lockout — only a successful verification does.
+/// does NOT reset this lockout, only a successful verification does.
 class BackupCodeEntryScreen extends StatefulWidget {
   final String uid;                 // Firebase UID (for rate-limit keying)
   final String backupCodeHash;      // bcrypt hash from cloud
@@ -184,7 +184,7 @@ class _BackupCodeEntryScreenState extends State<BackupCodeEntryScreen> {
 
     if (!mounted) return;
 
-    // Generate fresh code — the used one is now consumed
+    // Generate fresh code, the used one is now consumed
     final newCode = BackupCode.generate();
     widget.onVerified(newCode);
   }

@@ -249,7 +249,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
       verified: true,
     );
 
-    // Local — capture providers again after the await
+    // Local, capture providers again after the await
     if (!mounted) return;
     if (_isParent) {
       final parent = context.read<ParentProvider>().currentParent;
@@ -419,7 +419,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     await FirestoreService.instance
         .rotateBackupCode(uid, widget.role, newHash);
 
-    // Update local DB — capture provider again after await
+    // Update local DB, capture provider again after await
     if (!mounted) return;
     if (_isParent) {
       final parent = context.read<ParentProvider>().currentParent;

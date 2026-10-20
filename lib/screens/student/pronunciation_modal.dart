@@ -10,31 +10,32 @@ import '../../models/word.dart';
 import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
 
-/// Pronunciation practice modal — opened from My Dictionary on weak words.
+/// Pronunciation practice modal, opened from My Dictionary on weak words.
 ///
 /// Uses the platform speech-to-text engine to check whether the student's
 /// spoken word is recognizable. This is NOT a phoneme-level assessment.
-/// Success means the recognizer identified the target word — not that every
+/// Success means the recognizer identified the target word, not that every
 /// phonetic detail was produced correctly.
 class PronunciationModal extends StatefulWidget {
   final Word word;
   final int studentId;
   final bool isOnline;
+  final bool updateMastery;
 
   const PronunciationModal({
     super.key,
     required this.word,
     required this.studentId,
     required this.isOnline,
+    this.updateMastery = true,
   });
 
-  /// Show the modal as a bottom sheet. Returns true if the word was marked
-  /// as mastered, false/null otherwise.
   static Future<bool?> show(
     BuildContext context, {
     required Word word,
     required int studentId,
     required bool isOnline,
+    bool updateMastery = true,
   }) {
     return showModalBottomSheet<bool>(
       context: context,
@@ -45,6 +46,7 @@ class PronunciationModal extends StatefulWidget {
         word: word,
         studentId: studentId,
         isOnline: isOnline,
+        updateMastery: updateMastery,
       ),
     );
   }
@@ -117,7 +119,7 @@ class _PronunciationModalState extends State<PronunciationModal> {
   }
 
   /// The recognizer throws `error_no_match` when it can't identify any word.
-  /// For us this is a mismatch — the student didn't say the target word.
+  /// For us this is a mismatch, the student didn't say the target word.
   void _onSpeechError(dynamic e) {
     debugPrint('🎙 speech error: ${e.errorMsg}');
     if (!mounted) return;
@@ -207,12 +209,12 @@ class _PronunciationModalState extends State<PronunciationModal> {
     if (_evaluateLock) return;
     _evaluateLock = true;
 
-    // Failsafe — if the platform recognizer wedges, force a mismatch.
+    // Failsafe, if the platform recognizer wedges, force a mismatch.
     _evaluateTimeout?.cancel();
     _evaluateTimeout = Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
       if (_phase == _Phase.evaluating || _phase == _Phase.listening) {
-        debugPrint('🎙 evaluation timeout — forcing mismatch');
+        debugPrint('🎙 evaluation timeout, forcing mismatch');
         _finalizeAsMismatch();
       }
     });
@@ -245,13 +247,15 @@ class _PronunciationModalState extends State<PronunciationModal> {
     if (matched) {
       setState(() => _phase = _Phase.success);
 
-      try {
-        await DatabaseService.instance.markWordMastered(
-          studentId: widget.studentId,
-          wordId: widget.word.id!,
-        );
-      } catch (e) {
-        debugPrint('🎙 mastery update failed (continuing): $e');
+      if (widget.updateMastery) {
+        try {
+          await DatabaseService.instance.markWordMastered(
+            studentId: widget.studentId,
+            wordId: widget.word.id!,
+          );
+        } catch (e) {
+          debugPrint('🎙 mastery update failed (continuing): $e');
+        }
       }
 
       await Future.delayed(const Duration(milliseconds: 1800));
@@ -290,7 +294,7 @@ class _PronunciationModalState extends State<PronunciationModal> {
     final tokens = heard.split(RegExp(r'\s+'));
     if (tokens.contains(target)) return true;
 
-    // Also try concatenation — e.g. "sun flower" → "sunflower".
+    // Also try concatenation, e.g. "sun flower" → "sunflower".
     if (heard.replaceAll(' ', '') == target) return true;
 
     return false;

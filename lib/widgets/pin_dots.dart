@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/app_theme.dart';
 
-/// Distinct color per dot position — teal, green, yellow, coral.
+/// Distinct color per dot position, teal, green, yellow, coral.
 /// Matches ReadEase accent palette.
 const kPinDotColors = [
   AppColors.accentTeal,

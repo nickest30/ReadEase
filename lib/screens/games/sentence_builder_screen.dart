@@ -18,7 +18,7 @@ import '../../utils/app_theme.dart';
 import 'yse_reaction.dart';
 import '../../utils/game_score.dart';
 
-/// Sentence Builder — Grade 3 Hard.
+/// Sentence Builder, Grade 3 Hard.
 ///
 /// 14 rounds. Each round: big image + definition, empty sentence slots,
 /// shuffled word tiles at the bottom.
@@ -322,7 +322,7 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
 
     _submissionsThisRound++;
 
-    // First submission — record if it had any wrong.
+    // First submission, record if it had any wrong.
     if (_submissionsThisRound == 1 && newWrongCount > 0) {
       _firstAttemptFailed = true;
     }
@@ -342,7 +342,7 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
         if (mounted) _advanceRound();
       });
     } else {
-      // Partial feedback — learner fixes red tiles
+      // Partial feedback, learner fixes red tiles
       _currentStreak = 0;
       GameSfx.instance.playWrong();
       _reaction.show(YseReaction.tryAgain, persistent: true);
@@ -698,7 +698,7 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
                 Text(
                   _submissionsThisRound == 0
                       ? 'Tap the words to build the sentence'
-                      : 'Fix the red tiles — you can do this!',
+                      : 'Fix the red tiles, you can do this!',
                   textAlign: TextAlign.center,
                   style: AppText.caption.copyWith(
                     fontSize: 13,

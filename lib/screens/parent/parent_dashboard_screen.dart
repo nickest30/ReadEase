@@ -92,14 +92,14 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
             );
           }).toList();
         } catch (e) {
-          // Cloud fetch failed but local may still have data — log and continue.
+          // Cloud fetch failed but local may still have data, log and continue.
           debugPrint('🔥 Cloud children load failed: $e');
         }
       }
 
       if (!mounted) return;
 
-      // Merge — dedupe by firebaseUid
+      // Merge, dedupe by firebaseUid
       final Map<String, Student> merged = {};
       for (final c in localChildren) {
         final key = c.firebaseUid ?? 'local-${c.id}';
@@ -281,7 +281,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
 
     if (confirmed != true || !mounted) return;
 
-    // Cloud cascade first — if it fails, we still proceed with local delete.
+    // Cloud cascade first, if it fails, we still proceed with local delete.
     if (child.firebaseUid != null && child.firebaseUid!.isNotEmpty) {
       try {
         await FirestoreService.instance
@@ -291,7 +291,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
       }
     }
 
-    // Local SQLite delete — requires a local id.
+    // Local SQLite delete, requires a local id.
     if (child.id != null) {
       await DatabaseService.instance.deleteStudent(child.id!);
     }

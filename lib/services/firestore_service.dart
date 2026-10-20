@@ -233,7 +233,7 @@ class FirestoreService {
 
 
   // ============================================================
-  // LINK CODES — Parent generates, child redeems
+  // LINK CODES, Parent generates, child redeems
   // ============================================================
 
   /// Generate a 6-char link code valid for 24 hours.
@@ -439,7 +439,7 @@ class FirestoreService {
   }
 
   // ============================================================
-  // CLASSES (FLAT — top-level collection)
+  // CLASSES (FLAT, top-level collection)
   // ============================================================
 
   /// Save a new class.
@@ -522,7 +522,7 @@ class FirestoreService {
   }
 
   /// Look up a class by join code.
-  /// Queries the FLAT classes collection — no collection group needed.
+  /// Queries the FLAT classes collection, no collection group needed.
   Future<Map<String, dynamic>?> getClassByJoinCode(String joinCode) async {
     try {
       final upperCode = joinCode.toUpperCase();
@@ -693,7 +693,7 @@ class FirestoreService {
           });
         } catch (_) {}
       } else {
-        debugPrint('🔥 [1/5] Skipped — no old class');
+        debugPrint('🔥 [1/5] Skipped, no old class');
       }
 
       // 2. Add new enrollment
@@ -843,7 +843,7 @@ class FirestoreService {
     }
   }
 
-  /// Class leaderboard — filter by classId.
+  /// Class leaderboard, filter by classId.
   Future<List<Map<String, dynamic>>> getClassLeaderboard({
     required String classId,
     int limit = 100,
@@ -915,7 +915,7 @@ class FirestoreService {
     }
   }
 
-  /// Legacy method — kept for any remaining callers.
+  /// Legacy method, kept for any remaining callers.
   /// @Deprecated: use pushQuizAttempt for the new QuizAttempt flow.
   Future<void> syncStudentProgress(
     String studentUid,

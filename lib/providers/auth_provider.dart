@@ -84,12 +84,12 @@ class AuthProvider extends ChangeNotifier {
     if (isSignedIn && _firebaseUser?.uid != uid) {
       debugPrint(
         '🔑 tryRestoreSessionFor: wrong user signed in '
-        '(${_firebaseUser?.uid}) — signing out',
+        '(${_firebaseUser?.uid}) - signing out',
       );
       await signOut();
     }
 
-    // 2. Already correct user — done
+    // 2. Already correct user, done
     if (isSignedIn && _firebaseUser?.uid == uid) {
       debugPrint('🔑 tryRestoreSessionFor: already signed in as $uid');
       return true;
@@ -149,7 +149,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> signOut() async {
     await AuthService.instance.signOut();
-    // Note: We do NOT clear credentials here — the current user
+    // Note: We do NOT clear credentials here, the current user
     // may still need them. Individual clears happen via clear(uid).
     _sessionState = SessionState.offline;
     notifyListeners();
@@ -169,7 +169,7 @@ class AuthProvider extends ChangeNotifier {
     final expired = await CredentialStorage.instance.isSessionExpired();
     if (!expired) return false;
 
-    debugPrint('🔐 Session expired — forcing sign-out');
+    debugPrint('🔐 Session expired, forcing sign-out');
     await AuthService.instance.signOut();
     await CredentialStorage.instance.clearSessionMarker();
     _sessionState = SessionState.offline;
@@ -218,7 +218,7 @@ class AuthProvider extends ChangeNotifier {
       // Update cloud marker for current user
       final uid = AuthService.instance.currentUid;
       if (uid != null) {
-        // Try both parent and teacher — one will succeed
+        // Try both parent and teacher, one will succeed
         try {
           await FirestoreService.instance.markPhoneVerified(uid, 'parent');
         } catch (_) {}
