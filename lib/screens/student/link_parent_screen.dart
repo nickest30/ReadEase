@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/connectivity_provider.dart';
@@ -236,10 +237,10 @@ class _LinkParentScreenState extends State<LinkParentScreen> {
 
               const SizedBox(height: AppSpacing.xl),
 
-              // Yse
+              // Mascot: Motter
               Center(
                 child: Image.asset(
-                  'assets/images/mascot/yse_thinking.png',
+                  'assets/images/mascot/motter_waving.png',
                   width: 140,
                   height: 140,
                   fit: BoxFit.contain,
@@ -247,17 +248,17 @@ class _LinkParentScreenState extends State<LinkParentScreen> {
                     width: 140,
                     height: 140,
                     decoration: BoxDecoration(
-                      color: AppColors.accentTeal.withValues(alpha: 0.15),
+                      color: AppColors.accentPurple.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: AppColors.accentTeal,
+                        color: AppColors.accentPurple,
                         width: 2,
                       ),
                     ),
                     child: const Icon(
-                      Icons.link_rounded,
+                      Icons.family_restroom_rounded,
                       size: 60,
-                      color: AppColors.accentTeal,
+                      color: AppColors.accentPurple,
                     ),
                   ),
                 ),
@@ -279,6 +280,13 @@ class _LinkParentScreenState extends State<LinkParentScreen> {
                 controller: _codeController,
                 textCapitalization: TextCapitalization.characters,
                 maxLength: 6,
+                // BUG-006 Fix: Force uppercase on paste/typing
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+                  TextInputFormatter.withFunction((oldValue, newValue) {
+                    return newValue.copyWith(text: newValue.text.toUpperCase());
+                  }),
+                ],
                 style: const TextStyle(
                   fontFamily: 'Nunito',
                   fontSize: 22,

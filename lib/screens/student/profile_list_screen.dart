@@ -43,9 +43,18 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
             children: [
               const SizedBox(height: AppSpacing.md),
 
-              // Back button
+              // Back button with safe fallback
               IconButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      '/role-selection',
+                      (route) => false,
+                    );
+                  }
+                },
                 icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
                 alignment: Alignment.centerLeft,
                 padding: EdgeInsets.zero,

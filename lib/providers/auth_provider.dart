@@ -72,7 +72,7 @@ class AuthProvider extends ChangeNotifier {
       );
       return true;
     } catch (e) {
-      debugPrint('🔑 Password reset failed: $e');
+      debugPrint('Password reset failed: $e');
       return false;
     }
   }
@@ -82,43 +82,39 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> tryRestoreSessionFor({required String uid}) async {
     // 1. Sign out if a DIFFERENT user is currently signed in
     if (isSignedIn && _firebaseUser?.uid != uid) {
-      debugPrint(
-        '🔑 tryRestoreSessionFor: wrong user signed in '
-        '(${_firebaseUser?.uid}) - signing out',
-      );
+      debugPrint('tryRestoreSessionFor: wrong user signed in '
+          '(${_firebaseUser?.uid}) - signing out');
       await signOut();
     }
 
     // 2. Already correct user, done
     if (isSignedIn && _firebaseUser?.uid == uid) {
-      debugPrint('🔑 tryRestoreSessionFor: already signed in as $uid');
+      debugPrint('tryRestoreSessionFor: already signed in as $uid');
       return true;
     }
 
     // 3. Look for saved credentials
     final creds = await CredentialStorage.instance.read(uid);
     if (creds == null) {
-      debugPrint(
-        '🔑 tryRestoreSessionFor: NO credentials for $uid '
-        '(caller should prompt for password)',
-      );
+      debugPrint('tryRestoreSessionFor: NO credentials for $uid '
+          '(caller should prompt for password)');
       return false;
     }
 
-    debugPrint('🔑 tryRestoreSessionFor: restoring $uid (${creds['email']})');
+    debugPrint('tryRestoreSessionFor: restoring $uid (${creds['email']})');
 
     try {
       final ok = await AuthService.instance.signIn(
         creds['email']!,
         creds['password']!,
       );
-      debugPrint('🔑 tryRestoreSessionFor: signIn result = $ok');
+      debugPrint('tryRestoreSessionFor: signIn result = $ok');
       if (ok) {
         await CredentialStorage.instance.touchSession();
       }
       return ok;
     } catch (e) {
-      debugPrint('🔑 tryRestoreSessionFor: ERROR = $e');
+      debugPrint('tryRestoreSessionFor: ERROR = $e');
       return false;
     }
   }
@@ -149,7 +145,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> signOut() async {
     await AuthService.instance.signOut();
-    // Note: We do NOT clear credentials here, the current user
+    // We do NOT clear credentials here, the current user
     // may still need them. Individual clears happen via clear(uid).
     _sessionState = SessionState.offline;
     notifyListeners();
@@ -169,7 +165,7 @@ class AuthProvider extends ChangeNotifier {
     final expired = await CredentialStorage.instance.isSessionExpired();
     if (!expired) return false;
 
-    debugPrint('🔐 Session expired, forcing sign-out');
+    debugPrint('Session expired, forcing sign-out');
     await AuthService.instance.signOut();
     await CredentialStorage.instance.clearSessionMarker();
     _sessionState = SessionState.offline;
@@ -230,7 +226,6 @@ class AuthProvider extends ChangeNotifier {
     return ok;
   }
 
-
   /// Whether the current device is trusted for this uid.
   /// If true, skip the OTP step at login.
   Future<bool> isCurrentDeviceTrusted(String uid) async {
@@ -241,9 +236,6 @@ class AuthProvider extends ChangeNotifier {
   Future<void> trustCurrentDevice(String uid) async {
     await CredentialStorage.instance.trustDevice(uid);
   }
-
-
-
 
   /// Get the phone number linked to the current user (if any).
   String? get currentPhoneNumber => AuthService.instance.currentPhoneNumber;

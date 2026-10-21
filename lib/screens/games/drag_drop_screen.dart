@@ -53,10 +53,11 @@ class _DragDropScreenState extends State<DragDropScreen> {
   int _currentIndex = 0;
   int _correctCount = 0;
   int _wrongAttemptsThisRound = 0;
-  bool _roundResolved = false;         // true once correct answer placed or cap hit
-  int? _forcedCorrectWordId;           // set when we auto-show the answer
+  bool _roundResolved = false; // true once correct answer placed or cap hit
+  int? _forcedCorrectWordId; // set when we auto-show the answer
   DateTime? _roundStart;
   int? _lastResponseTimeMs;
+  bool _showWrongFeedback = false; // BUG-008 Fix: Red flash on wrong drop
 
   // ── [GAME-LAYER] Yse reactions + streak ──
   final YseReactionController _reaction = YseReactionController();
@@ -189,7 +190,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
       if (!mounted) return;
       _reaction.show(YseReaction.letsGo, persistent: true);
     } catch (e) {
-      debugPrint('🎯 DragDrop load ERROR: $e');
+      debugPrint('DragDrop load ERROR: $e');
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -244,6 +245,12 @@ class _DragDropScreenState extends State<DragDropScreen> {
       GameSfx.instance.playWrong();
       _reaction.show(YseReaction.tryAgain, persistent: true);
 
+      // BUG-008 Fix: Flash red border on wrong drop
+      setState(() => _showWrongFeedback = true);
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) setState(() => _showWrongFeedback = false);
+      });
+
       if (_wrongAttemptsThisRound >= _maxWrongAttempts) {
         // Give up on this round, show the answer, advance, 0 points
         setState(() => _roundResolved = true);
@@ -284,7 +291,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource(clean));
     } catch (e) {
-      debugPrint('🔊 Word audio failed (continuing): $e');
+      debugPrint('Word audio failed (continuing): $e');
     }
   }
 
@@ -407,7 +414,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
               badgeCount: badges.length,
             );
           } catch (e) {
-            debugPrint('🔥 Enrollment snapshot failed: $e');
+            debugPrint('Enrollment snapshot failed: $e');
           }
         }
       }
@@ -426,7 +433,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
         },
       );
     } catch (e) {
-      debugPrint('🎯 DragDrop finish ERROR: $e');
+      debugPrint('DragDrop finish ERROR: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -519,15 +526,8 @@ class _DragDropScreenState extends State<DragDropScreen> {
 
         const SizedBox(height: AppSpacing.sm),
 
-        // Yse bottom bar
-        Container(
-          height: 130,
-          alignment: Alignment.center,
-          child: YseReactionOverlay(
-            controller: _reaction,
-            size: 120,
-          ),
-        ),
+        // BUG-008 Fix: Mascot + Points/Rounds moved here
+        _buildBottomArea(),
       ],
     );
   }
@@ -547,42 +547,9 @@ class _DragDropScreenState extends State<DragDropScreen> {
             padding: EdgeInsets.zero,
           ),
           const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Drag the Word', style: AppText.h2),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    const Icon(Icons.star_rounded,
-                        size: 14, color: AppColors.accentYellow),
-                    const SizedBox(width: 3),
-                    Text(
-                      '${_correctCount * 5} pts',
-                      style: const TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textYellow,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    const Icon(Icons.flag_rounded,
-                        size: 14, color: AppColors.accentTeal),
-                    const SizedBox(width: 3),
-                    Text(
-                      'Round ${_currentIndex + 1} / ${_rounds.length}',
-                      style: AppText.caption.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          const Expanded(
+            child: Text('Drag the Word', style: AppText.h2),
           ),
-          const SizedBox(width: 8),
         ],
       ),
     );
@@ -605,10 +572,39 @@ class _DragDropScreenState extends State<DragDropScreen> {
           final isHovering = candidate.isNotEmpty;
 
           Color borderColor;
-          if (showCorrectHighlight || showSuccessGlow) {
+          double borderWidth = 3;
+          List<BoxShadow> shadows = AppShadows.soft;
+
+          if (_showWrongFeedback) {
+            borderColor = AppColors.accentCoral;
+            borderWidth = 4;
+            shadows = [
+              BoxShadow(
+                color: AppColors.accentCoral.withValues(alpha: 0.4),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+            ];
+          } else if (showCorrectHighlight || showSuccessGlow) {
             borderColor = AppColors.accentGreen;
+            borderWidth = 4;
+            shadows = [
+              BoxShadow(
+                color: AppColors.accentGreen.withValues(alpha: 0.4),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+            ];
           } else if (isHovering) {
             borderColor = AppColors.accentTeal;
+            borderWidth = 4;
+            shadows = [
+              BoxShadow(
+                color: AppColors.accentTeal.withValues(alpha: 0.35),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+            ];
           } else {
             borderColor = AppColors.border;
           }
@@ -618,18 +614,11 @@ class _DragDropScreenState extends State<DragDropScreen> {
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(AppRadius.xl),
-              border: Border.all(color: borderColor, width: isHovering ? 4 : 3),
-              boxShadow: isHovering || showCorrectHighlight
-                  ? [
-                      BoxShadow(
-                        color: AppColors.accentTeal.withValues(alpha: 0.35),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                      ),
-                    ]
-                  : AppShadows.soft,
+              border: Border.all(color: borderColor, width: borderWidth),
+              boxShadow: shadows,
             ),
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            // BUG-008 Fix: Reduced padding to make card shorter
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Center(
               child: Image.asset(
                 round.imagePath,
@@ -666,6 +655,53 @@ class _DragDropScreenState extends State<DragDropScreen> {
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildBottomArea() {
+    return Container(
+      height: 160,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          YseReactionOverlay(
+            controller: _reaction,
+            size: 100,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.star_rounded,
+                  size: 20, color: AppColors.accentYellow),
+              const SizedBox(width: 6),
+              Text(
+                '${_correctCount * 5} pts',
+                style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textYellow,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.lg),
+              const Icon(Icons.flag_rounded,
+                  size: 20, color: AppColors.accentTeal),
+              const SizedBox(width: 6),
+              Text(
+                'Round ${_currentIndex + 1} / ${_rounds.length}',
+                style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textTeal,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

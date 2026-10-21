@@ -32,8 +32,12 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
   Timer? _lockTimer;
   Duration _lockRemaining = Duration.zero;
 
-  Student get _student =>
-      ModalRoute.of(context)!.settings.arguments as Student;
+  // Safer getter for Hot Reload safety
+  Student? get _student {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Student) return args;
+    return null;
+  }
 
   @override
   void initState() {
@@ -48,8 +52,9 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
   }
 
   Future<void> _checkInitialLock() async {
-    final id = _student.id;
+    final id = _student?.id; // FIX: Null safety
     if (id == null) return;
+    
     final remaining = await DatabaseService.instance.pinLockRemaining(id);
     if (!mounted) return;
     if (remaining != null && remaining.inSeconds > 0) {
@@ -65,8 +70,9 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
   void _startLockCountdown() {
     _lockTimer?.cancel();
     _lockTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
-      final id = _student.id;
+      final id = _student?.id; // FIX: Null safety
       if (id == null || !mounted) return;
+      
       final remaining = await DatabaseService.instance.pinLockRemaining(id);
       if (!mounted) return;
       if (remaining == null || remaining.inSeconds <= 0) {
@@ -109,7 +115,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
     });
   }
 
-    Future<void> _verifyPin(Student student) async {
+  Future<void> _verifyPin(Student student) async {
     setState(() => _isVerifying = true);
 
     final id = student.id;
@@ -193,13 +199,9 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
           }
         }
       } catch (e) {
-        debugPrint('🔑 Session restore failed: $e');
+        debugPrint('Session restore failed: $e');
       }
     }
-
-    debugPrint('🔑 auth.isSignedIn=${authProvider.isSignedIn}');
-    debugPrint('🔑 auth.uid=${authProvider.uid}');
-    debugPrint('🔑 student.firebaseUid=${student.firebaseUid}');
 
     if (!mounted) return;
     Navigator.of(context).pushNamedAndRemoveUntil(
@@ -302,11 +304,11 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
 
     if (result != true || !mounted) return false;
 
-    final student2 = context.read<StudentProvider>().currentStudent;
+    final currentStudent = context.read<StudentProvider>().currentStudent;
     final authProvider = context.read<AuthProvider>();
-    if (student2?.firebaseUid == null) return false;
+    if (currentStudent?.firebaseUid == null) return false;
 
-    final syntheticEmail = '${student2!.username}@readease.app';
+    final syntheticEmail = '${currentStudent!.username}@readease.app';
 
     try {
       final ok = await authProvider.signIn(
@@ -314,11 +316,11 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
         passwordController.text,
       );
       if (ok) {
-        debugPrint('🔑 Password verified + credentials saved');
+        debugPrint('Password verified + credentials saved');
         return true;
       }
     } catch (e) {
-      debugPrint('🔑 Password verify failed: $e');
+      debugPrint('Password verify failed: $e');
     }
 
     if (mounted) {
@@ -337,167 +339,222 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final student = ModalRoute.of(context)!.settings.arguments as Student;
+    final student = _student;
+    
+    // Hot reload safety net
+    if (student == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/student-profile-list',
+            (route) => false,
+          );
+        }
+      });
+      return const Scaffold(
+        backgroundColor: AppColors.studentBg,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: const BoxDecoration(
-                  color: AppColors.accentTeal,
-                  shape: BoxShape.circle,
+        child: Stack(
+          children: [
+            // BUG-001 Fix: Back button placed in top-left
+            Positioned(
+              top: AppSpacing.sm,
+              left: AppSpacing.sm,
+              child: IconButton(
+                onPressed: () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    // Fallback if PIN entry is the root (e.g., from splash auto-login)
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      '/student-profile-list',
+                      (route) => false,
+                    );
+                  }
+                },
+                icon: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: AppColors.textPrimary,
+                  size: 28,
                 ),
-                child: Center(
-                  child: Text(
-                    student.displayName.isNotEmpty
-                        ? student.displayName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+                tooltip: 'Back to Profiles',
               ),
-              const SizedBox(height: AppSpacing.md),
-              Text(student.displayName, style: AppText.h2),
-
-                            if (_isLocked) ...[
-                const SizedBox(height: AppSpacing.xl),
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.large),
-                    border: Border.all(color: AppColors.accentCoral, width: 2),
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.lock_rounded,
-                          size: 44, color: AppColors.accentCoral),
-                      const SizedBox(height: AppSpacing.sm),
-                      const Text(
-                        'PROFILE LOCKED',
-                        style: TextStyle(
+            ),
+            
+            // Main Content
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: const BoxDecoration(
+                      color: AppColors.accentTeal,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        student.displayName.isNotEmpty
+                            ? student.displayName[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(
                           fontFamily: 'Nunito',
+                          fontSize: 28,
                           fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                          color: AppColors.textCoral,
+                          color: Colors.white,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'Too many incorrect attempts.\n'
-                        'Try again in ${_formatRemaining(_lockRemaining)}.',
-                        textAlign: TextAlign.center,
-                        style: AppText.caption,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                SizedBox(
-                  height: 52,
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context)
-                        .pushReplacementNamed('/student-signin'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentTeal,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.large),
-                      ),
-                    ),
-                    child: const Text(
-                      'Log In with Password',
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w700,
-                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                SizedBox(
-                  height: 50,
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textMuted,
-                      side: const BorderSide(color: AppColors.border),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.large),
-                      ),
-                    ),
-                    child: const Text(
-                      'Back to Profiles',
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              ] else ...[
-                const SizedBox(height: AppSpacing.xs),
-                AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 200),
-                  style: AppText.caption.copyWith(
-                    color: _attemptsRemaining <= 1
-                        ? AppColors.textCoral
-                        : AppColors.textMuted,
-                  ),
-                  child: Text('$_attemptsRemaining attempts remaining'),
-                ),
-                const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(student.displayName, style: AppText.h2),
 
-                PinDots(
-                  filledCount: _enteredPin.length,
-                  state: _dotState,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-
-                SizedBox(
-                  height: 22,
-                  child: _dotState == PinDotState.error
-                      ? Text(
-                          'Oops! Try again',
-                          style: AppText.caption.copyWith(
-                            color: AppColors.textCoral,
+                  if (_isLocked) ...[
+                    const SizedBox(height: AppSpacing.xl),
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.large),
+                        border: Border.all(color: AppColors.accentCoral, width: 2),
+                      ),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.lock_rounded,
+                              size: 44, color: AppColors.accentCoral),
+                          const SizedBox(height: AppSpacing.sm),
+                          const Text(
+                            'PROFILE LOCKED',
+                            style: TextStyle(
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                              color: AppColors.textCoral,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'Too many incorrect attempts.\n'
+                            'Try again in ${_formatRemaining(_lockRemaining)}.',
+                            textAlign: TextAlign.center,
+                            style: AppText.caption,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    SizedBox(
+                      height: 52,
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(context)
+                            .pushReplacementNamed('/student-signin'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accentTeal,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.large),
+                          ),
+                        ),
+                        child: const Text(
+                          'Log In with Password',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
                             fontWeight: FontWeight.w700,
                           ),
-                        )
-                      : _dotState == PinDotState.success
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    SizedBox(
+                      height: 50,
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          if (Navigator.of(context).canPop()) {
+                            Navigator.of(context).pop();
+                          } else {
+                            Navigator.of(context).pushNamedAndRemoveUntil(
+                              '/student-profile-list',
+                              (route) => false,
+                            );
+                          }
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textMuted,
+                          side: const BorderSide(color: AppColors.border),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.large),
+                          ),
+                        ),
+                        child: const Text(
+                          'Back to Profiles',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 200),
+                      style: AppText.caption.copyWith(
+                        color: _attemptsRemaining <= 1
+                            ? AppColors.textCoral
+                            : AppColors.textMuted,
+                      ),
+                      child: Text('$_attemptsRemaining attempts remaining'),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    PinDots(
+                      filledCount: _enteredPin.length,
+                      state: _dotState,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+
+                    SizedBox(
+                      height: 22,
+                      child: _dotState == PinDotState.error
                           ? Text(
-                              'Welcome back!',
+                              'Oops! Try again',
                               style: AppText.caption.copyWith(
-                                color: kPinSuccessColor,
+                                color: AppColors.textCoral,
                                 fontWeight: FontWeight.w700,
                               ),
                             )
-                          : const SizedBox.shrink(),
-                ),
-                const SizedBox(height: AppSpacing.lg),
+                          : _dotState == PinDotState.success
+                              ? Text(
+                                  'Welcome back!',
+                                  style: AppText.caption.copyWith(
+                                    color: kPinSuccessColor,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
 
-                NumberPad(
-                  enabled: !_isVerifying,
-                  onDigit: (d) => _onDigitPressed(d, student),
-                  onBackspace: _onBackspace,
-                ),
-              ],
-            ],
-          ),
+                    NumberPad(
+                      enabled: !_isVerifying,
+                      onDigit: (d) => _onDigitPressed(d, student),
+                      onBackspace: _onBackspace,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

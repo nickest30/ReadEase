@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
@@ -87,7 +88,7 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
     // Without this, the Firestore enrollment write below fails silently
     // with PERMISSION_DENIED (common right after a PIN-only login).
     if (authProvider.uid != student.firebaseUid) {
-      debugPrint('🔑 JoinClass: restoring session for ${student.firebaseUid}');
+      debugPrint('JoinClass: restoring session for ${student.firebaseUid}');
       final restored = await authProvider.tryRestoreSessionFor(
         uid: student.firebaseUid!,
       );
@@ -174,7 +175,7 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
     final classFirestoreId = _foundClass!['firestoreId'] as String;
     final className = _foundClass!['className'] as String;
 
-    debugPrint('🔑 JoinClass: studentUid=${student.firebaseUid} '
+    debugPrint('JoinClass: studentUid=${student.firebaseUid} '
         'authUid=${authProvider.uid}');
 
     // 1. Enroll in Firestore
@@ -303,7 +304,7 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
 
               const SizedBox(height: AppSpacing.sm),
 
-              // Header with Yse
+              // Header with Groo
               Row(
                 children: [
                   const Expanded(
@@ -319,8 +320,9 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
                       ],
                     ),
                   ),
+                  // BUG-004 Fix: Changed to groo_welcoming.png
                   Image.asset(
-                    'assets/images/mascot/yse_peek.png',
+                    'assets/images/mascot/groo_welcoming.png',
                     width: 80,
                     height: 80,
                     fit: BoxFit.contain,
@@ -441,6 +443,13 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
                 controller: _codeController,
                 textCapitalization: TextCapitalization.characters,
                 maxLength: 6,
+                // BUG-005 Fix: Force uppercase on paste/typing
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+                  TextInputFormatter.withFunction((oldValue, newValue) {
+                    return newValue.copyWith(text: newValue.text.toUpperCase());
+                  }),
+                ],
                 style: const TextStyle(
                   fontFamily: 'Nunito',
                   fontSize: 22,

@@ -18,6 +18,8 @@ import 'providers/connectivity_provider.dart';
 import 'services/content_importer.dart';
 import 'services/database_service.dart';
 import 'services/sync_service.dart';
+import 'services/credential_storage.dart';
+import 'services/sfx_service.dart'; // Added for Phase 3
 
 // Screens
 import 'screens/shared/splash_screen.dart';
@@ -42,6 +44,9 @@ import 'screens/student/link_parent_screen.dart';
 import 'screens/student/lesson_play_screen.dart';
 import 'screens/student/quiz_play_screen.dart';
 import 'screens/student/my_dictionary_screen.dart';
+import 'screens/student/lesson_intro_screen.dart';
+import 'screens/student/game_intro_screen.dart';
+import 'screens/student/avatar_picker_screen.dart';
 
 import 'screens/parent/parent_welcome_screen.dart';
 import 'screens/parent/parent_signup_screen.dart';
@@ -50,6 +55,7 @@ import 'screens/parent/parent_dashboard_screen.dart';
 import 'screens/parent/add_child_screen.dart';
 import 'screens/parent/child_progress_screen.dart';
 import 'screens/parent/generate_link_code_screen.dart';
+import 'screens/parent/parent_settings_screen.dart';
 
 import 'screens/teacher/teacher_welcome_screen.dart';
 import 'screens/teacher/teacher_signup_screen.dart';
@@ -60,24 +66,17 @@ import 'screens/teacher/class_overview_screen.dart';
 import 'screens/teacher/teacher_student_progress_screen.dart';
 import 'screens/teacher/class_analytics_screen.dart';
 import 'screens/teacher/class_leaderboard_screen.dart';
+import 'screens/teacher/teacher_settings_screen.dart';
+
 import 'screens/games/memory_match_screen.dart';
 import 'screens/games/bubble_pop_screen.dart';
 import 'screens/games/drag_drop_screen.dart';
-import 'screens/student/lesson_intro_screen.dart';
-import 'screens/student/game_intro_screen.dart';
 import 'screens/games/word_scramble_screen.dart';
 import 'screens/games/sentence_builder_screen.dart';
 import 'screens/games/floor_is_lava_screen.dart';
 import 'screens/games/passage_screen.dart';
 import 'screens/games/word_hunt_screen.dart';
 import 'screens/games/category_sort_screen.dart';
-import 'services/credential_storage.dart';
-import 'screens/parent/parent_settings_screen.dart';
-import 'screens/teacher/teacher_settings_screen.dart';
-import 'screens/student/avatar_picker_screen.dart';
-
-
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -89,17 +88,32 @@ void main() async {
   // Import bundled JSON content into SQLite
   await ContentImporter.instance.importAllGrades();
 
-  // Housekeeping, prune stale login/PIN attempts (>24h old)
+  // Housekeeping: prune stale login/PIN attempts (>24h old)
   try {
     await DatabaseService.instance.pruneOldAttempts();
   } catch (e) {
-    debugPrint('⚠️ pruneOldAttempts failed (non-blocking): $e');
+    debugPrint('pruneOldAttempts failed (non-blocking): $e');
   }
 
   final settingsProvider = SettingsProvider();
   await settingsProvider.load();
+  
+  // Initialize SFX with the loaded settings
+  SfxService.init(settingsProvider);
 
-  runApp(ReadEaseApp(settingsProvider: settingsProvider));
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => StudentProvider()),
+        ChangeNotifierProvider(create: (_) => ParentProvider()),
+        ChangeNotifierProvider(create: (_) => TeacherProvider()),
+        ChangeNotifierProvider.value(value: settingsProvider),
+        ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
+      ],
+      child: ReadEaseApp(settingsProvider: settingsProvider),
+    ),
+  );
 }
 
 class ReadEaseApp extends StatefulWidget {
@@ -111,14 +125,23 @@ class ReadEaseApp extends StatefulWidget {
   State<ReadEaseApp> createState() => _ReadEaseAppState();
 }
 
-class _ReadEaseAppState extends State<ReadEaseApp>
-    with WidgetsBindingObserver {
+class _ReadEaseAppState extends State<ReadEaseApp> with WidgetsBindingObserver {
   bool _syncWired = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Now safe to read providers because ReadEaseApp is a child of MultiProvider
+    if (!_syncWired) {
+      _wireConnectivitySync(context);
+      _syncWired = true;
+    }
   }
 
   @override
@@ -142,116 +165,97 @@ class _ReadEaseAppState extends State<ReadEaseApp>
         await CredentialStorage.instance.touchSession();
       }
     } catch (e) {
-      debugPrint('🔐 Resume session check failed: $e');
+      debugPrint('Resume session check failed: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => StudentProvider()),
-        ChangeNotifierProvider(create: (_) => ParentProvider()),
-        ChangeNotifierProvider(create: (_) => TeacherProvider()),
-        ChangeNotifierProvider.value(value: widget.settingsProvider),
-        ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
-      ],
-      child: Consumer<SettingsProvider>(
-        builder: (context, settings, _) {
-          if (!_syncWired) {
-            _wireConnectivitySync(context);
-            _syncWired = true;
-          }
-
-          return MaterialApp(
-            title: 'ReadEase',
-            debugShowCheckedModeBanner: false,
-            theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: AppColors.accentTeal,
-              ),
-              useMaterial3: true,
-              fontFamily: 'Nunito',
-              scaffoldBackgroundColor: AppColors.introBg,
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, _) {
+        return MaterialApp(
+          title: 'ReadEase',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: AppColors.accentTeal,
             ),
-            builder: (context, child) {
-              return MediaQuery(
-                data: MediaQuery.of(context).copyWith(
-                  textScaler: TextScaler.linear(settings.textScale),
-                ),
-                child: ColorBlindFilter(
-                  mode: settings.colorBlindMode,
-                  child: child!,
-                ),
-              );
-            },
-            initialRoute: '/',
-            routes: {
-              '/': (context) => const SplashScreen(),
-              '/role-selection': (context) => const RoleSelectionScreen(),
-              '/student-profile-list': (context) => const ProfileListScreen(),
-              '/solo-signup': (context) => const SoloSignupScreen(),
-              '/set-pin': (context) => const SetPinScreen(),
-              '/pin-entry': (context) => const PinEntryScreen(),
-              '/student-home': (context) => const StudentHomeScreen(),
-              '/grade-selection': (context) => const GradeSelectionScreen(),
-              '/difficulty-selection': (context) =>
-                  const DifficultySelectionScreen(),
-              '/results': (context) => const ResultsScreen(),
-              '/progress': (context) => const ProgressDashboardScreen(),
-              '/badges': (context) => const BadgeCollectionScreen(),
-              '/leaderboard': (context) => const LeaderboardScreen(),
-              '/settings': (context) => const StudentSettingsScreen(),
-              '/parent-welcome': (context) => const ParentWelcomeScreen(),
-              '/parent-signup': (context) => const ParentSignupScreen(),
-              '/parent-login': (context) => const ParentLoginScreen(),
-              '/parent-dashboard': (context) => const ParentDashboardScreen(),
-              '/add-child': (context) => const AddChildScreen(),
-              '/child-progress': (context) => const ChildProgressScreen(),
-              '/teacher-welcome': (context) => const TeacherWelcomeScreen(),
-              '/teacher-signup': (context) => const TeacherSignupScreen(),
-              '/teacher-login': (context) => const TeacherLoginScreen(),
-              '/teacher-dashboard': (context) => const TeacherDashboardScreen(),
-              '/create-class': (context) => const CreateClassScreen(),
-              '/class-overview': (context) => const ClassOverviewScreen(),
-              '/teacher-student-progress': (context) =>
-                  const TeacherStudentProgressScreen(),
-              '/class-analytics': (context) => const ClassAnalyticsScreen(),
-              '/class-leaderboard': (context) => const ClassLeaderboardScreen(),
-              '/student-signin': (context) => const StudentSignInScreen(),
-              '/edit-profile': (context) => const EditProfileScreen(),
-              '/change-pin': (context) => const ChangePinScreen(),
-              '/join-class': (context) => const JoinClassScreen(),
-              '/generate-link-code': (context) =>
-                  const GenerateLinkCodeScreen(),
-              '/link-parent': (context) => const LinkParentScreen(),
-              '/lesson-play': (context) => const LessonPlayScreen(),
-              '/quiz-play': (context) => const QuizPlayScreen(),
-              '/my-dictionary': (context) => const MyDictionaryScreen(),
-              '/memory-match': (context) => const MemoryMatchScreen(),
-              '/bubble-pop': (context) => const BubblePopScreen(),
-              '/drag-drop': (context) => const DragDropScreen(),
-              '/lesson-intro': (context) => const LessonIntroScreen(),
-              '/game-intro': (context) => const GameIntroScreen(),
-              '/word-scramble': (context) => const WordScrambleScreen(),
-              '/sentence-builder': (context) => const SentenceBuilderScreen(),
-              '/floor-is-lava': (context) => const FloorIsLavaScreen(),
-              '/passage': (context) => const PassageScreen(),
-              '/word-hunt': (context) => const WordHuntScreen(),
-              '/category-sort': (context) => const CategorySortScreen(),
-              '/parent-settings': (context) => const ParentSettingsScreen(),
-              '/teacher-settings': (context) => const TeacherSettingsScreen(),
-              '/avatar-picker': (context) => const AvatarPickerScreen(),
-            },
-          );
-        },
-      ),
+            useMaterial3: true,
+            fontFamily: 'Nunito',
+            scaffoldBackgroundColor: AppColors.introBg,
+          ),
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(settings.textScale),
+              ),
+              child: ColorBlindFilter(
+                mode: settings.colorBlindMode,
+                child: child!,
+              ),
+            );
+          },
+          initialRoute: '/',
+          routes: {
+            '/': (context) => const SplashScreen(),
+            '/role-selection': (context) => const RoleSelectionScreen(),
+            '/student-profile-list': (context) => const ProfileListScreen(),
+            '/solo-signup': (context) => const SoloSignupScreen(),
+            '/set-pin': (context) => const SetPinScreen(),
+            '/pin-entry': (context) => const PinEntryScreen(),
+            '/student-home': (context) => const StudentHomeScreen(),
+            '/grade-selection': (context) => const GradeSelectionScreen(),
+            '/difficulty-selection': (context) => const DifficultySelectionScreen(),
+            '/results': (context) => const ResultsScreen(),
+            '/progress': (context) => const ProgressDashboardScreen(),
+            '/badges': (context) => const BadgeCollectionScreen(),
+            '/leaderboard': (context) => const LeaderboardScreen(),
+            '/settings': (context) => const StudentSettingsScreen(),
+            '/parent-welcome': (context) => const ParentWelcomeScreen(),
+            '/parent-signup': (context) => const ParentSignupScreen(),
+            '/parent-login': (context) => const ParentLoginScreen(),
+            '/parent-dashboard': (context) => const ParentDashboardScreen(),
+            '/add-child': (context) => const AddChildScreen(),
+            '/child-progress': (context) => const ChildProgressScreen(),
+            '/teacher-welcome': (context) => const TeacherWelcomeScreen(),
+            '/teacher-signup': (context) => const TeacherSignupScreen(),
+            '/teacher-login': (context) => const TeacherLoginScreen(),
+            '/teacher-dashboard': (context) => const TeacherDashboardScreen(),
+            '/create-class': (context) => const CreateClassScreen(),
+            '/class-overview': (context) => const ClassOverviewScreen(),
+            '/teacher-student-progress': (context) => const TeacherStudentProgressScreen(),
+            '/class-analytics': (context) => const ClassAnalyticsScreen(),
+            '/class-leaderboard': (context) => const ClassLeaderboardScreen(),
+            '/student-signin': (context) => const StudentSignInScreen(),
+            '/edit-profile': (context) => const EditProfileScreen(),
+            '/change-pin': (context) => const ChangePinScreen(),
+            '/join-class': (context) => const JoinClassScreen(),
+            '/generate-link-code': (context) => const GenerateLinkCodeScreen(),
+            '/link-parent': (context) => const LinkParentScreen(),
+            '/lesson-play': (context) => const LessonPlayScreen(),
+            '/quiz-play': (context) => const QuizPlayScreen(),
+            '/my-dictionary': (context) => const MyDictionaryScreen(),
+            '/memory-match': (context) => const MemoryMatchScreen(),
+            '/bubble-pop': (context) => const BubblePopScreen(),
+            '/drag-drop': (context) => const DragDropScreen(),
+            '/lesson-intro': (context) => const LessonIntroScreen(),
+            '/game-intro': (context) => const GameIntroScreen(),
+            '/word-scramble': (context) => const WordScrambleScreen(),
+            '/sentence-builder': (context) => const SentenceBuilderScreen(),
+            '/floor-is-lava': (context) => const FloorIsLavaScreen(),
+            '/passage': (context) => const PassageScreen(),
+            '/word-hunt': (context) => const WordHuntScreen(),
+            '/category-sort': (context) => const CategorySortScreen(),
+            '/parent-settings': (context) => const ParentSettingsScreen(),
+            '/teacher-settings': (context) => const TeacherSettingsScreen(),
+            '/avatar-picker': (context) => const AvatarPickerScreen(),
+          },
+        );
+      },
     );
   }
 
-  /// Wire ConnectivityProvider.onWentOnline → SyncService.syncAll.
-  /// Called once on first build after providers are mounted.
+  /// Wire ConnectivityProvider.onWentOnline to SyncService.syncAll.
   void _wireConnectivitySync(BuildContext context) {
     final connectivity = context.read<ConnectivityProvider>();
     final studentProvider = context.read<StudentProvider>();
@@ -260,7 +264,7 @@ class _ReadEaseAppState extends State<ReadEaseApp>
     connectivity.onWentOnline = () {
       final student = studentProvider.currentStudent;
       if (student == null) return;
-      debugPrint('🔄 Connectivity restored, triggering sync');
+      debugPrint('Connectivity restored, triggering sync');
       SyncService.instance.syncAll(
         student: student,
         connectivity: connectivity,

@@ -45,7 +45,7 @@ class ConnectivityProvider extends ChangeNotifier {
     List<ConnectivityResult> results, {
     bool immediate = false,
   }) {
-    // Debounce rapid flips (weak signal, 2G↔4G transition, etc.)
+    // Debounce rapid flips (weak signal, 2G to 4G transition, etc.)
     if (immediate) {
       _applyResults(results);
       return;
@@ -76,10 +76,10 @@ class ConnectivityProvider extends ChangeNotifier {
     notifyListeners();
 
     if (wasOffline && online) {
-      debugPrint('🌐 Connectivity restored');
+      debugPrint('Connectivity restored');
       onWentOnline?.call();
     } else if (!wasOffline && !online) {
-      debugPrint('🌐 Connectivity lost');
+      debugPrint('Connectivity lost');
       onWentOffline?.call();
     }
   }

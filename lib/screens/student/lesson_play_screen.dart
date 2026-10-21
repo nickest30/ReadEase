@@ -10,7 +10,6 @@ import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
 import 'pronunciation_modal.dart';
 
-
 class LessonPlayScreen extends StatefulWidget {
   const LessonPlayScreen({super.key});
 
@@ -91,12 +90,12 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
             await DatabaseService.instance
                 .recordWordEncounter(studentId, w.id!);
           } catch (e) {
-            debugPrint('⚠️ Encounter record failed: $e');
+            debugPrint('Encounter record failed: $e');
           }
         }
       }
     } catch (e) {
-      debugPrint('📚 LessonPlay load ERROR: $e');
+      debugPrint('LessonPlay load ERROR: $e');
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -115,7 +114,7 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource(cleanPath));
     } catch (e) {
-      debugPrint('🔊 Word cue audio failed (continuing): $e');
+      debugPrint('Word cue audio failed (continuing): $e');
     }
   }
 
@@ -155,11 +154,9 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
         'gameType': _batch!.gameType,
       };
 
-      // G4+ flow: batch has a passage → route to /passage first.
-      // G1–G3 flow: no passage → straight to /game-intro.
-      final route = _batch!.passageId != null
-          ? '/passage'
-          : '/game-intro';
+      // G4+ flow: batch has a passage -> route to /passage first.
+      // G1-G3 flow: no passage -> straight to /game-intro.
+      final route = _batch!.passageId != null ? '/passage' : '/game-intro';
 
       if (_batch!.passageId != null) {
         args['passageId'] = _batch!.passageId!;
@@ -239,15 +236,13 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
     );
   }
 
-
   Widget _buildIntroduce() {
     final word = _words[_currentWordIndex];
     final isLast = _currentWordIndex == _words.length - 1;
 
-    // Responsive image size — bigger on taller screens, clamped so
-    // the layout never overflows.
+    // BUG-007 Fix: Significantly larger image, responsive to screen height
     final screenH = MediaQuery.of(context).size.height;
-    final imageSize = (screenH * 0.30).clamp(200.0, 260.0);
+    final imageSize = (screenH * 0.35).clamp(240.0, 320.0);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -308,10 +303,8 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
                       width: imageSize,
                       height: imageSize,
                       decoration: BoxDecoration(
-                        color:
-                            AppColors.studentBg.withValues(alpha: 0.6),
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.large),
+                        color: AppColors.studentBg.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(AppRadius.large),
                       ),
                       child: const Icon(
                         Icons.image_outlined,
@@ -326,16 +319,17 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
                 // ── Word: single row, auto-scaling to fit ──
                 SizedBox(
                   width: double.infinity,
-                  height: 72,
+                  height: 90,
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
+                    alignment: Alignment.center,
                     child: Text(
                       word.text,
                       maxLines: 1,
                       softWrap: false,
                       style: const TextStyle(
                         fontFamily: 'Nunito',
-                        fontSize: 56,
+                        fontSize: 64,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.5,
                         color: AppColors.textPrimary,
@@ -351,10 +345,8 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color:
-                          AppColors.accentTeal.withValues(alpha: 0.15),
-                      borderRadius:
-                          BorderRadius.circular(AppRadius.small),
+                      color: AppColors.accentTeal.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(AppRadius.small),
                     ),
                     child: Text(
                       word.category.replaceAll('_', ' '),
@@ -440,8 +432,7 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
                 child: SizedBox(
                   height: 52,
                   child: OutlinedButton(
-                    onPressed:
-                        _currentWordIndex > 0 ? _previousWord : null,
+                    onPressed: _currentWordIndex > 0 ? _previousWord : null,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.accentOrange,
                       side: const BorderSide(
@@ -449,8 +440,7 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
                         width: 1.5,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.large),
+                        borderRadius: BorderRadius.circular(AppRadius.large),
                       ),
                     ),
                     child: const Text(
@@ -477,8 +467,7 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
                           ? AppColors.textPrimary
                           : Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.large),
+                        borderRadius: BorderRadius.circular(AppRadius.large),
                       ),
                     ),
                     child: Text(

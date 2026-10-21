@@ -1,24 +1,19 @@
 import 'package:flutter/material.dart';
 
-/// ReadEase design system.
 class AppColors {
   AppColors._();
 
-  // ── Role backgrounds ─────────────────────────────
   static const introBg = Color(0xFFFDE8C8);
   static const studentBg = Color(0xFFD4EFDF);
   static const parentBg = Color(0xFFD6EEF8);
   static const teacherBg = Color(0xFFF8F0FD);
 
-  // ── Surfaces & borders ───────────────────────────
   static const surface = Color(0xFFFFF8F0);
   static const border = Color(0xFFE8DFD5);
 
-  // ── Text ─────────────────────────────────────────
   static const textPrimary = Color(0xFF505050);
   static const textMuted = Color(0xFF8A8A8A);
 
-  // ── Accents ──────────────────────────────────────
   static const accentTeal = Color(0xFF2EC4B6);
   static const accentGreen = Color(0xFF6BCB77);
   static const accentYellow = Color(0xFFFFD93D);
@@ -26,7 +21,6 @@ class AppColors {
   static const accentCoral = Color(0xFFFF6B6B);
   static const accentPurple = Color(0xFF9B6B9E);
 
-  // ── Text-safe variants ───────────────────────────
   static const textTeal = Color(0xFF1A8780);
   static const textGreen = Color(0xFF3A8C4A);
   static const textYellow = Color(0xFFB8860B);
@@ -35,7 +29,6 @@ class AppColors {
   static const textPurple = Color(0xFF6B3F6E);
 }
 
-/// Typography scale.
 class AppText {
   AppText._();
 
@@ -82,7 +75,6 @@ class AppText {
   );
 }
 
-/// Corner radii.
 class AppRadius {
   AppRadius._();
 
@@ -93,7 +85,6 @@ class AppRadius {
   static const xxl = 24.0;
 }
 
-/// Spacing scale.
 class AppSpacing {
   AppSpacing._();
 

@@ -450,90 +450,97 @@ class _PinVerifyDialogState extends State<_PinVerifyDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.studentBg, // BUG-002 Fix: Match student theme
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.xl),
       ),
       insetPadding: const EdgeInsets.all(AppSpacing.xl),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.lock_outline_rounded,
-              size: 40,
-              color: AppColors.accentTeal,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            const Text(
-              'Confirm with PIN',
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
+      child: SingleChildScrollView( // BUG-002 Fix: Prevent black/yellow overflow
+        physics: const BouncingScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.lock_outline_rounded,
+                size: 40,
+                color: AppColors.accentTeal,
               ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            const Text(
-              'Enter your PIN to save changes',
-              style: AppText.caption,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(4, (index) {
-                final filled = index < _pin.length;
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 6),
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color:
-                        filled ? AppColors.accentTeal : AppColors.border,
-                  ),
-                );
-              }),
-            ),
-
-            if (_error != null) ...[
               const SizedBox(height: AppSpacing.md),
-              Text(
-                _error!,
-                style: const TextStyle(
-                  color: AppColors.textCoral,
+              const Text(
+                'Confirm with PIN',
+                style: TextStyle(
                   fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              const Text(
+                'Enter your PIN to save changes',
+                style: AppText.caption,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+
+              // BUG-002 Fix: Slightly larger dots, better spacing
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(4, (index) {
+                  final filled = index < _pin.length;
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: filled ? AppColors.accentTeal : AppColors.border,
+                      border: Border.all(
+                        color: filled ? AppColors.accentTeal : AppColors.border,
+                        width: 2,
+                      ),
+                    ),
+                  );
+                }),
+              ),
+
+              if (_error != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  _error!,
+                  style: const TextStyle(
+                    color: AppColors.textCoral,
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: AppSpacing.lg),
+
+              _MiniPinPad(
+                onDigit: _onDigit,
+                onBackspace: _onBackspace,
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    color: AppColors.textMuted,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
-
-            const SizedBox(height: AppSpacing.lg),
-
-            _MiniPinPad(
-              onDigit: _onDigit,
-              onBackspace: _onBackspace,
-            ),
-
-            const SizedBox(height: AppSpacing.md),
-
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  color: AppColors.textMuted,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -560,12 +567,12 @@ class _MiniPinPad extends StatelessWidget {
         return Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: row.map((key) {
-            if (key.isEmpty) return const SizedBox(width: 56, height: 48);
+            if (key.isEmpty) return const SizedBox(width: 56, height: 52);
             return Padding(
-              padding: const EdgeInsets.all(4),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               child: SizedBox(
-                width: 48,
-                height: 48,
+                width: 52,
+                height: 52,
                 child: ElevatedButton(
                   onPressed: () {
                     if (key == '⌫') {
@@ -575,16 +582,17 @@ class _MiniPinPad extends StatelessWidget {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.studentBg,
+                    backgroundColor: AppColors.surface, // Contrast against studentBg
                     foregroundColor: AppColors.textPrimary,
                     elevation: 0,
                     shape: const CircleBorder(),
+                    padding: EdgeInsets.zero,
                   ),
                   child: Text(
                     key,
                     style: const TextStyle(
                       fontFamily: 'Nunito',
-                      fontSize: 18,
+                      fontSize: 20,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

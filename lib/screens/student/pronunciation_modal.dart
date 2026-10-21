@@ -55,7 +55,7 @@ class PronunciationModal extends StatefulWidget {
   State<PronunciationModal> createState() => _PronunciationModalState();
 }
 
-enum _Phase { ready, listening, evaluating, mismatch, success, cooldown }
+enum _Phase { ready, listening, evaluating, mismatch, success, cooldown, error }
 
 class _PronunciationModalState extends State<PronunciationModal> {
   static const int _maxAttempts = 3;
@@ -70,6 +70,7 @@ class _PronunciationModalState extends State<PronunciationModal> {
   _Phase _phase = _Phase.ready;
   int _attempts = 0;
   String _lastTranscript = '';
+  String? _errorMessage;
   final List<double> _bars = List.filled(_barCount, 0.0);
 
   // Guards against double-fire from onError + onStatus('done')
@@ -119,12 +120,24 @@ class _PronunciationModalState extends State<PronunciationModal> {
   }
 
   /// The recognizer throws `error_no_match` when it can't identify any word.
-  /// For us this is a mismatch, the student didn't say the target word.
+  /// It can also throw network/timeout errors.
   void _onSpeechError(dynamic e) {
-    debugPrint('🎙 speech error: ${e.errorMsg}');
+    final msg = e.errorMsg.toString().toLowerCase();
+    debugPrint('Speech error: $msg');
+    
     if (!mounted) return;
+    
     if (_phase == _Phase.listening) {
-      _evaluate();
+      if (msg.contains('network') || msg.contains('timeout') || msg.contains('unavailable')) {
+        // Technical failure, do not count as an attempt
+        setState(() {
+          _phase = _Phase.error;
+          _errorMessage = 'Connection dropped or mic interrupted. Tap the mic to try again.';
+        });
+      } else {
+        // Default to mismatch (e.g., error_no_match)
+        _evaluate();
+      }
     }
   }
 
@@ -161,6 +174,7 @@ class _PronunciationModalState extends State<PronunciationModal> {
     setState(() {
       _phase = _Phase.listening;
       _lastTranscript = '';
+      _errorMessage = null;
       for (int i = 0; i < _barCount; i++) {
         _bars[i] = 0.0;
       }
@@ -179,9 +193,12 @@ class _PronunciationModalState extends State<PronunciationModal> {
         ),
       );
     } catch (e) {
-      debugPrint('🎙 listen failed: $e');
+      debugPrint('Listen failed: $e');
       if (!mounted) return;
-      setState(() => _phase = _Phase.mismatch);
+      setState(() {
+        _phase = _Phase.error;
+        _errorMessage = 'Could not start the microphone. Please try again.';
+      });
     }
   }
 
@@ -205,7 +222,7 @@ class _PronunciationModalState extends State<PronunciationModal> {
   // Evaluation
   // ────────────────────────────────────────────────────────────
 
-    Future<void> _evaluate() async {
+  Future<void> _evaluate() async {
     if (_evaluateLock) return;
     _evaluateLock = true;
 
@@ -214,7 +231,7 @@ class _PronunciationModalState extends State<PronunciationModal> {
     _evaluateTimeout = Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
       if (_phase == _Phase.evaluating || _phase == _Phase.listening) {
-        debugPrint('🎙 evaluation timeout, forcing mismatch');
+        debugPrint('Evaluation timeout, forcing mismatch');
         _finalizeAsMismatch();
       }
     });
@@ -254,7 +271,7 @@ class _PronunciationModalState extends State<PronunciationModal> {
             wordId: widget.word.id!,
           );
         } catch (e) {
-          debugPrint('🎙 mastery update failed (continuing): $e');
+          debugPrint('Mastery update failed (continuing): $e');
         }
       }
 
@@ -294,7 +311,7 @@ class _PronunciationModalState extends State<PronunciationModal> {
     final tokens = heard.split(RegExp(r'\s+'));
     if (tokens.contains(target)) return true;
 
-    // Also try concatenation, e.g. "sun flower" → "sunflower".
+    // Also try concatenation, e.g. "sun flower" -> "sunflower".
     if (heard.replaceAll(' ', '') == target) return true;
 
     return false;
@@ -319,7 +336,7 @@ class _PronunciationModalState extends State<PronunciationModal> {
       await _audio.stop();
       await _audio.play(AssetSource(clean));
     } catch (e) {
-      debugPrint('🔊 reference audio failed: $e');
+      debugPrint('Reference audio failed: $e');
     }
   }
 
@@ -498,6 +515,7 @@ class _PronunciationModalState extends State<PronunciationModal> {
         break;
       case _Phase.mismatch:
       case _Phase.cooldown:
+      case _Phase.error:
         borderColor = AppColors.accentCoral;
         barColor = AppColors.accentCoral;
         break;
@@ -580,6 +598,11 @@ class _PronunciationModalState extends State<PronunciationModal> {
         text = "Let's try this word again later.";
         color = AppColors.textCoral;
         break;
+      case _Phase.error:
+        mascot = 'assets/images/mascot/yse_try_again.png';
+        text = _errorMessage ?? 'Something went wrong. Tap the mic to try again.';
+        color = AppColors.textCoral;
+        break;
     }
 
     return Row(
@@ -640,6 +663,7 @@ class _PronunciationModalState extends State<PronunciationModal> {
     Color bg;
     switch (_phase) {
       case _Phase.mismatch:
+      case _Phase.error:
         bg = AppColors.accentCoral;
         break;
       case _Phase.success:

@@ -86,7 +86,7 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
         _loading = false;
       });
     } catch (e) {
-      debugPrint('📖 MyDictionary load ERROR: $e');
+      debugPrint('MyDictionary load ERROR: $e');
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -101,7 +101,7 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource(cleanPath));
     } catch (e) {
-      debugPrint('🔊 Dictionary cue audio failed: $e');
+      debugPrint('Dictionary cue audio failed: $e');
     }
   }
 
@@ -280,8 +280,11 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
                         _buildGrid(_allWords
                             .where((w) => _starred.contains(w.id))
                             .toList()),
+                        // BUG-010 Fix: Only show weak words that are NOT mastered
                         _buildGrid(_allWords
-                            .where((w) => _weak.contains(w.id))
+                            .where((w) =>
+                                _weak.contains(w.id) &&
+                                !_mastered.contains(w.id))
                             .toList()),
                         _buildGrid(_allWords
                             .where((w) => _mastered.contains(w.id))
@@ -680,35 +683,35 @@ class _WordDetailSheet extends StatelessWidget {
               ],
             ),
 
-            // PRACTICE SPEAKING, only for weak, un-mastered words
-            if (isWeak && !isMastered) ...[
-              const SizedBox(height: AppSpacing.md),
-              SizedBox(
-                height: 52,
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: onPractice,
-                  icon: const Icon(Icons.mic_rounded, size: 22),
-                  label: const Text(
-                    'PRACTICE SPEAKING',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentOrange,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppRadius.large),
-                    ),
-                    elevation: 2,
+            // BUG-010 Fix: Practice Speaking button now available for ALL encountered words
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              height: 52,
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onPractice,
+                icon: const Icon(Icons.mic_rounded, size: 22),
+                label: Text(
+                  isMastered ? 'PRACTICE AGAIN' : 'PRACTICE SPEAKING',
+                  style: const TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.6,
                   ),
                 ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isMastered 
+                      ? AppColors.accentTeal // Teal for mastered words
+                      : AppColors.accentOrange, // Orange for needs practice
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppRadius.large),
+                  ),
+                  elevation: 2,
+                ),
               ),
-            ],
+            ),
           ],
           const SizedBox(height: AppSpacing.md),
         ],

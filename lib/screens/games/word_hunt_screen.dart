@@ -15,6 +15,9 @@ import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/game_sfx.dart';
+import '../../services/sfx_service.dart';
+import '../../services/hint_service.dart';
+import '../../widgets/hint_button.dart';
 import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/game_score.dart';
@@ -78,6 +81,8 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
   int _revealCountdown = _revealCountdownSeconds;
   final Set<int> _hintCells = {};
 
+  final HintService _hintService = HintService();
+
   final AudioPlayer _audioPlayer = AudioPlayer();
   final List<int> _wrongWordIds = [];
 
@@ -91,6 +96,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
   void dispose() {
     _ticker?.cancel();
     _audioPlayer.dispose();
+    _hintService.dispose();
     super.dispose();
   }
 
@@ -148,7 +154,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
 
       _startTicker();
     } catch (e) {
-      debugPrint('🔍 WordHunt load ERROR: $e');
+      debugPrint('WordHunt load ERROR: $e');
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -175,7 +181,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
       setState(() => _elapsedSeconds++);
 
       if (!_hintFired && _elapsedSeconds >= _hintAfterSeconds) {
-        _fireHint();
+        _fireHint(automatic: true);
       }
       if (!_autoRevealFired && _elapsedSeconds >= _autoRevealAfterSeconds) {
         _fireAutoReveal();
@@ -285,9 +291,6 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
   // Rounded-end helper for path highlighting
   // ────────────────────────────────────────────────────────────
 
-  /// Returns the BorderRadius for a cell at position `i` within `path`.
-  /// Only the head and tail cells get rounded (on the outward-facing side).
-  /// Middle cells stay square so they tile seamlessly with neighbors.
   BorderRadius _radiusForPathPosition(List<int> path, int i) {
     const r = 14.0;
     if (path.length == 1) return BorderRadius.circular(r);
@@ -304,7 +307,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
     final nRow = neighborIdx ~/ _gridSize;
     final nCol = neighborIdx % _gridSize;
 
-    final dr = row - nRow; // outward direction
+    final dr = row - nRow;
     final dc = col - nCol;
 
     return BorderRadius.only(
@@ -445,6 +448,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
   Future<void> _onWordFound(_PlacedWord match) async {
     HapticFeedback.heavyImpact();
     GameSfx.instance.playCorrect();
+    SfxService.correct(); // Phase 3: SFX
 
     final colorIdx = _foundWords.length % _palette.length;
     final color = _palette[colorIdx];
@@ -485,7 +489,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource(clean));
     } catch (e) {
-      debugPrint('🔊 Word audio failed (continuing): $e');
+      debugPrint('Word audio failed (continuing): $e');
     }
   }
 
@@ -493,12 +497,20 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
   // Hint + auto-reveal
   // ────────────────────────────────────────────────────────────
 
-  void _fireHint() {
-    _hintFired = true;
+  void _fireHint({bool automatic = false}) {
+    if (automatic) {
+      _hintFired = true;
+    } else {
+      if (!_hintService.canUse()) return;
+      _hintService.use();
+      SfxService.tap();
+    }
+
     final unfound =
         _placedWords.where((p) => !_foundWords.contains(p.word)).toList();
     if (unfound.isEmpty) return;
 
+    // Pick a random unfound word
     final pick = unfound[Random().nextInt(unfound.length)];
     final startIdx = pick.startRow * _gridSize + pick.startCol;
 
@@ -526,6 +538,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
       }
     });
     GameSfx.instance.playWrong();
+    SfxService.wrong();
   }
 
   // ────────────────────────────────────────────────────────────
@@ -537,6 +550,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
     try {
       if (!_autoRevealFired && _foundCount >= _placedWords.length) {
         GameSfx.instance.playCelebration();
+        SfxService.celebration();
         await Future.delayed(const Duration(milliseconds: 1200));
       }
       if (!mounted) return;
@@ -634,7 +648,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
               badgeCount: badges.length,
             );
           } catch (e) {
-            debugPrint('🔥 Enrollment snapshot failed: $e');
+            debugPrint('Enrollment snapshot failed: $e');
           }
         }
       }
@@ -653,7 +667,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
         },
       );
     } catch (e) {
-      debugPrint('🔍 WordHunt finish ERROR: $e');
+      debugPrint('WordHunt finish ERROR: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -722,130 +736,149 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
   }
 
   Widget _buildGame() {
-    return Column(
+    return Stack(
       children: [
-        _buildHeader(),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.xs,
-            ),
-            child: Column(
-              children: [
-                // Yse, pose depends on game state
-                Flexible(
-                  flex: 2,
-                  child: Image.asset(
-                    _ysePose(),
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => const Icon(
-                      Icons.search_rounded,
-                      size: 80,
+        Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.xs,
+                ),
+                child: Column(
+                  children: [
+                    // Yse, pose depends on game state
+                    Flexible(
+                      flex: 2,
+                      child: Image.asset(
+                        _ysePose(),
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => const Icon(
+                          Icons.search_rounded,
+                          size: 80,
+                          color: AppColors.accentTeal,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    // Reveal banner on time-up
+                    if (_gameOver)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _missedColor.withValues(alpha: 0.15),
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.medium),
+                            border: Border.all(color: _missedColor, width: 2),
+                          ),
+                          child: Text(
+                            "Time's up! See where the words were. Continuing in ${_revealCountdown}s",
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: 'Nunito',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFFFF5722),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    _buildWordList(),
+                    const SizedBox(height: 6),
+
+                    // Grid
+                    Flexible(
+                      flex: 6,
+                      child: FittedBox(
+                        fit: BoxFit.contain,
+                        child: SizedBox(
+                          width: _logicalGridSide,
+                          height: _logicalGridSide,
+                          child: _buildGrid(),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    _buildBigStat(
+                      icon: Icons.timer_rounded,
+                      color: _gridGlowColor(),
+                      label: 'TIME',
+                      value: _formatTime(_elapsedSeconds),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    _buildBigStat(
+                      icon: Icons.check_circle_rounded,
                       color: AppColors.accentTeal,
+                      label: 'FOUND',
+                      value: '$_foundCount / ${_placedWords.length}',
                     ),
-                  ),
-                ),
 
-                const SizedBox(height: 4),
-
-                // Reveal banner on time-up
-                if (_gameOver)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _missedColor.withValues(alpha: 0.15),
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.medium),
-                        border: Border.all(color: _missedColor, width: 2),
-                      ),
-                      child: Text(
-                        "Time's up! See where the words were. Continuing in ${_revealCountdown}s",
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFFFF5722),
+                    if (_gameOver) ...[
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 44,
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            _ticker?.cancel();
+                            _finishGame();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accentTeal,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.large),
+                            ),
+                          ),
+                          child: const Text(
+                            'CONTINUE NOW',
+                            style: TextStyle(
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+                    ],
 
-                _buildWordList(),
-                const SizedBox(height: 6),
-
-                // Grid
-                Flexible(
-                  flex: 6,
-                  child: FittedBox(
-                    fit: BoxFit.contain,
-                    child: SizedBox(
-                      width: _logicalGridSide,
-                      height: _logicalGridSide,
-                      child: _buildGrid(),
-                    ),
-                  ),
+                    const SizedBox(height: 60), // Extra space for floating hint button
+                  ],
                 ),
-
-                const SizedBox(height: 8),
-
-                _buildBigStat(
-                  icon: Icons.timer_rounded,
-                  color: _gridGlowColor(),
-                  label: 'TIME',
-                  value: _formatTime(_elapsedSeconds),
-                ),
-
-                const SizedBox(height: 6),
-
-                _buildBigStat(
-                  icon: Icons.check_circle_rounded,
-                  color: AppColors.accentTeal,
-                  label: 'FOUND',
-                  value: '$_foundCount / ${_placedWords.length}',
-                ),
-
-                if (_gameOver) ...[
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 44,
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        _ticker?.cancel();
-                        _finishGame();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accentTeal,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.large),
-                        ),
-                      ),
-                      child: const Text(
-                        'CONTINUE NOW',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 6),
-              ],
+              ),
+            ),
+          ],
+        ),
+        
+        // Phase 4: Hint Button floating at the bottom right
+        if (!_gameOver)
+          Positioned(
+            bottom: 20,
+            right: 20,
+            child: HintButton(
+              hintsRemaining: _hintService.remaining,
+              onCooldown: _hintService.onCooldown,
+              onTap: () {
+                _fireHint();
+                setState(() {}); // Update UI for hint count
+              },
             ),
           ),
-        ),
       ],
     );
   }
@@ -859,7 +892,10 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(context).pop();
+            },
             icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
             padding: EdgeInsets.zero,
           ),
@@ -971,7 +1007,6 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
     final isPreviewStart = _dragStartIndex == index;
     final isHint = _hintCells.contains(index) && foundColor == null;
 
-    // Determine preview radius (head/tail rounding during drag).
     BorderRadius? previewRadius;
     if (isPreview) {
       final i = _previewPath.indexOf(index);

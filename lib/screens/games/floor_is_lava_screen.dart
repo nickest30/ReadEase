@@ -13,6 +13,9 @@ import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/game_sfx.dart';
+import '../../services/sfx_service.dart';
+import '../../services/hint_service.dart';
+import '../../widgets/hint_button.dart';
 import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import 'yse_reaction.dart';
@@ -67,6 +70,7 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
   int? _lastResponseTimeMs;
 
   final YseReactionController _reaction = YseReactionController();
+  final HintService _hintService = HintService();
   int _currentStreak = 0;
   final List<int> _wrongWordIds = [];
 
@@ -97,6 +101,7 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
   void dispose() {
     _audioPlayer.dispose();
     _reaction.dispose();
+    _hintService.dispose();
     super.dispose();
   }
 
@@ -179,7 +184,7 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
       if (!mounted) return;
       _reaction.show(YseReaction.letsGo, persistent: true);
     } catch (e) {
-      debugPrint('🌋 FloorIsLava load ERROR: $e');
+      debugPrint('FloorIsLava load ERROR: $e');
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -202,6 +207,7 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
       _glowState = _GlowState.none;
       _roundStart = DateTime.now();
     });
+    _hintService.reset();
     _playAudio(round.wordAudioPath);
   }
 
@@ -214,7 +220,7 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource(clean));
     } catch (e) {
-      debugPrint('🔊 Audio failed (continuing): $e');
+      debugPrint('Audio failed (continuing): $e');
     }
   }
 
@@ -227,6 +233,8 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
     if (_correctGuesses.contains(letter) || _wrongGuesses.contains(letter)) {
       return;
     }
+
+    SfxService.tap(); // Phase 3 SFX
 
     final isCorrect = _currentWord.contains(letter);
 
@@ -241,15 +249,17 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
 
     if (isCorrect) {
       GameSfx.instance.playCorrect();
+      SfxService.correct();
       if (_isWordComplete()) {
         await _onRoundWin();
         return;
       }
     } else {
       GameSfx.instance.playWrong();
+      SfxService.wrong();
 
       if (!_hintFired && _wrongGuessCount >= _hintThreshold) {
-        final wonByHint = _fireHint();
+        final wonByHint = _fireHint(automatic: true);
         if (wonByHint) {
           await _onRoundWin();
           return;
@@ -271,8 +281,15 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
     }
   }
 
-  bool _fireHint() {
-    _hintFired = true;
+  bool _fireHint({bool automatic = false}) {
+    if (automatic) {
+      _hintFired = true;
+    } else {
+      if (!_hintService.canUse()) return false;
+      _hintService.use();
+      SfxService.tap(); // Phase 3 SFX for hint
+    }
+
     final lettersInWord = _currentWord.split('').toSet();
     final candidates = lettersInWord
         .where((c) =>
@@ -373,10 +390,13 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
       if (earlyExit) {
         _reaction.show(YseReaction.tryAgain, persistent: true);
         GameSfx.instance.playWrong();
+        SfxService.wrong();
+        SfxService.fail();
         await Future.delayed(const Duration(milliseconds: 1400));
       } else {
         _reaction.show(YseReaction.youDidIt, persistent: true);
         GameSfx.instance.playCelebration();
+        SfxService.celebration();
         await Future.delayed(const Duration(milliseconds: 1200));
       }
       if (!mounted) return;
@@ -489,7 +509,7 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
               badgeCount: badges.length,
             );
           } catch (e) {
-            debugPrint('🔥 Enrollment snapshot failed: $e');
+            debugPrint('Enrollment snapshot failed: $e');
           }
         }
       }
@@ -508,7 +528,7 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
         },
       );
     } catch (e) {
-      debugPrint('🌋 FloorIsLava finish ERROR: $e');
+      debugPrint('FloorIsLava finish ERROR: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -569,7 +589,7 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
     return 'yse_lava_safe.png';
   }
 
-    double _lavaRatio() {
+  double _lavaRatio() {
     if (_lavaSurge) return 1.0;
     final raw = (_failedWordCount / _maxFailedWords).clamp(0.0, 1.0);
     return raw * raw * (3 - 2 * raw);
@@ -692,6 +712,22 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
                 ),
               ],
             ),
+            
+            // Phase 4: Hint Button floating at top right, below header
+            if (!_roundResolved)
+              Positioned(
+                top: 70,
+                right: 16,
+                child: HintButton(
+                  hintsRemaining: _hintService.remaining,
+                  onCooldown: _hintService.onCooldown,
+                  onTap: () {
+                    final wonByHint = _fireHint();
+                    setState(() {});
+                    if (wonByHint) _onRoundWin();
+                  },
+                ),
+              ),
           ],
         );
       },
@@ -707,47 +743,17 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(context).pop();
+            },
             icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
             padding: EdgeInsets.zero,
           ),
           const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Escape the Lava!', style: AppText.h2),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    const Icon(Icons.star_rounded,
-                        size: 14, color: AppColors.accentYellow),
-                    const SizedBox(width: 3),
-                    Text(
-                      '${_correctCount * 5} pts',
-                      style: const TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textYellow,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    const Icon(Icons.flag_rounded,
-                        size: 14, color: AppColors.accentTeal),
-                    const SizedBox(width: 3),
-                    Text(
-                      'Round ${_currentIndex + 1} / ${_rounds.length}',
-                      style: AppText.caption.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          const Expanded(
+            child: Text('Escape the Lava!', style: AppText.h2),
           ),
-          const SizedBox(width: 8),
         ],
       ),
     );
@@ -828,7 +834,7 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
   }
 
   // ────────────────────────────────────────────────────────────
-  // Keyboard, 7 cols × 4 rows
+  // Indicators + Points/Rounds
   // ────────────────────────────────────────────────────────────
 
   Widget _buildIndicators() {
@@ -836,76 +842,112 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
         .clamp(0, _maxWrongPerWord);
     final failedSoFar = _failedWordCount.clamp(0, _maxFailedWords);
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
       children: [
-        // Wrong-letter attempts for this word
         Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Tries',
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textMuted,
-              ),
-            ),
-            const SizedBox(width: 4),
-            ...List.generate(_maxWrongPerWord, (i) {
-              final isLeft = i < attemptsLeft;
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: Icon(
-                  isLeft
-                      ? Icons.favorite_rounded
-                      : Icons.favorite_border_rounded,
-                  size: 14,
-                  color: isLeft
-                      ? AppColors.accentCoral
-                      : AppColors.textMuted,
-                ),
-              );
-            }),
-          ],
-        ),
-
-        const SizedBox(width: AppSpacing.lg),
-
-        // Failed-word / lava progress
-        Row(
-          children: [
-            const Icon(
-              Icons.local_fire_department_rounded,
-              size: 14,
-              color: _lavaDeep,
-            ),
-            const SizedBox(width: 4),
-            ...List.generate(_maxFailedWords, (i) {
-              final isFilled = i < failedSoFar;
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isFilled
-                        ? _lavaBright
-                        : AppColors.border.withValues(alpha: 0.5),
-                    boxShadow: isFilled
-                        ? [
-                            BoxShadow(
-                              color: _lavaBright.withValues(alpha: 0.7),
-                              blurRadius: 6,
-                              spreadRadius: 1,
-                            ),
-                          ]
-                        : null,
+            // Wrong-letter attempts for this word
+            Row(
+              children: [
+                const Text(
+                  'Tries',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textMuted,
                   ),
                 ),
-              );
-            }),
+                const SizedBox(width: 4),
+                ...List.generate(_maxWrongPerWord, (i) {
+                  final isLeft = i < attemptsLeft;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Icon(
+                      isLeft
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      size: 14,
+                      color: isLeft
+                          ? AppColors.accentCoral
+                          : AppColors.textMuted,
+                    ),
+                  );
+                }),
+              ],
+            ),
+
+            const SizedBox(width: AppSpacing.lg),
+
+            // Failed-word / lava progress
+            Row(
+              children: [
+                const Icon(
+                  Icons.local_fire_department_rounded,
+                  size: 14,
+                  color: _lavaDeep,
+                ),
+                const SizedBox(width: 4),
+                ...List.generate(_maxFailedWords, (i) {
+                  final isFilled = i < failedSoFar;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isFilled
+                            ? _lavaBright
+                            : AppColors.border.withValues(alpha: 0.5),
+                        boxShadow: isFilled
+                            ? [
+                                BoxShadow(
+                                  color: _lavaBright.withValues(alpha: 0.7),
+                                  blurRadius: 6,
+                                  spreadRadius: 1,
+                                ),
+                              ]
+                            : null,
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        // BUG-012 Fix: Points and Rounds below the mascot
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.star_rounded,
+                size: 20, color: AppColors.accentYellow),
+            const SizedBox(width: 6),
+            Text(
+              '${_correctCount * 5} pts',
+              style: const TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textYellow,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.lg),
+            const Icon(Icons.flag_rounded,
+                size: 20, color: AppColors.accentTeal),
+            const SizedBox(width: 6),
+            Text(
+              'Round ${_currentIndex + 1} / ${_rounds.length}',
+              style: const TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textTeal,
+              ),
+            ),
           ],
         ),
       ],
@@ -943,7 +985,7 @@ class _FloorIsLavaScreenState extends State<FloorIsLavaScreen> {
       bg = AppColors.accentCoral.withValues(alpha: 0.2);
       fg = AppColors.textCoral;
       border = AppColors.accentCoral;
-      } else if (isCorrect) {
+    } else if (isCorrect) {
       bg = AppColors.accentTeal.withValues(alpha: 0.2);
       fg = AppColors.textTeal;
       border = AppColors.accentTeal;

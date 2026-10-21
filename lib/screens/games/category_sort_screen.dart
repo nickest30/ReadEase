@@ -15,6 +15,9 @@ import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/game_sfx.dart';
+import '../../services/sfx_service.dart';
+import '../../services/hint_service.dart';
+import '../../widgets/hint_button.dart';
 import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/game_score.dart';
@@ -38,7 +41,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
   static const int _hintAfterSeconds = 60;
   static const int _autoCompleteAfterSeconds = 180;
 
-  /// Category → friendly display name.
+  /// Category -> friendly display name.
   static const Map<String, String> _categoryLabels = {
     'music': 'Music',
     'visual_arts': 'Visual Arts',
@@ -53,7 +56,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
     'general': 'General',
   };
 
-  /// Category → theme color.
+  /// Category -> theme color.
   static const Map<String, Color> _categoryColors = {
     'music': Color(0xFF9C27B0),        // purple
     'visual_arts': Color(0xFF4A9EFF),  // blue
@@ -79,7 +82,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
   /// Words currently in the pool (not yet sorted).
   final Set<int> _poolWordIds = {};
 
-  /// Words already sorted correctly. wordId → category.
+  /// Words already sorted correctly. wordId -> category.
   final Map<int, String> _sortedWords = {};
 
   /// Strike count per word (max 3).
@@ -99,6 +102,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
   bool _autoCompleteFired = false;
   bool _gameOver = false;
 
+  final HintService _hintService = HintService();
   final AudioPlayer _audioPlayer = AudioPlayer();
   final List<int> _wrongWordIds = [];
 
@@ -115,6 +119,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
   void dispose() {
     _ticker?.cancel();
     _audioPlayer.dispose();
+    _hintService.dispose();
     super.dispose();
   }
 
@@ -197,7 +202,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
 
       _startTicker();
     } catch (e) {
-      debugPrint('📦 CategorySort load ERROR: $e');
+      debugPrint('CategorySort load ERROR: $e');
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -213,7 +218,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
       setState(() => _elapsedSeconds++);
 
       if (!_hintFired && _elapsedSeconds >= _hintAfterSeconds) {
-        _fireHint();
+        _fireHint(automatic: true);
       }
       if (!_autoCompleteFired &&
           _elapsedSeconds >= _autoCompleteAfterSeconds) {
@@ -235,6 +240,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
     if (isCorrect) {
       HapticFeedback.heavyImpact();
       GameSfx.instance.playCorrect();
+      SfxService.correct(); // Phase 3: SFX
 
       setState(() {
         _poolWordIds.remove(word.id);
@@ -258,6 +264,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
     // Wrong drop.
     HapticFeedback.mediumImpact();
     GameSfx.instance.playWrong();
+    SfxService.wrong(); // Phase 3: SFX
 
     final currentStrikes = _strikes[word.id] ?? 0;
     final newStrikes = currentStrikes + 1;
@@ -295,7 +302,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource(clean));
     } catch (e) {
-      debugPrint('🔊 Word audio failed (continuing): $e');
+      debugPrint('Word audio failed (continuing): $e');
     }
   }
 
@@ -303,12 +310,20 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
   // Hint + auto-complete
   // ────────────────────────────────────────────────────────────
 
-  void _fireHint() {
-    _hintFired = true;
+  void _fireHint({bool automatic = false}) {
+    if (automatic) {
+      _hintFired = true;
+    } else {
+      if (!_hintService.canUse()) return;
+      _hintService.use();
+      SfxService.tap();
+    }
+
     if (_poolWordIds.isEmpty) return;
     final unsorted =
         _allWords.where((w) => _poolWordIds.contains(w.id)).toList();
     if (unsorted.isEmpty) return;
+    
     final pick = unsorted[Random().nextInt(unsorted.length)];
     setState(() => _hintWordId = pick.id);
   }
@@ -331,6 +346,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
     });
 
     GameSfx.instance.playWrong();
+    SfxService.wrong();
     await Future.delayed(const Duration(milliseconds: 1400));
     if (!mounted) return;
     await _finishGame();
@@ -345,6 +361,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
     try {
       if (!_autoCompleteFired && _sortedWords.length >= _allWords.length) {
         GameSfx.instance.playCelebration();
+        SfxService.celebration();
         await Future.delayed(const Duration(milliseconds: 1200));
       }
       if (!mounted) return;
@@ -443,7 +460,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
               badgeCount: badges.length,
             );
           } catch (e) {
-            debugPrint('🔥 Enrollment snapshot failed: $e');
+            debugPrint('Enrollment snapshot failed: $e');
           }
         }
       }
@@ -462,7 +479,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
         },
       );
     } catch (e) {
-      debugPrint('📦 CategorySort finish ERROR: $e');
+      debugPrint('CategorySort finish ERROR: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -529,69 +546,90 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
   }
 
   Widget _buildGame() {
-    return Column(
+    return Stack(
       children: [
-        _buildHeader(),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.xs,
-            ),
-            child: Column(
-              children: [
-                // Yse
-                Flexible(
-                  flex: 2,
-                  child: Image.asset(
-                    _ysePose(),
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => const Icon(
-                      Icons.category_rounded,
-                      size: 80,
-                      color: AppColors.accentTeal,
+        Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.xs,
+                ),
+                child: Column(
+                  children: [
+                    // Yse
+                    Flexible(
+                      flex: 2,
+                      child: Image.asset(
+                        _ysePose(),
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => const Icon(
+                          Icons.category_rounded,
+                          size: 80,
+                          color: AppColors.accentTeal,
+                        ),
+                      ),
                     ),
-                  ),
+
+                    const SizedBox(height: 4),
+
+                    // Time bar
+                    _buildBigStat(
+                      icon: Icons.timer_rounded,
+                      color: _gridGlowColor(),
+                      label: 'TIME',
+                      value: _formatTime(_elapsedSeconds),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    _buildBigStat(
+                      icon: Icons.check_circle_rounded,
+                      color: AppColors.accentTeal,
+                      label: 'SORTED',
+                      value: '${_sortedWords.length} / ${_allWords.length}',
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Word pool
+                    Flexible(
+                      flex: 3,
+                      child: _buildPool(),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Category bins
+                    Flexible(
+                      flex: 4,
+                      child: _buildBins(),
+                    ),
+                    
+                    const SizedBox(height: 60), // Space for floating hint button
+                  ],
                 ),
-
-                const SizedBox(height: 4),
-
-                // Time bar
-                _buildBigStat(
-                  icon: Icons.timer_rounded,
-                  color: _gridGlowColor(),
-                  label: 'TIME',
-                  value: _formatTime(_elapsedSeconds),
-                ),
-
-                const SizedBox(height: 6),
-
-                _buildBigStat(
-                  icon: Icons.check_circle_rounded,
-                  color: AppColors.accentTeal,
-                  label: 'SORTED',
-                  value: '${_sortedWords.length} / ${_allWords.length}',
-                ),
-
-                const SizedBox(height: 8),
-
-                // Word pool
-                Flexible(
-                  flex: 3,
-                  child: _buildPool(),
-                ),
-
-                const SizedBox(height: 8),
-
-                // Category bins
-                Flexible(
-                  flex: 4,
-                  child: _buildBins(),
-                ),
-              ],
+              ),
+            ),
+          ],
+        ),
+        
+        // Phase 4: Hint Button
+        if (!_gameOver)
+          Positioned(
+            bottom: 20,
+            right: 20,
+            child: HintButton(
+              hintsRemaining: _hintService.remaining,
+              onCooldown: _hintService.onCooldown,
+              onTap: () {
+                _fireHint();
+                setState(() {}); // Refresh hint count
+              },
             ),
           ),
-        ),
       ],
     );
   }
@@ -605,7 +643,10 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(context).pop();
+            },
             icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
             padding: EdgeInsets.zero,
           ),
@@ -682,6 +723,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
       delay: const Duration(milliseconds: 120),
       onDragStarted: () {
         HapticFeedback.selectionClick();
+        SfxService.tap();
         setState(() => _draggingWordId = word.id);
       },
       onDraggableCanceled: (_, _) {
