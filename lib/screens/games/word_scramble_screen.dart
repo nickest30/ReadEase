@@ -12,19 +12,14 @@ import '../../providers/connectivity_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
-import '../../services/game_sfx.dart';
+import '../../services/sfx_service.dart';
+import '../../services/bgm_service.dart';
 import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import 'yse_reaction.dart';
+import '../../widgets/info_button.dart';
 import '../../utils/game_score.dart';
 
-/// Word Scramble, Grade 2 Hard.
-///
-/// Layout: header → Yse → big image → definition → target slots →
-/// consistent-size letter pool at the bottom (thumb-reachable).
-///
-/// Slots adjust to word length. Letters are fixed and large.
-/// On wrong submission, all placed tiles glow red. On correct, green.
 class WordScrambleScreen extends StatefulWidget {
   const WordScrambleScreen({super.key});
 
@@ -56,7 +51,6 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
   List<_LetterTile?> _placedLetters = [];
   List<_LetterTile> _availableLetters = [];
 
-  /// Visual feedback state while checking the answer.
   _GlowState _glowState = _GlowState.none;
 
   DateTime? _roundStart;
@@ -69,11 +63,12 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   static const int _maxWrongAttempts = 3;
-  static const double _letterSize = 60.0; // Fixed, consistent, big
+  static const double _letterSize = 60.0;
 
   @override
   void initState() {
     super.initState();
+    BgmService.playTrack(BgmTrack.game);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadGame());
   }
 
@@ -84,30 +79,34 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
     super.dispose();
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Load
-  // ────────────────────────────────────────────────────────────
-
   Future<void> _loadGame() async {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
-    final batchId = args['batchId'] as int;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/student-home', (route) => false);
+        }
+      });
+      return;
+    }
+
+    final batchId = args['batchId'] as int?;
     final gradeLevel = (args['gradeLevel'] as int?) ?? 1;
     final difficulty = (args['difficulty'] as String?) ?? 'easy';
     final passageCorrect = (args['passageCorrect'] as int?) ?? 0;
     final passageTotal = (args['passageTotal'] as int?) ?? 0;
     final student = context.read<StudentProvider>().currentStudent;
 
-    if (student == null || student.id == null) {
+    if (batchId == null || student == null || student.id == null) {
       setState(() {
         _loading = false;
-        _error = 'Not signed in.';
+        _error = 'Not signed in or missing data.';
       });
       return;
     }
 
     try {
-      final words = await DatabaseService.instance
-          .getSampledWordsForBatch(batchId);
+      final words = await DatabaseService.instance.getSampledWordsForBatch(batchId);
       if (words.isEmpty) {
         setState(() {
           _loading = false;
@@ -116,8 +115,7 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
         return;
       }
 
-      final questions =
-          await DatabaseService.instance.getQuestionsForBatch(batchId);
+      final questions = await DatabaseService.instance.getQuestionsForBatch(batchId);
       final qMap = <int, QuizQuestion>{};
       for (final q in questions) {
         qMap.putIfAbsent(q.wordId, () => q);
@@ -173,7 +171,7 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
       if (!mounted) return;
       _reaction.show(YseReaction.letsGo, persistent: true);
     } catch (e) {
-      debugPrint('🔤 WordScramble load ERROR: $e');
+      debugPrint('WordScramble load ERROR: $e');
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -203,16 +201,14 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource(clean));
     } catch (e) {
-      debugPrint('🔊 Cue audio failed (continuing): $e');
+      debugPrint('Cue audio failed: $e');
     }
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Interaction
-  // ────────────────────────────────────────────────────────────
-
   void _onLetterTap(_LetterTile tile) {
     if (_roundResolved) return;
+    SfxService.tap();
+    
     final emptyIndex = _placedLetters.indexWhere((p) => p == null);
     if (emptyIndex == -1) return;
 
@@ -231,6 +227,7 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
     final tile = _placedLetters[index];
     if (tile == null) return;
 
+    SfxService.tap();
     setState(() {
       _placedLetters[index] = null;
       _availableLetters.add(tile);
@@ -247,12 +244,11 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
           ? null
           : DateTime.now().difference(_roundStart!).inMilliseconds;
 
-      // Green glow feedback
       setState(() {
         _roundResolved = true;
         _glowState = _GlowState.correct;
       });
-      GameSfx.instance.playCorrect();
+      SfxService.correct();
 
       if (_wrongAttemptsThisRound == 0) {
         setState(() => _correctCount++);
@@ -274,13 +270,11 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
       _wrongAttemptsThisRound++;
       _currentStreak = 0;
 
-      // Red glow feedback
       setState(() => _glowState = _GlowState.wrong);
-      GameSfx.instance.playWrong();
+      SfxService.wrong();
       _reaction.show(YseReaction.tryAgain, persistent: true);
 
       if (_wrongAttemptsThisRound >= _maxWrongAttempts) {
-        // Reveal correct after 3 wrongs, glow green
         _wrongWordIds.add(round.wordId);
         setState(() {
           _roundResolved = true;
@@ -292,7 +286,6 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
         if (!mounted) return;
         _advanceRound();
       } else {
-        // Hold red glow briefly, then reset
         await Future.delayed(const Duration(milliseconds: 1000));
         if (!mounted) return;
         setState(() {
@@ -339,18 +332,23 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
     }
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Finish
-  // ────────────────────────────────────────────────────────────
-
   Future<void> _finishGame() async {
     try {
-      _reaction.show(YseReaction.youDidIt, persistent: true);
-      GameSfx.instance.playCelebration();
-      await Future.delayed(const Duration(milliseconds: 1200));
+      final totalRounds = _rounds.length;
+      final isPassing = totalRounds > 0 && (_correctCount / totalRounds) >= 0.70;
+
+      if (isPassing) {
+        _reaction.show(YseReaction.youDidIt, persistent: true);
+        SfxService.celebration();
+        await Future.delayed(const Duration(milliseconds: 1500));
+      } else {
+        _reaction.show(YseReaction.tryAgain, persistent: true);
+        SfxService.fail();
+        await Future.delayed(const Duration(milliseconds: 1500));
+      }
+      
       if (!mounted) return;
 
-      final totalRounds = _rounds.length;
       final wrongWordIds = List<int>.from(_wrongWordIds);
 
       final combinedScore = _passageCorrect + _correctCount;
@@ -416,11 +414,8 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
       }
 
       bool isNewBadge = false;
-      final isPassing = totalRounds > 0 &&
-          (_correctCount / totalRounds) >= 0.70;
       if (isPassing) {
-        final badgeName =
-            AchievementBadge.nameFor(_gradeLevel, _difficulty);
+        final badgeName = AchievementBadge.nameFor(_gradeLevel, _difficulty);
         final badge = AchievementBadge(
           studentId: _studentId,
           gradeLevel: _gradeLevel,
@@ -432,8 +427,7 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
         isNewBadge = await DatabaseService.instance.awardBadge(badge);
       }
 
-      final updated =
-          await DatabaseService.instance.getStudentById(_studentId);
+      final updated = await DatabaseService.instance.getStudentById(_studentId);
       if (!mounted) return;
 
       if (updated != null) {
@@ -441,6 +435,7 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
 
         final connectivity = context.read<ConnectivityProvider>();
         final authProvider = context.read<AuthProvider>();
+        
         unawaited(
           SyncService.instance.syncAll(
             student: updated,
@@ -452,18 +447,20 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
         if (updated.classFirestoreId != null &&
             updated.classFirestoreId!.isNotEmpty &&
             updated.firebaseUid != null) {
-          try {
-            final badges = await DatabaseService.instance
-                .getBadgesForStudent(updated.id!);
-            await FirestoreService.instance.updateEnrollmentSnapshot(
-              classId: updated.classFirestoreId!,
-              studentUid: updated.firebaseUid!,
-              totalPoints: updated.totalPoints,
-              badgeCount: badges.length,
-            );
-          } catch (e) {
-            debugPrint('🔥 Enrollment snapshot failed: $e');
-          }
+          unawaited(() async {
+            try {
+              final badges = await DatabaseService.instance.getBadgesForStudent(updated.id!);
+              await FirestoreService.instance.updateEnrollmentSnapshot(
+                classId: updated.classFirestoreId!,
+                studentUid: updated.firebaseUid!,
+                totalPoints: updated.totalPoints,
+                badgeCount: badges.length,
+                avatarIndex: updated.avatarIndex,
+              );
+            } catch (e) {
+              debugPrint('Enrollment snapshot failed: $e');
+            }
+          }());
         }
       }
 
@@ -481,7 +478,7 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
         },
       );
     } catch (e) {
-      debugPrint('🔤 WordScramble finish ERROR: $e');
+      debugPrint('WordScramble finish ERROR: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -492,10 +489,6 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
     }
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Build
-  // ────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -505,12 +498,8 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
   }
 
   Widget _buildBody() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_error != null) {
-      return _buildError();
-    }
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) return _buildError();
     return _buildGame();
   }
 
@@ -521,8 +510,7 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 64, color: AppColors.textMuted),
+            const Icon(Icons.error_outline_rounded, size: 64, color: AppColors.textMuted),
             const SizedBox(height: AppSpacing.lg),
             Text(_error!, textAlign: TextAlign.center, style: AppText.body),
             const SizedBox(height: AppSpacing.xl),
@@ -536,19 +524,17 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
     );
   }
 
-  /// Slot size adjusts to word length so all tiles fit on one or two rows.
   double _slotSizeForWidth({
     required int wordLength,
     required double availableWidth,
   }) {
-    const spacing = 4.0;   // was 6.0
+    const spacing = 4.0;
     const maxSize = 76.0;
-    const minSize = 30.0;  // was 36.0
+    const minSize = 36.0;
 
     if (wordLength <= 0) return maxSize;
 
-    final computed =
-        (availableWidth - (wordLength - 1) * spacing) / wordLength;
+    final computed = (availableWidth - (wordLength - 1) * spacing) / wordLength;
     return computed.clamp(minSize, maxSize);
   }
 
@@ -558,121 +544,112 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
     final screenW = MediaQuery.of(context).size.width;
     final imageSize = (screenH * 0.26).clamp(170.0, 240.0);
 
-    // Available width for slots: screen minus horizontal padding (lg * 2).
     final slotAvailableWidth = screenW - AppSpacing.lg * 2;
     final slotSize = _slotSizeForWidth(
       wordLength: round.correctWord.length,
       availableWidth: slotAvailableWidth,
     );
 
-    return Column(
-      children: [
-        _buildHeader(),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-            ),
-            child: Column(
-              children: [
-                const SizedBox(height: 4),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 700),
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 4),
 
-                // Yse, big, top
-                YseReactionOverlay(
-                  controller: _reaction,
-                  size: 150,
-                ),
-
-                const SizedBox(height: AppSpacing.sm),
-
-                // Big centered image
-                Center(
-                  child: Container(
-                    width: imageSize,
-                    height: imageSize,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius:
-                          BorderRadius.circular(AppRadius.xl),
-                      border: Border.all(color: AppColors.border, width: 2),
-                      boxShadow: AppShadows.soft,
+                    YseReactionOverlay(
+                      controller: _reaction,
+                      size: 140,
                     ),
-                    child: Image.asset(
-                      round.imagePath,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => const Icon(
-                        Icons.image_outlined,
-                        size: 72,
-                        color: AppColors.textMuted,
+
+                    const SizedBox(height: AppSpacing.xs),
+
+                    Center(
+                      child: Container(
+                        width: imageSize,
+                        height: imageSize,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadius.xl),
+                          border: Border.all(color: AppColors.border, width: 2),
+                          boxShadow: AppShadows.soft,
+                        ),
+                        child: Image.asset(
+                          round.imagePath,
+                          fit: BoxFit.contain,
+                          cacheWidth: 400,
+                          errorBuilder: (_, _, _) => const Icon(
+                            Icons.image_outlined,
+                            size: 72,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
 
-                const SizedBox(height: AppSpacing.md),
+                    const SizedBox(height: AppSpacing.sm),
 
-                // Definition
-                if (round.definition.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                    ),
-                    child: Text(
-                      round.definition,
+                    if (round.definition.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                        child: Text(
+                          round.definition,
+                          textAlign: TextAlign.center,
+                          style: AppText.body.copyWith(
+                            fontSize: 14,
+                            fontStyle: FontStyle.italic,
+                            color: AppColors.textMuted,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    Text(
+                      _wrongAttemptsThisRound == 0
+                          ? 'Tap the letters to spell the word'
+                          : 'Try again, you can do this!',
                       textAlign: TextAlign.center,
-                      style: AppText.body.copyWith(
-                        fontSize: 14,
-                        fontStyle: FontStyle.italic,
-                        color: AppColors.textMuted,
-                        height: 1.4,
+                      style: AppText.caption.copyWith(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ),
 
-                const SizedBox(height: AppSpacing.md),
+                    const SizedBox(height: AppSpacing.md),
 
-                // Instruction
-                Text(
-                  _wrongAttemptsThisRound == 0
-                      ? 'Tap the letters to spell the word'
-                      : 'Try again, you can do this!',
-                  textAlign: TextAlign.center,
-                  style: AppText.caption.copyWith(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
+                    _buildSlots(round, slotSize),
+
+                    const SizedBox(height: AppSpacing.xl),
+                  ],
                 ),
-
-                const SizedBox(height: AppSpacing.md),
-
-                // Target slots
-                _buildSlots(round, slotSize),
-
-                const SizedBox(height: AppSpacing.xl),
-              ],
-            ),
-          ),
-        ),
-
-        // Letter pool, fixed at bottom, thumb-reachable
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.lg,
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.studentBg,
-            border: Border(
-              top: BorderSide(
-                color: AppColors.border,
-                width: 1,
               ),
             ),
-          ),
-          child: _buildLetterPool(round),
+
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.lg,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.studentBg,
+                border: Border(
+                  top: BorderSide(color: AppColors.border, width: 1),
+                ),
+              ),
+              child: _buildLetterPool(round),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -685,9 +662,11 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back,
-                color: AppColors.textPrimary),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(context).pop();
+            },
+            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
             padding: EdgeInsets.zero,
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -695,38 +674,43 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Spell the Word', style: AppText.h2),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Spell the Word', style: AppText.h2),
+                    const InfoButton(
+                      title: 'How to Spell',
+                      description: 'Unscramble the letters to spell the word.',
+                      steps: [
+                        'Look at the picture and read the definition.',
+                        'Tap the letters at the bottom to fill the empty slots.',
+                        'If you make a mistake, tap a filled slot to remove the letter.',
+                        'When all slots are filled, it checks automatically.',
+                      ],
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    const Icon(Icons.star_rounded,
-                        size: 14, color: AppColors.accentYellow),
-                    const SizedBox(width: 3),
+                    const Icon(Icons.star_rounded, size: 20, color: AppColors.accentYellow),
+                    const SizedBox(width: 6),
                     Text(
                       '${_correctCount * 5} pts',
-                      style: const TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textYellow,
-                      ),
+                      style: const TextStyle(fontFamily: 'Nunito', fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textYellow),
                     ),
-                    const SizedBox(width: AppSpacing.md),
-                    const Icon(Icons.flag_rounded,
-                        size: 14, color: AppColors.accentTeal),
-                    const SizedBox(width: 3),
+                    const SizedBox(width: AppSpacing.lg),
+                    const Icon(Icons.flag_rounded, size: 20, color: AppColors.accentTeal),
+                    const SizedBox(width: 6),
                     Text(
                       'Round ${_currentIndex + 1} / ${_rounds.length}',
-                      style: AppText.caption.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: const TextStyle(fontFamily: 'Nunito', fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textTeal),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
         ],
       ),
     );
@@ -743,28 +727,15 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
         final isGlowingCorrect = _glowState == _GlowState.correct;
         final isGlowingWrong = _glowState == _GlowState.wrong && isFilled;
 
-        // Border + glow color
         final Color borderColor;
         final List<BoxShadow>? glow;
 
         if (isGlowingCorrect && isFilled) {
           borderColor = AppColors.accentGreen;
-          glow = [
-            BoxShadow(
-              color: AppColors.accentGreen.withValues(alpha: 0.65),
-              blurRadius: 22,
-              spreadRadius: 3,
-            ),
-          ];
+          glow = [BoxShadow(color: AppColors.accentGreen.withValues(alpha: 0.65), blurRadius: 22, spreadRadius: 3)];
         } else if (isGlowingWrong) {
           borderColor = AppColors.accentCoral;
-          glow = [
-            BoxShadow(
-              color: AppColors.accentCoral.withValues(alpha: 0.65),
-              blurRadius: 22,
-              spreadRadius: 3,
-            ),
-          ];
+          glow = [BoxShadow(color: AppColors.accentCoral.withValues(alpha: 0.65), blurRadius: 22, spreadRadius: 3)];
         } else if (isFilled) {
           borderColor = AppColors.accentTeal;
           glow = null;
@@ -797,17 +768,20 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
               boxShadow: glow,
             ),
             child: Center(
-              child: Text(
-                tile?.letter ?? '',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: size * 0.55,
-                  fontWeight: FontWeight.w800,
-                  color: isGlowingCorrect && isFilled
-                      ? AppColors.textGreen
-                      : isGlowingWrong
-                          ? AppColors.textCoral
-                          : AppColors.textPrimary,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  tile?.letter ?? '',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: size * 0.55,
+                    fontWeight: FontWeight.w800,
+                    color: isGlowingCorrect && isFilled
+                        ? AppColors.textGreen
+                        : isGlowingWrong
+                            ? AppColors.textCoral
+                            : AppColors.textPrimary,
+                  ),
                 ),
               ),
             ),
@@ -837,12 +811,7 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
             child: Center(
               child: Text(
                 tile.letter,
-                style: const TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 32,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
+                style: const TextStyle(fontFamily: 'Nunito', fontSize: 32, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
               ),
             ),
           ),
@@ -851,10 +820,6 @@ class _WordScrambleScreenState extends State<WordScrambleScreen> {
     );
   }
 }
-
-// ═══════════════════════════════════════════════════════════════
-// Data models
-// ═══════════════════════════════════════════════════════════════
 
 class _ScrambleRound {
   final int wordId;

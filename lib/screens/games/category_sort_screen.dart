@@ -14,19 +14,13 @@ import '../../providers/connectivity_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
-import '../../services/game_sfx.dart';
 import '../../services/sfx_service.dart';
-import '../../services/hint_service.dart';
-import '../../widgets/hint_button.dart';
+import '../../services/bgm_service.dart';
 import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/game_score.dart';
+import '../../widgets/info_button.dart';
 
-/// Category Sort, Grade 6 Hard.
-///
-/// 12 words, 3 category bins, drag-and-drop. 5 pts per correct.
-/// 3-strike rule auto-places a word after 3 wrong attempts (0 pts).
-/// 60s hint glows one word's correct bin. 180s auto-completes.
 class CategorySortScreen extends StatefulWidget {
   const CategorySortScreen({super.key});
 
@@ -41,12 +35,10 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
   static const int _hintAfterSeconds = 60;
   static const int _autoCompleteAfterSeconds = 180;
 
-  /// Category -> friendly display name.
   static const Map<String, String> _categoryLabels = {
     'music': 'Music',
     'visual_arts': 'Visual Arts',
     'storytelling': 'Storytelling',
-    // Fallback labels in case future content adds categories
     'movement': 'Movement',
     'action': 'Action',
     'flavor': 'Flavor',
@@ -56,11 +48,10 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
     'general': 'General',
   };
 
-  /// Category -> theme color.
   static const Map<String, Color> _categoryColors = {
-    'music': Color(0xFF9C27B0),        // purple
-    'visual_arts': Color(0xFF4A9EFF),  // blue
-    'storytelling': Color(0xFFFF9800), // orange
+    'music': Color(0xFF9C27B0),
+    'visual_arts': Color(0xFF4A9EFF),
+    'storytelling': Color(0xFFFF9800),
   };
 
   static const Color _fallbackColor = Color(0xFF009688);
@@ -73,28 +64,15 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
   int _gradeLevel = 6;
   String _difficulty = 'hard';
 
-  /// All 18 loaded words (unsorted pool is derived).
   List<Word> _allWords = [];
-
-  /// Category names in display order (3 of them).
   List<String> _categoryOrder = [];
-
-  /// Words currently in the pool (not yet sorted).
   final Set<int> _poolWordIds = {};
-
-  /// Words already sorted correctly. wordId -> category.
   final Map<int, String> _sortedWords = {};
-
-  /// Strike count per word (max 3).
   final Map<int, int> _strikes = {};
-
-  /// Words that were auto-placed after 3 strikes (0 pts).
   final Set<int> _autoPlacedWordIds = {};
 
-  /// Hint state: word id whose correct bin is glowing.
   int? _hintWordId;
-
-  int _correctCount = 0; // words sorted correctly (5 pts each)
+  int _correctCount = 0;
 
   Timer? _ticker;
   int _elapsedSeconds = 0;
@@ -102,16 +80,15 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
   bool _autoCompleteFired = false;
   bool _gameOver = false;
 
-  final HintService _hintService = HintService();
   final AudioPlayer _audioPlayer = AudioPlayer();
   final List<int> _wrongWordIds = [];
 
-  // Word being dragged (for the feedback widget scale).
   int? _draggingWordId;
 
   @override
   void initState() {
     super.initState();
+    BgmService.playTrack(BgmTrack.game);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadGame());
   }
 
@@ -119,32 +96,35 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
   void dispose() {
     _ticker?.cancel();
     _audioPlayer.dispose();
-    _hintService.dispose();
     super.dispose();
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Load
-  // ────────────────────────────────────────────────────────────
-
   Future<void> _loadGame() async {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
-    final batchId = args['batchId'] as int;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/student-home', (route) => false);
+        }
+      });
+      return;
+    }
+
+    final batchId = args['batchId'] as int?;
     final gradeLevel = (args['gradeLevel'] as int?) ?? 6;
     final difficulty = (args['difficulty'] as String?) ?? 'hard';
     final student = context.read<StudentProvider>().currentStudent;
 
-    if (student == null || student.id == null) {
+    if (batchId == null || student == null || student.id == null) {
       setState(() {
         _loading = false;
-        _error = 'Not signed in.';
+        _error = 'Not signed in or missing data.';
       });
       return;
     }
 
     try {
-      final allWords =
-          await DatabaseService.instance.getSampledWordsForBatch(batchId);
+      final allWords = await DatabaseService.instance.getSampledWordsForBatch(batchId);
 
       if (allWords.length < _wordsPerRound) {
         setState(() {
@@ -154,7 +134,6 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
         return;
       }
 
-      // Group words by category.
       final grouped = <String, List<Word>>{};
       for (final w in allWords) {
         final cat = w.category.trim();
@@ -170,7 +149,6 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
         return;
       }
 
-      // Sample 4 per category, take the first 3 categories (shuffled).
       final rng = Random();
       final catNames = grouped.keys.toList()..shuffle(rng);
       final pickedCats = catNames.take(_categoriesPerRound).toList();
@@ -218,18 +196,13 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
       setState(() => _elapsedSeconds++);
 
       if (!_hintFired && _elapsedSeconds >= _hintAfterSeconds) {
-        _fireHint(automatic: true);
+        _fireAutomaticHint();
       }
-      if (!_autoCompleteFired &&
-          _elapsedSeconds >= _autoCompleteAfterSeconds) {
+      if (!_autoCompleteFired && _elapsedSeconds >= _autoCompleteAfterSeconds) {
         _fireAutoComplete();
       }
     });
   }
-
-  // ────────────────────────────────────────────────────────────
-  // Sorting logic
-  // ────────────────────────────────────────────────────────────
 
   Future<void> _onWordDropped(Word word, String targetCategory) async {
     if (_gameOver) return;
@@ -239,8 +212,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
 
     if (isCorrect) {
       HapticFeedback.heavyImpact();
-      GameSfx.instance.playCorrect();
-      SfxService.correct(); // Phase 3: SFX
+      SfxService.correct();
 
       setState(() {
         _poolWordIds.remove(word.id);
@@ -261,10 +233,8 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
       return;
     }
 
-    // Wrong drop.
     HapticFeedback.mediumImpact();
-    GameSfx.instance.playWrong();
-    SfxService.wrong(); // Phase 3: SFX
+    SfxService.wrong();
 
     final currentStrikes = _strikes[word.id] ?? 0;
     final newStrikes = currentStrikes + 1;
@@ -274,7 +244,6 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
     });
 
     if (newStrikes >= _maxStrikes) {
-      // Auto-place after 3 strikes, 0 pts.
       setState(() {
         _poolWordIds.remove(word.id);
         _sortedWords[word.id!] = word.category;
@@ -302,26 +271,15 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource(clean));
     } catch (e) {
-      debugPrint('Word audio failed (continuing): $e');
+      debugPrint('Word audio failed: $e');
     }
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Hint + auto-complete
-  // ────────────────────────────────────────────────────────────
-
-  void _fireHint({bool automatic = false}) {
-    if (automatic) {
-      _hintFired = true;
-    } else {
-      if (!_hintService.canUse()) return;
-      _hintService.use();
-      SfxService.tap();
-    }
+  void _fireAutomaticHint() {
+    _hintFired = true;
 
     if (_poolWordIds.isEmpty) return;
-    final unsorted =
-        _allWords.where((w) => _poolWordIds.contains(w.id)).toList();
+    final unsorted = _allWords.where((w) => _poolWordIds.contains(w.id)).toList();
     if (unsorted.isEmpty) return;
     
     final pick = unsorted[Random().nextInt(unsorted.length)];
@@ -330,8 +288,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
 
   Future<void> _fireAutoComplete() async {
     _autoCompleteFired = true;
-    final remaining =
-        _allWords.where((w) => _poolWordIds.contains(w.id)).toList();
+    final remaining = _allWords.where((w) => _poolWordIds.contains(w.id)).toList();
     if (remaining.isEmpty) return;
 
     setState(() {
@@ -345,28 +302,28 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
       _hintWordId = null;
     });
 
-    GameSfx.instance.playWrong();
     SfxService.wrong();
     await Future.delayed(const Duration(milliseconds: 1400));
     if (!mounted) return;
     await _finishGame();
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Finish
-  // ────────────────────────────────────────────────────────────
-
   Future<void> _finishGame() async {
     if (_ticker?.isActive ?? false) _ticker!.cancel();
     try {
-      if (!_autoCompleteFired && _sortedWords.length >= _allWords.length) {
-        GameSfx.instance.playCelebration();
+      final totalRounds = _allWords.length;
+      final isPassing = totalRounds > 0 && (_correctCount / totalRounds) >= 0.70;
+
+      if (isPassing) {
         SfxService.celebration();
-        await Future.delayed(const Duration(milliseconds: 1200));
+        await Future.delayed(const Duration(milliseconds: 1500));
+      } else {
+        SfxService.fail();
+        await Future.delayed(const Duration(milliseconds: 1500));
       }
+
       if (!mounted) return;
 
-      final totalRounds = _allWords.length;
       final wrongWordIds = List<int>.from(_wrongWordIds);
 
       final args = ModalRoute.of(context)!.settings.arguments as Map;
@@ -376,8 +333,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
         gameTotal: totalRounds,
       );
 
-      final pointsDelta =
-          await DatabaseService.instance.computePointsDeltaForBatch(
+      final pointsDelta = await DatabaseService.instance.computePointsDeltaForBatch(
         studentId: _studentId,
         batchId: _batchId,
         newScore: score.correct,
@@ -390,18 +346,14 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
           score: score.correct,
           totalQuestions: score.total,
           pointsEarned: pointsDelta,
-          wrongWordIdsJson: wrongWordIds.isEmpty
-              ? null
-              : '[${wrongWordIds.join(',')}]',
+          wrongWordIdsJson: wrongWordIds.isEmpty ? null : '[${wrongWordIds.join(',')}]',
           completedAt: DateTime.now().toIso8601String(),
         ),
       );
 
       for (final w in _allWords) {
-        final wasCorrect = !_autoPlacedWordIds.contains(w.id) &&
-            !_wrongWordIds.contains(w.id);
-        await DatabaseService.instance
-            .recordWordEncounter(_studentId, w.id!);
+        final wasCorrect = !_autoPlacedWordIds.contains(w.id) && !_wrongWordIds.contains(w.id);
+        await DatabaseService.instance.recordWordEncounter(_studentId, w.id!);
         await DatabaseService.instance.updateWordMastery(
           studentId: _studentId,
           wordId: w.id!,
@@ -414,11 +366,8 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
       }
 
       bool isNewBadge = false;
-      final isPassing =
-          totalRounds > 0 && (_correctCount / totalRounds) >= 0.70;
       if (isPassing) {
-        final badgeName =
-            AchievementBadge.nameFor(_gradeLevel, _difficulty);
+        final badgeName = AchievementBadge.nameFor(_gradeLevel, _difficulty);
         final badge = AchievementBadge(
           studentId: _studentId,
           gradeLevel: _gradeLevel,
@@ -430,8 +379,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
         isNewBadge = await DatabaseService.instance.awardBadge(badge);
       }
 
-      final updated =
-          await DatabaseService.instance.getStudentById(_studentId);
+      final updated = await DatabaseService.instance.getStudentById(_studentId);
       if (!mounted) return;
 
       if (updated != null) {
@@ -439,6 +387,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
 
         final connectivity = context.read<ConnectivityProvider>();
         final authProvider = context.read<AuthProvider>();
+        
         unawaited(
           SyncService.instance.syncAll(
             student: updated,
@@ -450,18 +399,20 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
         if (updated.classFirestoreId != null &&
             updated.classFirestoreId!.isNotEmpty &&
             updated.firebaseUid != null) {
-          try {
-            final badges = await DatabaseService.instance
-                .getBadgesForStudent(updated.id!);
-            await FirestoreService.instance.updateEnrollmentSnapshot(
-              classId: updated.classFirestoreId!,
-              studentUid: updated.firebaseUid!,
-              totalPoints: updated.totalPoints,
-              badgeCount: badges.length,
-            );
-          } catch (e) {
-            debugPrint('Enrollment snapshot failed: $e');
-          }
+          unawaited(() async {
+            try {
+              final badges = await DatabaseService.instance.getBadgesForStudent(updated.id!);
+              await FirestoreService.instance.updateEnrollmentSnapshot(
+                classId: updated.classFirestoreId!,
+                studentUid: updated.firebaseUid!,
+                totalPoints: updated.totalPoints,
+                badgeCount: badges.length,
+                avatarIndex: updated.avatarIndex,
+              );
+            } catch (e) {
+              debugPrint('Enrollment snapshot failed: $e');
+            }
+          }());
         }
       }
 
@@ -490,10 +441,6 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
     }
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Build
-  // ────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -515,8 +462,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 64, color: AppColors.textMuted),
+            const Icon(Icons.error_outline_rounded, size: 64, color: AppColors.textMuted),
             const SizedBox(height: AppSpacing.lg),
             Text(_error!, textAlign: TextAlign.center, style: AppText.body),
             const SizedBox(height: AppSpacing.xl),
@@ -532,9 +478,9 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
 
   Color _gridGlowColor() {
     if (_gameOver) return AppColors.accentCoral;
-    if (_elapsedSeconds < 60) return const Color(0xFF4CAF50); // green
-    if (_elapsedSeconds < 120) return const Color(0xFFFF9800); // orange
-    return const Color(0xFFE53935); // red
+    if (_elapsedSeconds < 60) return const Color(0xFF4CAF50);
+    if (_elapsedSeconds < 120) return const Color(0xFFFF9800);
+    return const Color(0xFFE53935);
   }
 
   String _ysePose() {
@@ -546,9 +492,10 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
   }
 
   Widget _buildGame() {
-    return Stack(
-      children: [
-        Column(
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 700),
+        child: Column(
           children: [
             _buildHeader(),
             Expanded(
@@ -559,12 +506,12 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
                 ),
                 child: Column(
                   children: [
-                    // Yse
                     Flexible(
                       flex: 2,
                       child: Image.asset(
                         _ysePose(),
                         fit: BoxFit.contain,
+                        cacheWidth: 300,
                         errorBuilder: (_, _, _) => const Icon(
                           Icons.category_rounded,
                           size: 80,
@@ -575,7 +522,6 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
 
                     const SizedBox(height: 4),
 
-                    // Time bar
                     _buildBigStat(
                       icon: Icons.timer_rounded,
                       color: _gridGlowColor(),
@@ -594,7 +540,6 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
 
                     const SizedBox(height: 8),
 
-                    // Word pool
                     Flexible(
                       flex: 3,
                       child: _buildPool(),
@@ -602,35 +547,19 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
 
                     const SizedBox(height: 8),
 
-                    // Category bins
                     Flexible(
                       flex: 4,
                       child: _buildBins(),
                     ),
                     
-                    const SizedBox(height: 60), // Space for floating hint button
+                    const SizedBox(height: 10),
                   ],
                 ),
               ),
             ),
           ],
         ),
-        
-        // Phase 4: Hint Button
-        if (!_gameOver)
-          Positioned(
-            bottom: 20,
-            right: 20,
-            child: HintButton(
-              hintsRemaining: _hintService.remaining,
-              onCooldown: _hintService.onCooldown,
-              onTap: () {
-                _fireHint();
-                setState(() {}); // Refresh hint count
-              },
-            ),
-          ),
-      ],
+      ),
     );
   }
 
@@ -651,13 +580,28 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
             padding: EdgeInsets.zero,
           ),
           const SizedBox(width: AppSpacing.sm),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Sort the Words!', style: AppText.h2),
-                SizedBox(height: 2),
-                Text(
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Sort the Words!', style: AppText.h2),
+                    const InfoButton(
+                      title: 'How to Sort',
+                      description: 'Drag each word into its correct group.',
+                      steps: [
+                        'Read the words at the top.',
+                        'Look at the 3 category bins at the bottom.',
+                        'Drag a word into the bin you think it belongs to.',
+                        'If you get it wrong 3 times, it will place itself!',
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                const Text(
                   'Drag each word into the correct group',
                   style: AppText.caption,
                 ),
@@ -670,9 +614,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
   }
 
   Widget _buildPool() {
-    final poolWords = _allWords
-        .where((w) => _poolWordIds.contains(w.id))
-        .toList();
+    final poolWords = _allWords.where((w) => _poolWordIds.contains(w.id)).toList();
 
     if (poolWords.isEmpty) {
       return const Center(
@@ -771,13 +713,11 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
     final color = _categoryColors[category] ?? _fallbackColor;
     final label = _categoryLabels[category] ?? _prettifyCategory(category);
     final sortedWordsInBin = _allWords
-        .where((w) =>
-            _sortedWords.containsKey(w.id) && _sortedWords[w.id] == category)
+        .where((w) => _sortedWords.containsKey(w.id) && _sortedWords[w.id] == category)
         .toList();
 
     final isHinted = _hintWordId != null &&
-        _allWords
-            .any((w) => w.id == _hintWordId && w.category == category);
+        _allWords.any((w) => w.id == _hintWordId && w.category == category);
 
     return DragTarget<Word>(
       onWillAcceptWithDetails: (_) => true,
@@ -811,7 +751,6 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
           padding: const EdgeInsets.all(6),
           child: Column(
             children: [
-              // Label
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 4),
@@ -833,7 +772,6 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
               ),
               const SizedBox(height: 4),
 
-              // Sorted word chips
               Expanded(
                 child: SingleChildScrollView(
                   child: Wrap(
@@ -843,14 +781,10 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
                     children: sortedWordsInBin.map((w) {
                       final auto = _autoPlacedWordIds.contains(w.id);
                       return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 3,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                         decoration: BoxDecoration(
                           color: color.withValues(alpha: auto ? 0.15 : 0.30),
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.small),
+                          borderRadius: BorderRadius.circular(AppRadius.small),
                           border: Border.all(
                             color: color.withValues(alpha: 0.5),
                             width: 1,
@@ -881,9 +815,7 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
     if (raw.isEmpty) return raw;
     return raw
         .split('_')
-        .map((s) => s.isEmpty
-            ? s
-            : '${s[0].toUpperCase()}${s.substring(1)}')
+        .map((s) => s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}')
         .join(' ');
   }
 
@@ -936,10 +868,6 @@ class _CategorySortScreenState extends State<CategorySortScreen> {
     return '$m:${s.toString().padLeft(2, '0')}';
   }
 }
-
-// ═══════════════════════════════════════════════════════════════
-// Word chip widget
-// ═══════════════════════════════════════════════════════════════
 
 class _WordChip extends StatelessWidget {
   final Word word;

@@ -4,23 +4,17 @@ import 'dart:math';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/content_models.dart';
 import '../../models/word.dart';
-import '../../services/database_service.dart';
-import '../../services/game_sfx.dart';
-import '../../utils/app_theme.dart';
-
-import 'package:provider/provider.dart';
 import '../../providers/student_provider.dart';
+import '../../services/database_service.dart';
+import '../../services/sfx_service.dart';
+import '../../utils/app_theme.dart';
+import '../../widgets/info_button.dart';
 
 /// PassageScreen, Grade 4+.
-///
-/// Flow:
-///   1. Illustration + title
-///   2. Sentences played one at a time (active sentence highlighted, auto-scrolled)
-///   3. Comprehension questions (mascot top, question middle, answers bottom)
-///   4. Passage score passed to the game via route args
 class PassageScreen extends StatefulWidget {
   const PassageScreen({super.key});
 
@@ -40,19 +34,17 @@ class _PassageScreenState extends State<PassageScreen> {
 
   int _activeSentenceIndex = 0;
   bool _isPlaying = false;
-  bool _hasStartedReading = false; // controls the Ready / Next Sentence button
-  bool _hasCompletedBefore = false; // shows a Skip-to-Questions button
+  bool _hasStartedReading = false;
+  bool _hasCompletedBefore = false;
 
   int _currentQuestionIndex = 0;
   String? _selectedAnswer;
   bool _answered = false;
   int _passageCorrect = 0;
 
-  // Cached choices per question, prevents reshuffle on rebuild.
   List<String>? _cachedChoices;
   int _cachedChoicesForIndex = -1;
 
-  // Sentence scroll + per-sentence keys for auto-scroll.
   final ScrollController _sentenceScroll = ScrollController();
   final List<GlobalKey> _sentenceKeys = [];
 
@@ -61,7 +53,6 @@ class _PassageScreenState extends State<PassageScreen> {
   final AudioPlayer _popupAudioPlayer = AudioPlayer();
   bool _isPlayingQuestion = false;
 
-  // Tappable words (G5+), populated from passage.tappableWords on load.
   Set<String> _tappableWords = <String>{};
   final Map<String, TapGestureRecognizer> _tappableRecognizers = {};
 
@@ -85,9 +76,18 @@ class _PassageScreenState extends State<PassageScreen> {
   }
 
   Future<void> _loadPassage() async {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
-    final passageKey = args['passageId'] as String?;
+    // SAFE ROUTE ARGUMENTS FALLBACK
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/student-home', (route) => false);
+        }
+      });
+      return;
+    }
 
+    final passageKey = args['passageId'] as String?;
     final studentId = context.read<StudentProvider>().currentStudent?.id;
     final batchIdArg = args['batchId'] as int?;
 
@@ -113,7 +113,6 @@ class _PassageScreenState extends State<PassageScreen> {
     final questions =
         await DatabaseService.instance.getQuestionsForPassage(passage.id!);
 
-    // Did this student already finish this batch before?
     bool alreadyDone = false;
     if (studentId != null && batchIdArg != null) {
       final prior = await DatabaseService.instance
@@ -141,8 +140,7 @@ class _PassageScreenState extends State<PassageScreen> {
     });
   }
 
-
-    void _initTappableWords(Passage passage) {
+  void _initTappableWords(Passage passage) {
     for (final r in _tappableRecognizers.values) {
       r.dispose();
     }
@@ -160,7 +158,6 @@ class _PassageScreenState extends State<PassageScreen> {
   }
 
   Future<void> _onTappableWordTap(String lowerWord) async {
-    // Pause any playing audio so the popup isn't drowned out.
     try {
       await _audioPlayer.stop();
       await _questionAudioPlayer.stop();
@@ -189,7 +186,7 @@ class _PassageScreenState extends State<PassageScreen> {
       await _popupAudioPlayer.stop();
       await _popupAudioPlayer.play(AssetSource(clean));
     } catch (e) {
-      debugPrint('🔊 Popup audio failed (continuing): $e');
+      debugPrint('Popup audio failed (continuing): $e');
     }
   }
 
@@ -211,8 +208,14 @@ class _PassageScreenState extends State<PassageScreen> {
               constraints: const BoxConstraints(maxWidth: 420),
               child: _WordPopupCard(
                 word: word,
-                onPlay: () => _playPopupAudio(word.audioAsset),
-                onClose: () => Navigator.of(ctx).pop(),
+                onPlay: () {
+                  SfxService.tap();
+                  _playPopupAudio(word.audioAsset);
+                },
+                onClose: () {
+                  SfxService.tap();
+                  Navigator.of(ctx).pop();
+                },
               ),
             ),
           ),
@@ -221,8 +224,6 @@ class _PassageScreenState extends State<PassageScreen> {
     );
   }
 
-  /// Builds a RichText for one sentence.
-  /// Tappable words get a dotted teal underline + tap handler.
   Widget _buildTappableSentence(
     String text, {
     required TextStyle baseStyle,
@@ -267,12 +268,11 @@ class _PassageScreenState extends State<PassageScreen> {
     );
   }
 
-  /// Renders the illustration, falling back to the alternate folder if the
-  /// primary path fails. Handles the G4 migration from /words/ to /passages/.
   Widget _buildIllustration(String rawPath) {
     return Image.asset(
       rawPath,
       fit: BoxFit.cover,
+      cacheWidth: 800, // MEMORY CACHING FIX
       errorBuilder: (_, _, _) => _buildIllustrationAlt(rawPath),
     );
   }
@@ -298,6 +298,7 @@ class _PassageScreenState extends State<PassageScreen> {
     return Image.asset(
       alt,
       fit: BoxFit.cover,
+      cacheWidth: 800, // MEMORY CACHING FIX
       errorBuilder: (_, _, _) => const Center(
         child: Icon(
           Icons.image_outlined,
@@ -330,7 +331,7 @@ class _PassageScreenState extends State<PassageScreen> {
           .first
           .timeout(const Duration(seconds: 15));
     } catch (e) {
-      debugPrint('🔊 Sentence audio failed (continuing): $e');
+      debugPrint('Sentence audio failed (continuing): $e');
     }
 
     if (!mounted) return;
@@ -354,14 +355,13 @@ class _PassageScreenState extends State<PassageScreen> {
 
   Future<void> _onButtonPressed() async {
     if (_isPlaying) return;
+    SfxService.tap();
 
-    // First tap, "READY?", start sentence 0.
     if (!_hasStartedReading) {
       await _playSentence(0);
       return;
     }
 
-    // Subsequent taps, advance to next sentence, or go to questions.
     if (_activeSentenceIndex < _sentences.length - 1) {
       await _playSentence(_activeSentenceIndex + 1);
     } else {
@@ -370,7 +370,7 @@ class _PassageScreenState extends State<PassageScreen> {
     }
   }
 
-    Future<void> _playQuestionStem() async {
+  Future<void> _playQuestionStem() async {
     if (_questions.isEmpty) return;
     final q = _questions[_currentQuestionIndex];
     final audio = q.stemAudio;
@@ -388,7 +388,7 @@ class _PassageScreenState extends State<PassageScreen> {
           .first
           .timeout(const Duration(seconds: 12));
     } catch (e) {
-      debugPrint('🔊 Question stem audio failed (continuing): $e');
+      debugPrint('Question stem audio failed (continuing): $e');
     }
     _isPlayingQuestion = false;
   }
@@ -417,16 +417,15 @@ class _PassageScreenState extends State<PassageScreen> {
     return list;
   }
 
-    void _onSelectAnswer(String answer) {
+  void _onSelectAnswer(String answer) {
     if (_answered) return;
     final q = _questions[_currentQuestionIndex];
     final isCorrect = answer == q.correctAnswer;
 
-    // Immediate audio feedback on tap.
     if (isCorrect) {
-      GameSfx.instance.playCorrect();
+      SfxService.correct();
     } else {
-      GameSfx.instance.playWrong();
+      SfxService.wrong();
     }
 
     setState(() {
@@ -496,7 +495,10 @@ class _PassageScreenState extends State<PassageScreen> {
             Text(_error!, textAlign: TextAlign.center, style: AppText.body),
             const SizedBox(height: AppSpacing.xl),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                SfxService.tap();
+                Navigator.of(context).pop();
+              },
               child: const Text('Go Back'),
             ),
           ],
@@ -504,10 +506,6 @@ class _PassageScreenState extends State<PassageScreen> {
       ),
     );
   }
-
-  // ────────────────────────────────────────────────────────────
-  // Reading phase
-  // ────────────────────────────────────────────────────────────
 
   Widget _buildReading() {
     final p = _passage!;
@@ -527,328 +525,279 @@ class _PassageScreenState extends State<PassageScreen> {
             ? Icons.quiz_rounded
             : Icons.arrow_forward_rounded;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Column(
-        children: [
-          const SizedBox(height: AppSpacing.sm),
-
-          // Header
-          Row(
+    // RESPONSIVENESS FIX: Constrain width for tablets
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 700),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: Column(
             children: [
-              IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.arrow_back,
-                    color: AppColors.textPrimary),
-                padding: EdgeInsets.zero,
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      SfxService.tap();
+                      Navigator.of(context).pop();
+                    },
+                    icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                    padding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  const Expanded(
+                    child: Text('Read the Passage', style: AppText.h2),
+                  ),
+                  const InfoButton(
+                    title: 'How to Read',
+                    description: 'Listen to the story sentence by sentence.',
+                    steps: [
+                      'Tap READY to hear the first sentence.',
+                      'Follow along as the text highlights.',
+                      'Tap NEXT SENTENCE to continue.',
+                      'At the end, answer the comprehension questions!',
+                    ],
+                  ),
+                  if (_hasCompletedBefore)
+                    TextButton.icon(
+                      onPressed: () {
+                        SfxService.tap();
+                        setState(() => _phase = _PassagePhase.questions);
+                        _playQuestionStem();
+                      },
+                      icon: const Icon(Icons.fast_forward_rounded, size: 18),
+                      label: const Text(
+                        'Skip',
+                        style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w700),
+                      ),
+                      style: TextButton.styleFrom(foregroundColor: AppColors.accentTeal),
+                    ),
+                ],
               ),
-              const SizedBox(width: AppSpacing.sm),
-              const Expanded(
-                child: Text('Read the Passage', style: AppText.h2),
+              const SizedBox(height: AppSpacing.sm),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+                child: Container(
+                  width: double.infinity,
+                  height: illustrationHeight,
+                  color: AppColors.surface,
+                  child: _buildIllustration(p.illustration),
+                ),
               ),
-              if (_hasCompletedBefore)
-                TextButton.icon(
-                  onPressed: () {
-                    setState(() => _phase = _PassagePhase.questions);
-                    _playQuestionStem();
-                  },
-                  icon: const Icon(Icons.fast_forward_rounded, size: 18),
-                  label: const Text(
-                    'Skip',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
+              const SizedBox(height: AppSpacing.md),
+              Text(p.title, textAlign: TextAlign.center, style: AppText.h2.copyWith(fontSize: 18)),
+              const SizedBox(height: AppSpacing.sm),
+              Expanded(
+                child: Scrollbar(
+                  controller: _sentenceScroll,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _sentenceScroll,
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Column(
+                      children: List.generate(_sentences.length, (i) {
+                        final s = _sentences[i];
+                        final isActive = _hasStartedReading && i == _activeSentenceIndex;
+                        final isDone = _hasStartedReading && i < _activeSentenceIndex;
+
+                        return GestureDetector(
+                          onTap: isDone ? () => _playSentence(i) : null,
+                          child: Container(
+                            key: _sentenceKeys[i],
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 250),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isActive ? AppColors.accentYellow.withValues(alpha: 0.25) : AppColors.surface,
+                                borderRadius: BorderRadius.circular(AppRadius.medium),
+                                border: Border.all(
+                                  color: isActive ? AppColors.accentYellow : AppColors.border,
+                                  width: isActive ? 2 : 1,
+                                ),
+                              ),
+                              child: _buildTappableSentence(
+                                s.text,
+                                baseStyle: TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontSize: 15,
+                                  height: 1.5,
+                                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                                  color: isDone ? AppColors.textMuted : AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
                     ),
                   ),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.accentTeal,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SizedBox(
+                height: 56,
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isPlaying ? null : _onButtonPressed,
+                  icon: Icon(buttonIcon),
+                  label: Text(
+                    buttonLabel,
+                    style: const TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w700, letterSpacing: 0.5),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentTeal,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.large)),
                   ),
                 ),
+              ),
+              const SizedBox(height: AppSpacing.md),
             ],
           ),
-
-          const SizedBox(height: AppSpacing.sm),
-
-          // Big illustration, full width, cover fit
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.xl),
-            child: Container(
-              width: double.infinity,
-              height: illustrationHeight,
-              color: AppColors.surface,
-              child: _buildIllustration(p.illustration),
-            ),
-          ),
-
-          const SizedBox(height: AppSpacing.md),
-
-          Text(
-            p.title,
-            textAlign: TextAlign.center,
-            style: AppText.h2.copyWith(fontSize: 18),
-          ),
-
-          const SizedBox(height: AppSpacing.sm),
-
-          // Sentences, auto-scrolling
-          Expanded(
-            child: Scrollbar(
-              controller: _sentenceScroll,
-              thumbVisibility: true,
-              child: SingleChildScrollView(
-                controller: _sentenceScroll,
-                padding: const EdgeInsets.only(right: 8),
-                child: Column(
-                  children: List.generate(_sentences.length, (i) {
-                    final s = _sentences[i];
-                    final isActive =
-                        _hasStartedReading && i == _activeSentenceIndex;
-                    final isDone =
-                        _hasStartedReading && i < _activeSentenceIndex;
-
-                    return GestureDetector(
-                      onTap: isDone ? () => _playSentence(i) : null,
-                      child: Container(
-                        key: _sentenceKeys[i],
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? AppColors.accentYellow
-                                    .withValues(alpha: 0.25)
-                                : AppColors.surface,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.medium),
-                            border: Border.all(
-                              color: isActive
-                                  ? AppColors.accentYellow
-                                  : AppColors.border,
-                              width: isActive ? 2 : 1,
-                            ),
-                          ),
-                          child: _buildTappableSentence(
-                            s.text,
-                            baseStyle: TextStyle(
-                              fontFamily: 'Nunito',
-                              fontSize: 15,
-                              height: 1.5,
-                              fontWeight: isActive
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              color: isDone
-                                  ? AppColors.textMuted
-                                  : AppColors.textPrimary,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: AppSpacing.sm),
-
-          // Ready / Next Sentence / Ask Questions
-          SizedBox(
-            height: 56,
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _isPlaying ? null : _onButtonPressed,
-              icon: Icon(buttonIcon),
-              label: Text(
-                buttonLabel,
-                style: const TextStyle(
-                  fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentTeal,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.large),
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: AppSpacing.md),
-        ],
+        ),
       ),
     );
   }
-
-  // ────────────────────────────────────────────────────────────
-  // Questions phase
-  // ────────────────────────────────────────────────────────────
 
   Widget _buildQuestions() {
     final q = _questions[_currentQuestionIndex];
     final choices = _choicesForCurrentQuestion();
 
+    // RESPONSIVENESS FIX: Constrain width for tablets
     return Container(
-      // Slightly warmer background than the reading phase, visually refreshing.
       color: AppColors.accentYellow.withValues(alpha: 0.10),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: AppSpacing.md),
-
-            Row(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 700),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Expanded(
-                  child: Text('Comprehension', style: AppText.h2),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    const Expanded(child: Text('Comprehension', style: AppText.h2)),
+                    Text('Q ${_currentQuestionIndex + 1} / ${_questions.length}', style: AppText.caption),
+                    const SizedBox(width: 8),
+                    const InfoButton(
+                      title: 'Questions',
+                      description: 'Answer the questions about the story you just read.',
+                      steps: [
+                        'Read the question carefully.',
+                        'Tap the speaker icon to hear the question again.',
+                        'Tap the best answer from the choices below.',
+                      ],
+                    ),
+                  ],
                 ),
-                Text(
-                  'Q ${_currentQuestionIndex + 1} / ${_questions.length}',
-                  style: AppText.caption,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: AppSpacing.sm),
-
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.small),
-              child: LinearProgressIndicator(
-                value: (_currentQuestionIndex + 1) / _questions.length,
-                minHeight: 6,
-                backgroundColor: AppColors.border,
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.accentTeal,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: AppSpacing.md),
-
-            // Mascot, top area
-            Expanded(
-              flex: 3,
-              child: Center(
-                child: Image.asset(
-                  'assets/images/mascot/groo_teaching.png',
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => const Icon(
-                    Icons.school_rounded,
-                    size: 80,
-                    color: AppColors.accentPurple,
+                const SizedBox(height: AppSpacing.sm),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.small),
+                  child: LinearProgressIndicator(
+                    value: (_currentQuestionIndex + 1) / _questions.length,
+                    minHeight: 6,
+                    backgroundColor: AppColors.border,
+                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentTeal),
                   ),
                 ),
-              ),
-            ),
-
-            // Question stem, middle
-                        // Question stem, middle, with a replay button
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(AppRadius.xl),
-                border: Border.all(color: AppColors.border),
-                boxShadow: AppShadows.soft,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      q.stem,
-                      textAlign: TextAlign.center,
-                      style: AppText.h2.copyWith(fontSize: 18),
+                const SizedBox(height: AppSpacing.md),
+                Expanded(
+                  flex: 3,
+                  child: Center(
+                    child: Image.asset(
+                      'assets/images/mascot/groo_teaching.png',
+                      fit: BoxFit.contain,
+                      cacheWidth: 400, // MEMORY CACHING FIX
+                      errorBuilder: (_, _, _) => const Icon(Icons.school_rounded, size: 80, color: AppColors.accentPurple),
                     ),
                   ),
-                  if (q.stemAudio != null && q.stemAudio!.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    InkWell(
-                      onTap: _playQuestionStem,
-                      borderRadius:
-                          BorderRadius.circular(AppRadius.medium),
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: Icon(
-                          Icons.volume_up_rounded,
-                          color: AppColors.accentTeal,
-                          size: 26,
+                ),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
+                    border: Border.all(color: AppColors.border),
+                    boxShadow: AppShadows.soft,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(q.stem, textAlign: TextAlign.center, style: AppText.h2.copyWith(fontSize: 18)),
+                      ),
+                      if (q.stemAudio != null && q.stemAudio!.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () {
+                            SfxService.tap();
+                            _playQuestionStem();
+                          },
+                          borderRadius: BorderRadius.circular(AppRadius.medium),
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Icon(Icons.volume_up_rounded, color: AppColors.accentTeal, size: 26),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                ...choices.map((choice) {
+                  final isCorrect = choice == q.correctAnswer;
+                  final isSelected = choice == _selectedAnswer;
+
+                  Color bg = AppColors.surface;
+                  Color border = AppColors.border;
+                  IconData? icon;
+                  Color? iconColor;
+
+                  if (_answered) {
+                    if (isCorrect) {
+                      bg = AppColors.accentTeal.withValues(alpha: 0.15);
+                      border = AppColors.accentTeal;
+                      icon = Icons.check_circle_rounded;
+                      iconColor = AppColors.accentTeal;
+                    } else if (isSelected) {
+                      bg = AppColors.accentCoral.withValues(alpha: 0.15);
+                      border = AppColors.accentCoral;
+                      icon = Icons.cancel_rounded;
+                      iconColor = AppColors.accentCoral;
+                    }
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: InkWell(
+                      onTap: _answered ? null : () => _onSelectAnswer(choice),
+                      borderRadius: BorderRadius.circular(AppRadius.medium),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: bg,
+                          borderRadius: BorderRadius.circular(AppRadius.medium),
+                          border: Border.all(color: border, width: 1.5),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(choice, style: AppText.bodyBold.copyWith(fontSize: 15)),
+                            ),
+                            if (icon != null) Icon(icon, color: iconColor),
+                          ],
                         ),
                       ),
                     ),
-                  ],
-                ],
-              ),
+                  );
+                }),
+                const SizedBox(height: AppSpacing.md),
+              ],
             ),
-
-            const SizedBox(height: AppSpacing.md),
-
-            // Answers, bottom thumb zone
-            ...choices.map((choice) {
-              final isCorrect = choice == q.correctAnswer;
-              final isSelected = choice == _selectedAnswer;
-
-              Color bg = AppColors.surface;
-              Color border = AppColors.border;
-              IconData? icon;
-              Color? iconColor;
-
-              if (_answered) {
-                if (isCorrect) {
-                  bg = AppColors.accentTeal.withValues(alpha: 0.15);
-                  border = AppColors.accentTeal;
-                  icon = Icons.check_circle_rounded;
-                  iconColor = AppColors.accentTeal;
-                } else if (isSelected) {
-                  bg = AppColors.accentCoral.withValues(alpha: 0.15);
-                  border = AppColors.accentCoral;
-                  icon = Icons.cancel_rounded;
-                  iconColor = AppColors.accentCoral;
-                }
-              }
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: InkWell(
-                  onTap: _answered ? null : () => _onSelectAnswer(choice),
-                  borderRadius: BorderRadius.circular(AppRadius.medium),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: bg,
-                      borderRadius: BorderRadius.circular(AppRadius.medium),
-                      border: Border.all(color: border, width: 1.5),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            choice,
-                            style: AppText.bodyBold.copyWith(fontSize: 15),
-                          ),
-                        ),
-                        if (icon != null) Icon(icon, color: iconColor),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }),
-
-            const SizedBox(height: AppSpacing.md),
-          ],
+          ),
         ),
       ),
     );
@@ -895,17 +844,12 @@ class _WordPopupCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header row, word + close
           Row(
             children: [
               Expanded(
                 child: Text(
                   word.text.toUpperCase(),
-                  style: AppText.h2.copyWith(
-                    fontSize: 22,
-                    letterSpacing: 1.2,
-                    color: const Color(0xFF2EC4B6),
-                  ),
+                  style: AppText.h2.copyWith(fontSize: 22, letterSpacing: 1.2, color: const Color(0xFF2EC4B6)),
                 ),
               ),
               InkWell(
@@ -914,23 +858,13 @@ class _WordPopupCard extends StatelessWidget {
                 child: Container(
                   width: 34,
                   height: 34,
-                  decoration: BoxDecoration(
-                    color: AppColors.studentBg,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.close_rounded,
-                    size: 18,
-                    color: AppColors.textPrimary,
-                  ),
+                  decoration: const BoxDecoration(color: AppColors.studentBg, shape: BoxShape.circle),
+                  child: const Icon(Icons.close_rounded, size: 18, color: AppColors.textPrimary),
                 ),
               ),
             ],
           ),
-
           const SizedBox(height: AppSpacing.md),
-
-          // Image
           Container(
             height: 120,
             decoration: BoxDecoration(
@@ -942,44 +876,24 @@ class _WordPopupCard extends StatelessWidget {
             child: Image.asset(
               word.imageAsset,
               fit: BoxFit.contain,
-              errorBuilder: (_, _, _) => const Icon(
-                Icons.image_outlined,
-                size: 56,
-                color: AppColors.textMuted,
-              ),
+              cacheWidth: 300, // MEMORY CACHING FIX
+              errorBuilder: (_, _, _) => const Icon(Icons.image_outlined, size: 56, color: AppColors.textMuted),
             ),
           ),
-
           const SizedBox(height: AppSpacing.md),
-
-          // Audio replay
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
               onPressed: onPlay,
               icon: const Icon(Icons.volume_up_rounded, size: 20),
-              label: const Text(
-                'Hear it',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF2EC4B6),
-                padding: EdgeInsets.zero,
-              ),
+              label: const Text('Hear it', style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w700)),
+              style: TextButton.styleFrom(foregroundColor: const Color(0xFF2EC4B6), padding: EdgeInsets.zero),
             ),
           ),
-
           if (hasDef) ...[
             const SizedBox(height: AppSpacing.xs),
-            Text(
-              word.definition,
-              style: AppText.body.copyWith(fontSize: 14),
-            ),
+            Text(word.definition, style: AppText.body.copyWith(fontSize: 14)),
           ],
-
           if (hasSentence) ...[
             const SizedBox(height: AppSpacing.sm),
             Container(
@@ -990,16 +904,11 @@ class _WordPopupCard extends StatelessWidget {
               ),
               child: Text(
                 '"${word.sampleSentence}"',
-                style: AppText.caption.copyWith(
-                  fontStyle: FontStyle.italic,
-                  color: AppColors.textPrimary,
-                ),
+                style: AppText.caption.copyWith(fontStyle: FontStyle.italic, color: AppColors.textPrimary),
               ),
             ),
           ],
-
           const SizedBox(height: AppSpacing.md),
-
           SizedBox(
             height: 44,
             child: ElevatedButton(
@@ -1007,17 +916,9 @@ class _WordPopupCard extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2EC4B6),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.medium),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.medium)),
               ),
-              child: const Text(
-                'Close',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              child: const Text('Close', style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w700)),
             ),
           ),
         ],

@@ -8,39 +8,24 @@ class SfxService {
 
   static void init(SettingsProvider provider) {
     _settings = provider;
-    
-    // Configure strictly for Android
-    _player.setAudioContext(
-      AudioContext(
-        android: AudioContextAndroid(
-          isSpeakerphoneOn: true,
-          audioMode: AndroidAudioMode.normal,
-          stayAwake: false,
-          contentType: AndroidContentType.sonification,
-          usageType: AndroidUsageType.game,
-          audioFocus: AndroidAudioFocus.gainTransientMayDuck,
-        ),
-      ),
-    );
   }
 
   static Future<void> _play(String file) async {
     try {
-      if (_settings != null) {
-        if (!_settings!.sfxEnabled || !_settings!.audioEnabled) return;
+      if (_settings != null && _settings!.sfxVolume <= 0) {
+        return; // Muted
       }
       
-      await _player.stop(); // Stop previous sound
+      // DO NOT CALL _player.stop(); 
+      // audioplayers automatically interrupts the current sound when play() is called.
       
       if (_settings != null) {
-        await _player.setVolume(_settings!.sfxVolume); // Apply volume
+        await _player.setVolume(_settings!.sfxVolume);
       }
       
-      // Play the asset
       await _player.play(AssetSource('audio/sfx/$file'));
       
     } catch (e) {
-      // THIS WILL PRINT IN YOUR TERMINAL IF THE FILE IS MISSING OR CORRUPT
       debugPrint('❌ SFX ERROR ($file): $e'); 
     }
   }

@@ -6,53 +6,28 @@ import '../providers/connectivity_provider.dart';
 import 'database_service.dart';
 import 'firestore_service.dart';
 
-/// Orchestrates cloud push of local data (quiz attempts, badges, mastery,
-/// encounters, starred words, leaderboard).
-///
-/// Call `syncAll()` after login, on offline→online transition, and after
-/// any local write that needs cloud persistence.
 class SyncService {
   static final SyncService instance = SyncService._internal();
   SyncService._internal();
 
   bool _running = false;
 
-  /// Push everything pending for this student to Firestore.
-  /// Safe to call multiple times, guarded against concurrent runs.
-  ///
-  /// Ensures the Firebase Auth session is active for this student before
-  /// writing, without it, all Firestore writes fail with PERMISSION_DENIED.
   Future<void> syncAll({
     required Student student,
     required ConnectivityProvider connectivity,
     required AuthProvider authProvider,
   }) async {
-    if (_running) {
-      debugPrint('🔄 Sync: already running, skipping');
-      return;
-    }
+    if (_running) return;
 
     final uid = student.firebaseUid;
     final localId = student.id;
-    if (uid == null || localId == null) {
-      debugPrint('🔄 Sync: no Firebase UID or local ID, skipping');
-      return;
-    }
+    if (uid == null || localId == null) return;
 
-    if (!connectivity.isOnline) {
-      debugPrint('🔄 Sync: offline, skipping');
-      return;
-    }
+    if (!connectivity.isOnline) return;
 
-    // ── Ensure Firebase Auth session is active for this student ──
-    // Without this, all Firestore writes below fail with PERMISSION_DENIED.
     if (authProvider.uid != uid) {
-      debugPrint('🔄 Sync: restoring session for $uid');
       final restored = await authProvider.tryRestoreSessionFor(uid: uid);
-      if (!restored) {
-        debugPrint('🔄 Sync: could not restore session, aborting');
-        return;
-      }
+      if (!restored) return;
     }
 
     _running = true;
@@ -65,18 +40,14 @@ class SyncService {
       await _pushStarred(student);
       await _updateLeaderboard(student);
 
-      debugPrint('🔄 Sync: complete ✓');
+      debugPrint('Sync: complete');
     } catch (e, stack) {
-      debugPrint('🔄 Sync failed (will retry next time): $e');
-      debugPrint('🔄 STACK: $stack');
+      debugPrint('Sync failed: $e');
+      debugPrint('STACK: $stack');
     } finally {
       _running = false;
     }
   }
-
-  // ──────────────────────────────────────────────────────────────
-  // Quiz attempts
-  // ──────────────────────────────────────────────────────────────
 
   Future<void> _pushQuizAttempts(Student student) async {
     final uid = student.firebaseUid!;
@@ -85,21 +56,12 @@ class SyncService {
     final pending = await DatabaseService.instance
         .getPendingSyncAttempts(localId);
 
-    if (pending.isEmpty) {
-      debugPrint('🔄 Sync: no pending quiz attempts');
-      return;
-    }
-
-    debugPrint('🔄 Sync: pushing ${pending.length} quiz attempts');
+    if (pending.isEmpty) return;
 
     for (final attempt in pending) {
-      // Look up the batch to derive grade + difficulty
       final batch = await DatabaseService.instance
           .getBatchById(attempt.batchId);
-      if (batch == null) {
-        debugPrint('🔄 Sync: batch ${attempt.batchId} not found, skipping');
-        continue;
-      }
+      if (batch == null) continue;
 
       final wrongIds = _parseWrongWordIds(attempt.wrongWordIdsJson);
 
@@ -119,7 +81,6 @@ class SyncService {
       if (ok) {
         await DatabaseService.instance.markAttemptSynced(attempt.id!);
 
-        // Increment cloud total points atomically
         if (attempt.pointsEarned > 0) {
           await FirestoreService.instance.incrementStudentPoints(
             uid,
@@ -130,16 +91,10 @@ class SyncService {
     }
   }
 
-
-  // ──────────────────────────────────────────────────────────────
-  // Profile, keeps students/{uid} fresh (name, grade, avatar).
-  // ──────────────────────────────────────────────────────────────
-
   Future<void> _pushProfile(Student student) async {
     final uid = student.firebaseUid!;
     final localId = student.id!;
 
-    // Refresh from DB so we push the latest values.
     final fresh = await DatabaseService.instance.getStudentById(localId);
     final source = fresh ?? student;
 
@@ -151,9 +106,7 @@ class SyncService {
       avatarIndex: source.avatarIndex,
       includePoints: false,
     );
-    debugPrint('🔄 Sync: profile pushed (avatar=${source.avatarIndex})');
   }
-
 
   List<int> _parseWrongWordIds(String? json) {
     if (json == null || json.isEmpty) return [];
@@ -170,10 +123,6 @@ class SyncService {
     }
   }
 
-  // ──────────────────────────────────────────────────────────────
-  // Badges
-  // ──────────────────────────────────────────────────────────────
-
   Future<void> _pushBadges(Student student) async {
     final uid = student.firebaseUid!;
     final localId = student.id!;
@@ -182,8 +131,6 @@ class SyncService {
         .getPendingSyncBadges(localId);
 
     if (pending.isEmpty) return;
-
-    debugPrint('🔄 Sync: pushing ${pending.length} badges');
 
     for (final badge in pending) {
       final badgeKey = '${badge.gradeLevel}-${badge.difficulty}';
@@ -202,10 +149,6 @@ class SyncService {
     }
   }
 
-  // ──────────────────────────────────────────────────────────────
-  // Word mastery
-  // ──────────────────────────────────────────────────────────────
-
   Future<void> _pushMastery(Student student) async {
     final uid = student.firebaseUid!;
     final localId = student.id!;
@@ -213,8 +156,6 @@ class SyncService {
     final masteries =
         await DatabaseService.instance.getMasteryForStudent(localId);
     if (masteries.isEmpty) return;
-
-    debugPrint('🔄 Sync: pushing ${masteries.length} mastery rows');
 
     for (final m in masteries) {
       await FirestoreService.instance.syncWordMastery(
@@ -227,10 +168,6 @@ class SyncService {
     }
   }
 
-  // ──────────────────────────────────────────────────────────────
-  // Word encounters
-  // ──────────────────────────────────────────────────────────────
-
   Future<void> _pushEncounters(Student student) async {
     final uid = student.firebaseUid!;
     final localId = student.id!;
@@ -238,8 +175,6 @@ class SyncService {
     final encounters =
         await DatabaseService.instance.getEncountersForStudent(localId);
     if (encounters.isEmpty) return;
-
-    debugPrint('🔄 Sync: pushing ${encounters.length} encounters');
 
     for (final e in encounters) {
       await FirestoreService.instance.syncWordEncounter(
@@ -251,10 +186,6 @@ class SyncService {
     }
   }
 
-  // ──────────────────────────────────────────────────────────────
-  // Starred words
-  // ──────────────────────────────────────────────────────────────
-
   Future<void> _pushStarred(Student student) async {
     final uid = student.firebaseUid!;
     final localId = student.id!;
@@ -262,8 +193,6 @@ class SyncService {
     final starred =
         await DatabaseService.instance.getStarredWordsForStudent(localId);
     if (starred.isEmpty) return;
-
-    debugPrint('🔄 Sync: pushing ${starred.length} starred');
 
     for (final s in starred) {
       await FirestoreService.instance.syncStarredWord(
@@ -274,15 +203,9 @@ class SyncService {
     }
   }
 
-  // ──────────────────────────────────────────────────────────────
-  // Leaderboard
-  // ──────────────────────────────────────────────────────────────
-
   Future<void> _updateLeaderboard(Student student) async {
     final uid = student.firebaseUid!;
 
-    // Refresh from DB, the passed-in `student` may be a stale snapshot
-    // from before this sync's `incrementStudentPoints` calls landed.
     final fresh =
         await DatabaseService.instance.getStudentById(student.id!);
     final source = fresh ?? student;
@@ -299,11 +222,18 @@ class SyncService {
       classId: source.classFirestoreId,
       avatarIndex: source.avatarIndex,
     );
-  }
 
-  // ──────────────────────────────────────────────────────────────
-  // Legacy alias (keeps old callers working)
-  // ──────────────────────────────────────────────────────────────
+    if (source.classFirestoreId != null &&
+        source.classFirestoreId!.isNotEmpty) {
+      await FirestoreService.instance.updateEnrollmentSnapshot(
+        classId: source.classFirestoreId!,
+        studentUid: uid,
+        totalPoints: source.totalPoints,
+        badgeCount: badges.length,
+        avatarIndex: source.avatarIndex,
+      );
+    }
+  }
 
   @Deprecated('Use syncAll() instead')
   Future<void> retryPendingSyncs({

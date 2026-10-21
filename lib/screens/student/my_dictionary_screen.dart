@@ -6,6 +6,7 @@ import '../../models/word.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
+import '../../services/sfx_service.dart'; // Added SFX
 import '../../utils/app_theme.dart';
 import 'pronunciation_modal.dart';
 
@@ -92,6 +93,7 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
   }
 
   Future<void> _playWordAudio(Word word) async {
+    SfxService.tap();
     final assetPath = word.lessonCueAudio ?? word.audioAsset;
 
     try {
@@ -106,6 +108,7 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
   }
 
   Future<void> _toggleStar(Word word) async {
+    SfxService.tap();
     final student = context.read<StudentProvider>().currentStudent;
     if (student?.id == null || word.id == null) return;
 
@@ -119,6 +122,7 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
   }
 
   Future<void> _showWordDetail(Word word) async {
+    SfxService.tap();
     final student = context.read<StudentProvider>().currentStudent;
     final studentId = student?.id;
     if (studentId == null) return;
@@ -145,8 +149,8 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
           if (sheetCtx.mounted) Navigator.of(sheetCtx).pop();
         },
         onPractice: () async {
-          final isOnline =
-              context.read<ConnectivityProvider>().isOnline;
+          SfxService.tap();
+          final isOnline = context.read<ConnectivityProvider>().isOnline;
           final ok = await PronunciationModal.show(
             sheetCtx,
             word: word,
@@ -173,13 +177,12 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
   @override
   Widget build(BuildContext context) {
     final student = context.watch<StudentProvider>().currentStudent;
+    
     if (student == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil(
-            '/student-profile-list',
-            ModalRoute.withName('/role-selection'),
-          );
+          // FALLBACK: Clear stack and go to role selection safely
+          Navigator.of(context).pushNamedAndRemoveUntil('/role-selection', (route) => false);
         }
       });
       return const Scaffold(
@@ -191,109 +194,92 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
     return Scaffold(
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl,
-                      vertical: AppSpacing.md,
-                    ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.arrow_back,
-                              color: AppColors.textPrimary),
-                          padding: EdgeInsets.zero,
+        child: Center( // RESPONSIVENESS FIX: Centers content on tablets
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800), // Wider constraint for grids
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xl,
+                          vertical: AppSpacing.md,
                         ),
-                        const SizedBox(width: AppSpacing.sm),
-                        const Expanded(
-                          child: Text('My Dictionary', style: AppText.h2),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.xl),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          '$_discoveredCount of $_totalCount words discovered '
-                          '(through Grade $_highestUnlocked)',
-                          style: AppText.caption,
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        ClipRRect(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.small),
-                          child: LinearProgressIndicator(
-                            value: _totalCount == 0
-                                ? 0
-                                : _discoveredCount / _totalCount,
-                            minHeight: 10,
-                            backgroundColor: AppColors.border,
-                            valueColor:
-                                const AlwaysStoppedAnimation<Color>(
-                              AppColors.accentTeal,
+                        child: Row(
+                          children: [
+                            IconButton(
+                              onPressed: () {
+                                SfxService.tap();
+                                Navigator.of(context).pop();
+                              },
+                              icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                              padding: EdgeInsets.zero,
                             ),
-                          ),
+                            const SizedBox(width: AppSpacing.sm),
+                            const Expanded(
+                              child: Text('My Dictionary', style: AppText.h2),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
 
-                  const SizedBox(height: AppSpacing.md),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              '$_discoveredCount of $_totalCount words discovered '
+                              '(through Grade $_highestUnlocked)',
+                              style: AppText.caption,
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(AppRadius.small),
+                              child: LinearProgressIndicator(
+                                value: _totalCount == 0 ? 0 : _discoveredCount / _totalCount,
+                                minHeight: 10,
+                                backgroundColor: AppColors.border,
+                                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentTeal),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
-                  TabBar(
-                    controller: _tabController,
-                    labelColor: AppColors.accentTeal,
-                    unselectedLabelColor: AppColors.textMuted,
-                    indicatorColor: AppColors.accentTeal,
-                    labelStyle: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
-                    ),
-                    unselectedLabelStyle: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                    tabs: const [
-                      Tab(text: 'All'),
-                      Tab(text: 'Favorites'),
-                      Tab(text: 'Weak'),
-                      Tab(text: 'Mastered'),
+                      const SizedBox(height: AppSpacing.md),
+
+                      TabBar(
+                        controller: _tabController,
+                        labelColor: AppColors.accentTeal,
+                        unselectedLabelColor: AppColors.textMuted,
+                        indicatorColor: AppColors.accentTeal,
+                        labelStyle: const TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w800, fontSize: 13),
+                        unselectedLabelStyle: const TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w600, fontSize: 13),
+                        tabs: const [
+                          Tab(text: 'All'),
+                          Tab(text: 'Favorites'),
+                          Tab(text: 'Weak'),
+                          Tab(text: 'Mastered'),
+                        ],
+                      ),
+
+                      Expanded(
+                        child: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildGrid(_allWords),
+                            _buildGrid(_allWords.where((w) => _starred.contains(w.id)).toList()),
+                            _buildGrid(_allWords.where((w) => _weak.contains(w.id) && !_mastered.contains(w.id)).toList()),
+                            _buildGrid(_allWords.where((w) => _mastered.contains(w.id)).toList()),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _buildGrid(_allWords),
-                        _buildGrid(_allWords
-                            .where((w) => _starred.contains(w.id))
-                            .toList()),
-                        // BUG-010 Fix: Only show weak words that are NOT mastered
-                        _buildGrid(_allWords
-                            .where((w) =>
-                                _weak.contains(w.id) &&
-                                !_mastered.contains(w.id))
-                            .toList()),
-                        _buildGrid(_allWords
-                            .where((w) => _mastered.contains(w.id))
-                            .toList()),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+          ),
+        ),
       ),
     );
   }
@@ -306,53 +292,49 @@ class _MyDictionaryScreenState extends State<MyDictionaryScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.menu_book_outlined,
-                size: 64,
-                color: AppColors.textMuted,
-              ),
+              const Icon(Icons.menu_book_outlined, size: 64, color: AppColors.textMuted),
               const SizedBox(height: AppSpacing.md),
-              Text(
-                'Nothing here yet',
-                style: AppText.h2,
-                textAlign: TextAlign.center,
-              ),
+              Text('Nothing here yet', style: AppText.h2, textAlign: TextAlign.center),
               const SizedBox(height: AppSpacing.xs),
-              const Text(
-                'Complete lessons to fill your dictionary!',
-                style: AppText.caption,
-                textAlign: TextAlign.center,
-              ),
+              const Text('Complete lessons to fill your dictionary!', style: AppText.caption, textAlign: TextAlign.center),
             ],
           ),
         ),
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: AppSpacing.md,
-        crossAxisSpacing: AppSpacing.md,
-        childAspectRatio: 0.85,
-      ),
-      itemCount: words.length,
-      itemBuilder: (context, index) {
-        final word = words[index];
-        final isEncountered =
-            word.id != null && _encountered.contains(word.id);
-        final isMastered = word.id != null && _mastered.contains(word.id);
-        final isStarred = word.id != null && _starred.contains(word.id);
-        final isWeak = word.id != null && _weak.contains(word.id);
+    // RESPONSIVENESS FIX: Dynamic grid columns
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        int crossAxisCount = 3; // Default for phones
+        if (constraints.maxWidth > 600) crossAxisCount = 5; // Tablets
+        if (constraints.maxWidth > 800) crossAxisCount = 6; // Large tablets
 
-        return _WordTile(
-          word: word,
-          isEncountered: isEncountered,
-          isMastered: isMastered,
-          isStarred: isStarred,
-          isWeak: isWeak,
-          onTap: () => _showWordDetail(word),
+        return GridView.builder(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: AppSpacing.md,
+            crossAxisSpacing: AppSpacing.md,
+            childAspectRatio: 0.85,
+          ),
+          itemCount: words.length,
+          itemBuilder: (context, index) {
+            final word = words[index];
+            final isEncountered = word.id != null && _encountered.contains(word.id);
+            final isMastered = word.id != null && _mastered.contains(word.id);
+            final isStarred = word.id != null && _starred.contains(word.id);
+            final isWeak = word.id != null && _weak.contains(word.id);
+
+            return _WordTile(
+              word: word,
+              isEncountered: isEncountered,
+              isMastered: isMastered,
+              isStarred: isStarred,
+              isWeak: isWeak,
+              onTap: () => _showWordDetail(word),
+            );
+          },
         );
       },
     );
@@ -403,8 +385,7 @@ class _WordTile extends StatelessWidget {
               boxShadow: isMastered
                   ? [
                       BoxShadow(
-                        color: AppColors.accentYellow
-                            .withValues(alpha: 0.35),
+                        color: AppColors.accentYellow.withValues(alpha: 0.35),
                         blurRadius: 12,
                         spreadRadius: 1,
                       ),
@@ -421,6 +402,7 @@ class _WordTile extends StatelessWidget {
                         ? Image.asset(
                             word.imageAsset,
                             fit: BoxFit.contain,
+                            cacheWidth: 200, // MEMORY CACHING FIX
                             errorBuilder: (_, _, _) => const Icon(
                               Icons.image_outlined,
                               size: 32,
@@ -433,8 +415,7 @@ class _WordTile extends StatelessWidget {
                               fontFamily: 'Nunito',
                               fontSize: 44,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.textMuted
-                                  .withValues(alpha: 0.6),
+                              color: AppColors.textMuted.withValues(alpha: 0.6),
                             ),
                           ),
                   ),
@@ -449,9 +430,7 @@ class _WordTile extends StatelessWidget {
                     fontFamily: 'Nunito',
                     fontWeight: FontWeight.w700,
                     fontSize: 12,
-                    color: isEncountered
-                        ? AppColors.textPrimary
-                        : AppColors.textMuted,
+                    color: isEncountered ? AppColors.textPrimary : AppColors.textMuted,
                   ),
                 ),
               ],
@@ -469,11 +448,7 @@ class _WordTile extends StatelessWidget {
                   color: AppColors.accentYellow,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.star_rounded,
-                  size: 14,
-                  color: Colors.white,
-                ),
+                child: const Icon(Icons.star_rounded, size: 14, color: Colors.white),
               ),
             ),
 
@@ -488,11 +463,7 @@ class _WordTile extends StatelessWidget {
                   color: AppColors.accentCoral,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.priority_high_rounded,
-                  size: 14,
-                  color: Colors.white,
-                ),
+                child: const Icon(Icons.priority_high_rounded, size: 14, color: Colors.white),
               ),
             ),
         ],
@@ -546,23 +517,11 @@ class _WordDetailSheet extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
 
           if (!isEncountered) ...[
-            const Icon(
-              Icons.help_outline_rounded,
-              size: 64,
-              color: AppColors.textMuted,
-            ),
+            const Icon(Icons.help_outline_rounded, size: 64, color: AppColors.textMuted),
             const SizedBox(height: AppSpacing.md),
-            const Text(
-              'Word not yet discovered',
-              style: AppText.h2,
-              textAlign: TextAlign.center,
-            ),
+            const Text('Word not yet discovered', style: AppText.h2, textAlign: TextAlign.center),
             const SizedBox(height: AppSpacing.xs),
-            const Text(
-              'Complete lessons to unlock this word!',
-              style: AppText.caption,
-              textAlign: TextAlign.center,
-            ),
+            const Text('Complete lessons to unlock this word!', style: AppText.caption, textAlign: TextAlign.center),
           ] else ...[
             SizedBox(
               width: 140,
@@ -570,19 +529,13 @@ class _WordDetailSheet extends StatelessWidget {
               child: Image.asset(
                 word.imageAsset,
                 fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => const Icon(
-                  Icons.image_outlined,
-                  size: 60,
-                  color: AppColors.textMuted,
-                ),
+                cacheWidth: 400, // MEMORY CACHING FIX
+                errorBuilder: (_, _, _) => const Icon(Icons.image_outlined, size: 60, color: AppColors.textMuted),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
 
-            Text(
-              word.text,
-              style: AppText.display.copyWith(fontSize: 36),
-            ),
+            Text(word.text, style: AppText.display.copyWith(fontSize: 36)),
 
             const SizedBox(height: AppSpacing.xs),
 
@@ -592,14 +545,9 @@ class _WordDetailSheet extends StatelessWidget {
               children: [
                 _pill('Grade ${word.gradeLevel}', AppColors.accentTeal),
                 if (word.category.isNotEmpty)
-                  _pill(
-                    word.category.replaceAll('_', ' '),
-                    AppColors.accentPurple,
-                  ),
-                if (isMastered)
-                  _pill('Mastered', AppColors.accentYellow),
-                if (isWeak && !isMastered)
-                  _pill('Needs practice', AppColors.accentCoral),
+                  _pill(word.category.replaceAll('_', ' '), AppColors.accentPurple),
+                if (isMastered) _pill('Mastered', AppColors.accentYellow),
+                if (isWeak && !isMastered) _pill('Needs practice', AppColors.accentCoral),
               ],
             ),
 
@@ -615,14 +563,10 @@ class _WordDetailSheet extends StatelessWidget {
             if (word.sampleSentence.isNotEmpty) ...[
               _label('SAMPLE SENTENCE'),
               const SizedBox(height: 4),
-              Text(
-                word.sampleSentence,
-                style: AppText.body.copyWith(fontStyle: FontStyle.italic),
-              ),
+              Text(word.sampleSentence, style: AppText.body.copyWith(fontStyle: FontStyle.italic)),
               const SizedBox(height: AppSpacing.lg),
             ],
 
-            // LISTEN + STAR row
             Row(
               children: [
                 Expanded(
@@ -631,20 +575,11 @@ class _WordDetailSheet extends StatelessWidget {
                     child: ElevatedButton.icon(
                       onPressed: onPlayAudio,
                       icon: const Icon(Icons.volume_up_rounded),
-                      label: const Text(
-                        'LISTEN',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                      label: const Text('LISTEN', style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w700)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accentTeal,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.large),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.large)),
                       ),
                     ),
                   ),
@@ -656,34 +591,20 @@ class _WordDetailSheet extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: onToggleStar,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isStarred
-                          ? AppColors.accentYellow
-                          : AppColors.surface,
-                      foregroundColor: isStarred
-                          ? Colors.white
-                          : AppColors.textYellow,
+                      backgroundColor: isStarred ? AppColors.accentYellow : AppColors.surface,
+                      foregroundColor: isStarred ? Colors.white : AppColors.textYellow,
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.large),
-                        side: BorderSide(
-                          color: AppColors.accentYellow,
-                          width: isStarred ? 0 : 2,
-                        ),
+                        borderRadius: BorderRadius.circular(AppRadius.large),
+                        side: BorderSide(color: AppColors.accentYellow, width: isStarred ? 0 : 2),
                       ),
                       padding: EdgeInsets.zero,
                     ),
-                    child: Icon(
-                      isStarred
-                          ? Icons.star_rounded
-                          : Icons.star_border_rounded,
-                      size: 28,
-                    ),
+                    child: Icon(isStarred ? Icons.star_rounded : Icons.star_border_rounded, size: 28),
                   ),
                 ),
               ],
             ),
 
-            // BUG-010 Fix: Practice Speaking button now available for ALL encountered words
             const SizedBox(height: AppSpacing.md),
             SizedBox(
               height: 52,
@@ -693,21 +614,12 @@ class _WordDetailSheet extends StatelessWidget {
                 icon: const Icon(Icons.mic_rounded, size: 22),
                 label: Text(
                   isMastered ? 'PRACTICE AGAIN' : 'PRACTICE SPEAKING',
-                  style: const TextStyle(
-                    fontFamily: 'Nunito',
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.6,
-                  ),
+                  style: const TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w800, letterSpacing: 0.6),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isMastered 
-                      ? AppColors.accentTeal // Teal for mastered words
-                      : AppColors.accentOrange, // Orange for needs practice
+                  backgroundColor: isMastered ? AppColors.accentTeal : AppColors.accentOrange,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppRadius.large),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.large)),
                   elevation: 2,
                 ),
               ),
@@ -724,13 +636,7 @@ class _WordDetailSheet extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: Text(
         text,
-        style: const TextStyle(
-          fontFamily: 'Nunito',
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1,
-          color: AppColors.textMuted,
-        ),
+        style: const TextStyle(fontFamily: 'Nunito', fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1, color: AppColors.textMuted),
       ),
     );
   }
@@ -738,19 +644,8 @@ class _WordDetailSheet extends StatelessWidget {
   Widget _pill(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontFamily: 'Nunito',
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: color,
-        ),
-      ),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
+      child: Text(text, style: TextStyle(fontFamily: 'Nunito', fontSize: 11, fontWeight: FontWeight.w700, color: color)),
     );
   }
 }

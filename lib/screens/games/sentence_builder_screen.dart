@@ -12,11 +12,12 @@ import '../../providers/connectivity_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
-import '../../services/game_sfx.dart';
 import '../../services/sfx_service.dart';
+import '../../services/bgm_service.dart';
 import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import 'yse_reaction.dart';
+import '../../widgets/info_button.dart';
 import '../../utils/game_score.dart';
 
 class SentenceBuilderScreen extends StatefulWidget {
@@ -53,7 +54,6 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
   int? _lastResponseTimeMs;
 
   final YseReactionController _reaction = YseReactionController();
-  int _currentStreak = 0;
   final List<int> _wrongWordIds = [];
 
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -63,6 +63,7 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
   @override
   void initState() {
     super.initState();
+    BgmService.playTrack(BgmTrack.game);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadGame());
   }
 
@@ -74,16 +75,25 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
   }
 
   Future<void> _loadGame() async {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
-    final batchId = args['batchId'] as int;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/student-home', (route) => false);
+        }
+      });
+      return;
+    }
+
+    final batchId = args['batchId'] as int?;
     final gradeLevel = (args['gradeLevel'] as int?) ?? 3;
     final difficulty = (args['difficulty'] as String?) ?? 'easy';
     final student = context.read<StudentProvider>().currentStudent;
 
-    if (student == null || student.id == null) {
+    if (batchId == null || student == null || student.id == null) {
       setState(() {
         _loading = false;
-        _error = 'Not signed in.';
+        _error = 'Not signed in or missing data.';
       });
       return;
     }
@@ -223,7 +233,7 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
 
   void _onWordTap(_WordTile tile) {
     if (_roundResolved) return;
-    SfxService.tap(); // Added tap sound
+    SfxService.tap();
     
     final emptyIndex = _slots.indexWhere((s) => s.state == _SlotState.empty);
     if (emptyIndex == -1) return;
@@ -245,7 +255,7 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
     if (slot.state == _SlotState.correct) return;
     if (slot.tile == null) return;
 
-    SfxService.tap(); // Added tap sound
+    SfxService.tap();
     setState(() {
       _availableWords.add(slot.tile!);
       _slots[index] = _Slot();
@@ -292,14 +302,11 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
       setState(() => _roundResolved = true);
       _revealCorrectSentence(round);
       _reaction.show(YseReaction.tryAgain, persistent: true);
-      GameSfx.instance.playWrong();
       SfxService.wrong();
       Future.delayed(const Duration(milliseconds: 1600), () {
         if (mounted) _advanceRound();
       });
     } else {
-      _currentStreak = 0;
-      GameSfx.instance.playWrong();
       SfxService.wrong();
       _reaction.show(YseReaction.tryAgain, persistent: true);
     }
@@ -314,19 +321,12 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
 
     setState(() => _roundResolved = true);
 
-    GameSfx.instance.playCorrect();
     SfxService.correct();
 
     if (!_firstAttemptFailed) {
       setState(() => _correctCount++);
-      _currentStreak++;
-      if (_currentStreak >= 3) {
-        _reaction.show(YseReaction.hwaiting, persistent: true);
-      } else {
-        _reaction.show(YseReaction.nice, persistent: true);
-      }
+      _reaction.show(YseReaction.nice, persistent: true);
     } else {
-      _currentStreak = 0;
       _reaction.show(YseReaction.nice, persistent: true);
     }
 
@@ -455,20 +455,24 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
         context.read<StudentProvider>().setStudent(updated);
         final connectivity = context.read<ConnectivityProvider>();
         final authProvider = context.read<AuthProvider>();
+        
         unawaited(SyncService.instance.syncAll(
           student: updated, connectivity: connectivity, authProvider: authProvider,
         ));
 
         if (updated.classFirestoreId != null && updated.classFirestoreId!.isNotEmpty && updated.firebaseUid != null) {
-          try {
-            final badges = await DatabaseService.instance.getBadgesForStudent(updated.id!);
-            await FirestoreService.instance.updateEnrollmentSnapshot(
-              classId: updated.classFirestoreId!, studentUid: updated.firebaseUid!,
-              totalPoints: updated.totalPoints, badgeCount: badges.length,
-            );
-          } catch (e) {
-            debugPrint('Enrollment snapshot failed: $e');
-          }
+          unawaited(() async {
+            try {
+              final badges = await DatabaseService.instance.getBadgesForStudent(updated.id!);
+              await FirestoreService.instance.updateEnrollmentSnapshot(
+                classId: updated.classFirestoreId!, studentUid: updated.firebaseUid!,
+                totalPoints: updated.totalPoints, badgeCount: badges.length,
+                avatarIndex: updated.avatarIndex,
+              );
+            } catch (e) {
+              debugPrint('Enrollment snapshot failed: $e');
+            }
+          }());
         }
       }
 
@@ -526,120 +530,161 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
   Widget _buildGame() {
     final round = _rounds[_currentIndex];
 
-    return Column(
-      children: [
-        _buildHeader(),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              // Calculate dynamic image size
-              final screenH = constraints.maxHeight;
-              final imageSize = (screenH * 0.20).clamp(100.0, 150.0);
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 700),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final screenH = constraints.maxHeight;
+            final screenW = constraints.maxWidth;
+            
+            final imageSize = (screenH * 0.25).clamp(140.0, 200.0);
 
-              // Dynamic tile width calculation based on screen size
-              final maxWidth = constraints.maxWidth - (AppSpacing.lg * 2);
-              final slotCount = round.targetSentence.length;
-              double computedTileWidth = (maxWidth - (slotCount * 4)) / slotCount;
-              computedTileWidth = computedTileWidth.clamp(50.0, 110.0);
+            final maxWidthForSlots = screenW - (AppSpacing.lg * 2);
+            final wordCount = round.targetSentence.length;
+            
+            int targetCols = (wordCount / 2).ceil();
+            if (targetCols < 3) targetCols = 3;
+            
+            double slotWidth = (maxWidthForSlots - (targetCols - 1) * 6) / targetCols;
+            slotWidth = slotWidth.clamp(40.0, 80.0);
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // Mascot and points row
-                    Column(
-                      children: [
-                        YseReactionOverlay(controller: _reaction, size: 110),
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Column(
+                children: [
+                  const SizedBox(height: AppSpacing.sm),
+                  
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          SfxService.tap();
+                          Navigator.of(context).pop();
+                        },
+                        icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                        padding: EdgeInsets.zero,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Icon(Icons.star_rounded, size: 20, color: AppColors.accentYellow),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${_correctCount * 5} pts',
-                              style: const TextStyle(fontFamily: 'Nunito', fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textYellow),
+                            Row(
+                              children: [
+                                const Icon(Icons.star_rounded, size: 20, color: AppColors.accentYellow),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${_correctCount * 5} pts',
+                                  style: const TextStyle(fontFamily: 'Nunito', fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textYellow),
+                                ),
+                                const SizedBox(width: 16),
+                                const Icon(Icons.flag_rounded, size: 20, color: AppColors.accentTeal),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Round ${_currentIndex + 1} / ${_rounds.length}',
+                                  style: const TextStyle(fontFamily: 'Nunito', fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textTeal),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: AppSpacing.lg),
-                            const Icon(Icons.flag_rounded, size: 20, color: AppColors.accentTeal),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Round ${_currentIndex + 1} / ${_rounds.length}',
-                              style: const TextStyle(fontFamily: 'Nunito', fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textTeal),
+                            const InfoButton(
+                              title: 'How to Build',
+                              description: 'Arrange the shuffled words to form the correct sentence.',
+                              steps: [
+                                'Tap a word from the bottom bank.',
+                                'It will place in the first empty slot.',
+                                'If you want to remove it, tap the slot again.',
+                                'Once all slots are filled, it checks your answer.',
+                                'Green means correct, Red means wrong. Fix the red ones!',
+                              ],
                             ),
                           ],
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: AppSpacing.md),
+
+                  Container(
+                    width: imageSize,
+                    height: imageSize,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                      border: Border.all(color: AppColors.border, width: 2),
+                      boxShadow: AppShadows.soft,
                     ),
-                    
-                    // Image
-                    Container(
-                      width: imageSize,
-                      height: imageSize,
-                      padding: const EdgeInsets.all(8),
+                    child: Image.asset(
+                      round.imagePath,
+                      fit: BoxFit.contain,
+                      cacheWidth: 400,
+                      errorBuilder: (_, _, _) => const Icon(Icons.image_outlined, size: 60, color: AppColors.textMuted),
+                    ),
+                  ),
+
+                  const SizedBox(height: AppSpacing.md),
+
+                  Text(
+                    _submissionsThisRound == 0
+                        ? 'Tap the words to build the sentence'
+                        : 'Fix the red tiles, you can do this!',
+                    textAlign: TextAlign.center,
+                    style: AppText.caption.copyWith(fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                  
+                  const SizedBox(height: AppSpacing.sm),
+
+                  Expanded(
+                    flex: 2,
+                    child: SingleChildScrollView(
+                      child: Center(
+                        child: _buildSlots(round, slotWidth),
+                      ),
+                    ),
+                  ),
+
+                  Expanded(
+                    flex: 2,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSpacing.sm),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(AppRadius.xl),
-                        border: Border.all(color: AppColors.border, width: 2),
-                        boxShadow: AppShadows.soft,
+                        color: AppColors.surface.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(AppRadius.large),
+                        border: Border.all(color: AppColors.border),
                       ),
-                      child: Image.asset(
-                        round.imagePath,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, _, _) => const Icon(Icons.image_outlined, size: 50, color: AppColors.textMuted),
+                      child: SingleChildScrollView(
+                        child: Center(
+                          child: _buildWordBank(round),
+                        ),
                       ),
                     ),
-
-                    // Instruction
-                    Text(
-                      _submissionsThisRound == 0
-                          ? 'Tap the words to build the sentence'
-                          : 'Fix the red tiles, you can do this!',
-                      textAlign: TextAlign.center,
-                      style: AppText.caption.copyWith(fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                  
+                  Container(
+                    height: 80,
+                    alignment: Alignment.center,
+                    child: YseReactionOverlay(
+                      controller: _reaction,
+                      size: 80,
                     ),
-
-                    // Slots
-                    _buildSlots(round, computedTileWidth),
-
-                    // Word Bank
-                    _buildWordBank(round, computedTileWidth),
-                  ],
-                ),
-              );
-            },
-          ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
-      ],
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () {
-              SfxService.tap();
-              Navigator.of(context).pop();
-            },
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-            padding: EdgeInsets.zero,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          const Expanded(child: Text('Build a Sentence', style: AppText.h2)),
-        ],
       ),
     );
   }
 
-  Widget _buildSlots(_SentenceRound round, double tileWidth) {
+  Widget _buildSlots(_SentenceRound round, double slotWidth) {
     return Wrap(
       alignment: WrapAlignment.center,
       spacing: 6,
-      runSpacing: 6,
+      runSpacing: 8,
       children: List.generate(_slots.length, (i) {
         final slot = _slots[i];
         final hasTile = slot.tile != null;
@@ -677,8 +722,8 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
             borderRadius: BorderRadius.circular(AppRadius.small),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 220),
-              width: tileWidth,
-              height: 52,
+              width: slotWidth,
+              height: 50,
               padding: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
                 color: fillColor,
@@ -693,7 +738,7 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
                     slot.tile?.text ?? '',
                     textAlign: TextAlign.center,
                     maxLines: 1,
-                    style: TextStyle(fontFamily: 'Nunito', fontSize: 14, fontWeight: FontWeight.w800, color: textColor),
+                    style: TextStyle(fontFamily: 'Nunito', fontSize: 16, fontWeight: FontWeight.w800, color: textColor),
                   ),
                 ),
               ),
@@ -704,40 +749,35 @@ class _SentenceBuilderScreenState extends State<SentenceBuilderScreen> {
     );
   }
 
-  Widget _buildWordBank(_SentenceRound round, double tileWidth) {
+  Widget _buildWordBank(_SentenceRound round) {
     if (_availableWords.isEmpty) {
       return const SizedBox(height: 52);
     }
 
     return Wrap(
       alignment: WrapAlignment.center,
-      spacing: 6,
-      runSpacing: 6,
+      spacing: 10,
+      runSpacing: 10,
       children: _availableWords.map((tile) {
         return GestureDetector(
           onTap: () => _onWordTap(tile),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.small),
-            child: Container(
-              width: tileWidth,
-              height: 52,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(AppRadius.small),
-                border: Border.all(color: AppColors.accentTeal, width: 2.5),
-                boxShadow: AppShadows.soft,
-              ),
-              child: Center(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    tile.text,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    style: const TextStyle(fontFamily: 'Nunito', fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
-                  ),
-                ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.large),
+              border: Border.all(color: AppColors.accentTeal, width: 2.5),
+              boxShadow: AppShadows.soft,
+            ),
+            child: Text(
+              tile.text,
+              maxLines: 1,
+              softWrap: false,
+              style: const TextStyle(
+                fontFamily: 'Nunito', 
+                fontSize: 18,
+                fontWeight: FontWeight.w800, 
+                color: AppColors.textPrimary,
               ),
             ),
           ),

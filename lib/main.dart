@@ -6,7 +6,6 @@ import 'firebase_options.dart';
 import 'utils/app_theme.dart';
 import 'utils/color_blind_filter.dart';
 
-// Providers
 import 'providers/auth_provider.dart';
 import 'providers/student_provider.dart';
 import 'providers/parent_provider.dart';
@@ -14,14 +13,14 @@ import 'providers/teacher_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/connectivity_provider.dart';
 
-// Services
 import 'services/content_importer.dart';
 import 'services/database_service.dart';
 import 'services/sync_service.dart';
 import 'services/credential_storage.dart';
-import 'services/sfx_service.dart'; // Added for Phase 3
+import 'services/sfx_service.dart';
+import 'services/bgm_service.dart';
+import 'services/bgm_route_observer.dart';
 
-// Screens
 import 'screens/shared/splash_screen.dart';
 import 'screens/shared/role_selection_screen.dart';
 import 'screens/student/profile_list_screen.dart';
@@ -81,25 +80,26 @@ import 'screens/games/category_sort_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 150 * 1024 * 1024;
+  PaintingBinding.instance.imageCache.maximumSize = 1000;
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Import bundled JSON content into SQLite
   await ContentImporter.instance.importAllGrades();
 
-  // Housekeeping: prune stale login/PIN attempts (>24h old)
   try {
     await DatabaseService.instance.pruneOldAttempts();
   } catch (e) {
-    debugPrint('pruneOldAttempts failed (non-blocking): $e');
+    debugPrint('pruneOldAttempts failed: $e');
   }
 
   final settingsProvider = SettingsProvider();
   await settingsProvider.load();
   
-  // Initialize SFX with the loaded settings
   SfxService.init(settingsProvider);
+  BgmService.init(settingsProvider);
 
   runApp(
     MultiProvider(
@@ -127,6 +127,7 @@ class ReadEaseApp extends StatefulWidget {
 
 class _ReadEaseAppState extends State<ReadEaseApp> with WidgetsBindingObserver {
   bool _syncWired = false;
+  final BgmRouteObserver _routeObserver = BgmRouteObserver();
 
   @override
   void initState() {
@@ -137,7 +138,6 @@ class _ReadEaseAppState extends State<ReadEaseApp> with WidgetsBindingObserver {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Now safe to read providers because ReadEaseApp is a child of MultiProvider
     if (!_syncWired) {
       _wireConnectivitySync(context);
       _syncWired = true;
@@ -154,6 +154,9 @@ class _ReadEaseAppState extends State<ReadEaseApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _checkSessionOnResume();
+      BgmService.resumeFromLifecycle();
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      BgmService.pauseForLifecycle();
     }
   }
 
@@ -161,7 +164,6 @@ class _ReadEaseAppState extends State<ReadEaseApp> with WidgetsBindingObserver {
     try {
       final expired = await CredentialStorage.instance.isSessionExpired();
       if (!expired) {
-        // Touch on resume so the TTL rolls forward while the app is in use.
         await CredentialStorage.instance.touchSession();
       }
     } catch (e) {
@@ -176,6 +178,7 @@ class _ReadEaseAppState extends State<ReadEaseApp> with WidgetsBindingObserver {
         return MaterialApp(
           title: 'ReadEase',
           debugShowCheckedModeBanner: false,
+          navigatorObservers: [_routeObserver],
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(
               seedColor: AppColors.accentTeal,
@@ -255,7 +258,6 @@ class _ReadEaseAppState extends State<ReadEaseApp> with WidgetsBindingObserver {
     );
   }
 
-  /// Wire ConnectivityProvider.onWentOnline to SyncService.syncAll.
   void _wireConnectivitySync(BuildContext context) {
     final connectivity = context.read<ConnectivityProvider>();
     final studentProvider = context.read<StudentProvider>();

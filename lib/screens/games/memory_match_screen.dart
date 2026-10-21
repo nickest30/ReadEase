@@ -12,12 +12,13 @@ import '../../providers/connectivity_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
-import '../../services/game_sfx.dart';
+import '../../services/sfx_service.dart';
+import '../../services/bgm_service.dart';
 import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import 'yse_reaction.dart';
+import '../../widgets/info_button.dart';
 
-/// Memory Match game, replaces the MCQ quiz for Grade 1 Easy.
 class MemoryMatchScreen extends StatefulWidget {
   const MemoryMatchScreen({super.key});
 
@@ -26,11 +27,9 @@ class MemoryMatchScreen extends StatefulWidget {
 }
 
 class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
-  // ── Loading ──
   bool _loading = true;
   String? _error;
 
-  // ── Game data ──
   List<_MemoryCard> _cards = [];
   Map<int, QuizQuestion> _questionByWordId = {};
 
@@ -39,24 +38,21 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
   int _gradeLevel = 1;
   String _difficulty = 'easy';
 
-  // ── Game state ──
   final List<int> _flippedIndices = [];
   final Set<int> _correctPairIds = {};
   final Set<int> _allPairIds = {};
   final Set<String> _failedCombos = {};
   bool _locked = false;
 
-  // ── [GAME-LAYER] Yse reaction + SFX ──
-  // ── [GAME-LAYER] Yse reaction + SFX ──
   final YseReactionController _reaction = YseReactionController();
   int _currentStreak = 0;
 
-  // ── Audio ──
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
+    BgmService.playTrack(BgmTrack.game);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadGame());
   }
 
@@ -67,28 +63,32 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
     super.dispose();
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Load
-  // ────────────────────────────────────────────────────────────
-
   Future<void> _loadGame() async {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
-    final batchId = args['batchId'] as int;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/student-home', (route) => false);
+        }
+      });
+      return;
+    }
+
+    final batchId = args['batchId'] as int?;
     final gradeLevel = (args['gradeLevel'] as int?) ?? 1;
     final difficulty = (args['difficulty'] as String?) ?? 'easy';
     final student = context.read<StudentProvider>().currentStudent;
 
-    if (student == null || student.id == null) {
+    if (batchId == null || student == null || student.id == null) {
       setState(() {
         _loading = false;
-        _error = 'Not signed in.';
+        _error = 'Not signed in or missing data.';
       });
       return;
     }
 
     try {
-      final words = await DatabaseService.instance
-          .getSampledWordsForBatch(batchId);
+      final words = await DatabaseService.instance.getSampledWordsForBatch(batchId);
       if (words.isEmpty) {
         setState(() {
           _loading = false;
@@ -99,8 +99,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
 
       final limited = words.toList();
 
-      final questions =
-          await DatabaseService.instance.getQuestionsForBatch(batchId);
+      final questions = await DatabaseService.instance.getQuestionsForBatch(batchId);
       final qMap = <int, QuizQuestion>{};
       for (final q in questions) {
         qMap.putIfAbsent(q.wordId, () => q);
@@ -140,13 +139,11 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
         _loading = false;
       });
 
-      // [GAME-LAYER] Show LET'S GO! once cards are visible.
-      // Persistent, stays until the user's first pair attempt.
       await Future.delayed(const Duration(milliseconds: 400));
       if (!mounted) return;
       _reaction.show(YseReaction.letsGo, persistent: true);
     } catch (e) {
-      debugPrint('🧠 MemoryMatch load ERROR: $e');
+      debugPrint('MemoryMatch load ERROR: $e');
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -155,16 +152,12 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
     }
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Card tap
-  // ────────────────────────────────────────────────────────────
-
   Future<void> _onCardTap(int index) async {
     if (_locked) return;
     final card = _cards[index];
-    if (card.isMatched) return;
-    if (card.isFlipped) return;
-    if (_flippedIndices.contains(index)) return;
+    if (card.isMatched || card.isFlipped || _flippedIndices.contains(index)) return;
+
+    SfxService.tap();
 
     setState(() {
       card.isFlipped = true;
@@ -193,22 +186,16 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
         b.isMatched = true;
         _flippedIndices.clear();
         _locked = false;
-        if (isFirstAttempt) {
-          _correctPairIds.add(a.pairId);
-        }
+        if (isFirstAttempt) _correctPairIds.add(a.pairId);
       });
 
-            // [GAME-LAYER] SFX + Yse reactions
-      GameSfx.instance.playCorrect();
+      SfxService.correct();
 
       if (isFirstAttempt) {
         _currentStreak++;
-
         if (_currentStreak >= 3) {
-          // Streak of 3+ correct in a row
           _reaction.show(YseReaction.hwaiting, persistent: true);
         } else {
-          // Streak of 1–2 correct
           _reaction.show(YseReaction.nice, persistent: true);
         }
       }
@@ -221,8 +208,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
       _failedCombos.add(_comboKey(a.id, b.id));
       _currentStreak = 0;
 
-       // [GAME-LAYER] Wrong answer → whoosh + TRY AGAIN pose
-      GameSfx.instance.playWrong();
+      SfxService.wrong();
       _reaction.show(YseReaction.tryAgain, persistent: true);
 
       await Future.delayed(const Duration(milliseconds: 1200));
@@ -251,27 +237,29 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource(clean));
     } catch (e) {
-      debugPrint('🔊 Word audio failed (continuing): $e');
+      debugPrint('Word audio failed: $e');
     }
   }
-
-  // ────────────────────────────────────────────────────────────
-  // Finish
-  // ────────────────────────────────────────────────────────────
 
   Future<void> _finishGame() async {
     final correctCount = _correctPairIds.length;
     final wrongPairIds = _allPairIds.difference(_correctPairIds).toList();
+    final isPassing = _allPairIds.isNotEmpty && (correctCount / _allPairIds.length) >= 0.70;
 
     try {
-      // [GAME-LAYER] Show YOU DID IT! before transitioning
-      _reaction.show(YseReaction.youDidIt, persistent: true);
-      GameSfx.instance.playCelebration();
-      await Future.delayed(const Duration(milliseconds: 1200));
+      if (isPassing) {
+        _reaction.show(YseReaction.youDidIt, persistent: true);
+        SfxService.celebration();
+        await Future.delayed(const Duration(milliseconds: 1500));
+      } else {
+        _reaction.show(YseReaction.tryAgain, persistent: true);
+        SfxService.fail();
+        await Future.delayed(const Duration(milliseconds: 1500));
+      }
+      
       if (!mounted) return;
 
-      final pointsDelta =
-          await DatabaseService.instance.computePointsDeltaForBatch(
+      final pointsDelta = await DatabaseService.instance.computePointsDeltaForBatch(
         studentId: _studentId,
         batchId: _batchId,
         newScore: correctCount,
@@ -284,9 +272,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
           score: correctCount,
           totalQuestions: _allPairIds.length,
           pointsEarned: pointsDelta,
-          wrongWordIdsJson: wrongPairIds.isEmpty
-              ? null
-              : '[${wrongPairIds.join(',')}]',
+          wrongWordIdsJson: wrongPairIds.isEmpty ? null : '[${wrongPairIds.join(',')}]',
           completedAt: DateTime.now().toIso8601String(),
         ),
       );
@@ -320,11 +306,8 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
       }
 
       bool isNewBadge = false;
-      final isPassing = _allPairIds.isNotEmpty &&
-          (correctCount / _allPairIds.length) >= 0.70;
       if (isPassing) {
-        final badgeName =
-            AchievementBadge.nameFor(_gradeLevel, _difficulty);
+        final badgeName = AchievementBadge.nameFor(_gradeLevel, _difficulty);
         final badge = AchievementBadge(
           studentId: _studentId,
           gradeLevel: _gradeLevel,
@@ -336,8 +319,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
         isNewBadge = await DatabaseService.instance.awardBadge(badge);
       }
 
-      final updated =
-          await DatabaseService.instance.getStudentById(_studentId);
+      final updated = await DatabaseService.instance.getStudentById(_studentId);
       if (!mounted) return;
 
       if (updated != null) {
@@ -345,6 +327,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
 
         final connectivity = context.read<ConnectivityProvider>();
         final authProvider = context.read<AuthProvider>();
+        
         unawaited(
           SyncService.instance.syncAll(
             student: updated,
@@ -356,18 +339,20 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
         if (updated.classFirestoreId != null &&
             updated.classFirestoreId!.isNotEmpty &&
             updated.firebaseUid != null) {
-          try {
-            final badges = await DatabaseService.instance
-                .getBadgesForStudent(updated.id!);
-            await FirestoreService.instance.updateEnrollmentSnapshot(
-              classId: updated.classFirestoreId!,
-              studentUid: updated.firebaseUid!,
-              totalPoints: updated.totalPoints,
-              badgeCount: badges.length,
-            );
-          } catch (e) {
-            debugPrint('🔥 Enrollment snapshot failed: $e');
-          }
+          unawaited(() async {
+            try {
+              final badges = await DatabaseService.instance.getBadgesForStudent(updated.id!);
+              await FirestoreService.instance.updateEnrollmentSnapshot(
+                classId: updated.classFirestoreId!,
+                studentUid: updated.firebaseUid!,
+                totalPoints: updated.totalPoints,
+                badgeCount: badges.length,
+                avatarIndex: updated.avatarIndex,
+              );
+            } catch (e) {
+              debugPrint('Enrollment snapshot failed: $e');
+            }
+          }());
         }
       }
 
@@ -385,7 +370,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
         },
       );
     } catch (e) {
-      debugPrint('🧠 MemoryMatch finish ERROR: $e');
+      debugPrint('MemoryMatch finish ERROR: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -396,10 +381,6 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
     }
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Build
-  // ────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -409,12 +390,8 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
   }
 
   Widget _buildBody() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_error != null) {
-      return _buildError();
-    }
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) return _buildError();
     return _buildGame();
   }
 
@@ -425,8 +402,7 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 64, color: AppColors.textMuted),
+            const Icon(Icons.error_outline_rounded, size: 64, color: AppColors.textMuted),
             const SizedBox(height: AppSpacing.lg),
             Text(_error!, textAlign: TextAlign.center, style: AppText.body),
             const SizedBox(height: AppSpacing.xl),
@@ -440,26 +416,29 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
     );
   }
 
-    Widget _buildGame() {
+  Widget _buildGame() {
     final matchedPairs = _cards.where((c) => c.isMatched).length ~/ 2;
     final totalPairs = _allPairIds.length;
 
-    // Layout: header / grid / Yse bottom bar
-    return Column(
-      children: [
-        _buildHeader(matchedPairs, totalPairs),
-        const SizedBox(height: AppSpacing.sm),
-        Expanded(child: _buildGrid()),
-        // Yse bottom bar, reserved space, cards are sized to fit above
-        Container(
-          height: 130,
-          alignment: Alignment.center,
-          child: YseReactionOverlay(
-            controller: _reaction,
-            size: 120,
-          ),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 700),
+        child: Column(
+          children: [
+            _buildHeader(matchedPairs, totalPairs),
+            const SizedBox(height: AppSpacing.sm),
+            Expanded(child: _buildGrid()),
+            Container(
+              height: 100,
+              alignment: Alignment.center,
+              child: YseReactionOverlay(
+                controller: _reaction,
+                size: 100,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -473,9 +452,11 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back,
-                color: AppColors.textPrimary),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(context).pop();
+            },
+            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
             padding: EdgeInsets.zero,
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -483,57 +464,59 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Match the Word', style: AppText.h2),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Match the Word', style: AppText.h2),
+                    const InfoButton(
+                      title: 'How to Match',
+                      description: 'Find the matching pairs of words and pictures.',
+                      steps: [
+                        'Tap a card to flip it over.',
+                        'Tap a second card to find its match.',
+                        'If they match, they stay face up!',
+                        'If they don\'t match, they will flip back over.',
+                        'Match all the pairs to win!',
+                      ],
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    const Icon(Icons.star_rounded,
-                        size: 14, color: AppColors.accentYellow),
-                    const SizedBox(width: 3),
+                    const Icon(Icons.star_rounded, size: 20, color: AppColors.accentYellow),
+                    const SizedBox(width: 6),
                     Text(
                       '${_correctPairIds.length * 5} pts',
-                      style: const TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textYellow,
-                      ),
+                      style: const TextStyle(fontFamily: 'Nunito', fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textYellow),
                     ),
-                    const SizedBox(width: AppSpacing.md),
-                    const Icon(Icons.check_circle_rounded,
-                        size: 14, color: AppColors.accentTeal),
-                    const SizedBox(width: 3),
+                    const SizedBox(width: AppSpacing.lg),
+                    const Icon(Icons.check_circle_rounded, size: 20, color: AppColors.accentTeal),
+                    const SizedBox(width: 6),
                     Text(
                       '$matchedPairs / $totalPairs pairs',
-                      style: AppText.caption.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: const TextStyle(fontFamily: 'Nunito', fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textTeal),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          // Note: Yse slot removed from header, she now floats
-          // top-center via the overlay above. Header right side blank.
         ],
       ),
     );
   }
 
-    Widget _buildGrid() {
+  Widget _buildGrid() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Fixed 3-column layout for the 12-card grid.
-        // 6 pairs = 12 cards = perfect 3×4 grid.
         final columns = _cards.length <= 12 ? 3 : (_cards.length <= 20 ? 4 : 5);
         final rows = (_cards.length / columns).ceil();
 
         const spacing = 10.0;
         const outerPadding = 16.0;
 
-        final availableHeight =
-            constraints.maxHeight - (rows - 1) * spacing;
+        final availableHeight = constraints.maxHeight - (rows - 1) * spacing;
         final cardHeight = availableHeight / rows;
 
         return Padding(
@@ -561,10 +544,6 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// Card model
-// ═══════════════════════════════════════════════════════════════
-
 class _MemoryCard {
   int id = 0;
   final int pairId;
@@ -584,10 +563,6 @@ class _MemoryCard {
     required this.isWordCard,
   });
 }
-
-// ═══════════════════════════════════════════════════════════════
-// Card tile
-// ═══════════════════════════════════════════════════════════════
 
 class _MemoryCardTile extends StatelessWidget {
   final _MemoryCard card;
@@ -614,13 +589,7 @@ class _MemoryCardTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.medium),
           border: Border.all(color: borderColor, width: 2),
           boxShadow: card.isMatched
-              ? [
-                  BoxShadow(
-                    color: AppColors.accentGreen.withValues(alpha: 0.3),
-                    blurRadius: 12,
-                    spreadRadius: 1,
-                  ),
-                ]
+              ? [BoxShadow(color: AppColors.accentGreen.withValues(alpha: 0.3), blurRadius: 12, spreadRadius: 1)]
               : AppShadows.soft,
         ),
         child: Center(
@@ -631,41 +600,31 @@ class _MemoryCardTile extends StatelessWidget {
   }
 
   Widget _buildBack() {
-    return const Icon(
-      Icons.auto_stories_rounded,
-      color: Colors.white,
-      size: 36,
-    );
+    return const Icon(Icons.auto_stories_rounded, color: Colors.white, size: 36);
   }
 
   Widget _buildFace() {
     if (card.isWordCard) {
       return Padding(
         padding: const EdgeInsets.all(4),
-        child: Text(
-          card.wordText,
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
-          maxLines: 2,
-          style: const TextStyle(
-            fontFamily: 'Nunito',
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: AppColors.textPrimary,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            card.wordText,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            style: const TextStyle(fontFamily: 'Nunito', fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
           ),
         ),
       );
     }
     return Padding(
-      padding: const EdgeInsets.all(6),
+      padding: const EdgeInsets.all(4),
       child: Image.asset(
         card.imagePath,
         fit: BoxFit.contain,
-        errorBuilder: (_, _, _) => const Icon(
-          Icons.image_outlined,
-          size: 32,
-          color: AppColors.textMuted,
-        ),
+        cacheWidth: 200,
+        errorBuilder: (_, _, _) => const Icon(Icons.image_outlined, size: 32, color: AppColors.textMuted),
       ),
     );
   }

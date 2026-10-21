@@ -7,6 +7,7 @@ import '../../providers/student_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../services/firestore_service.dart';
 import '../../services/database_service.dart';
+import '../../services/sfx_service.dart'; // Added
 import '../../utils/avatar_helper.dart';
 
 class StudentSettingsScreen extends StatefulWidget {
@@ -18,6 +19,7 @@ class StudentSettingsScreen extends StatefulWidget {
 
 class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
   Future<void> _confirmLogout() async {
+    SfxService.tap();
     final studentProvider = context.read<StudentProvider>();
     final authProvider = context.read<AuthProvider>();
 
@@ -52,6 +54,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
   }
 
   void _showColorBlindDialog(SettingsProvider settings) {
+    SfxService.tap();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -61,10 +64,10 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _ColorBlindOption(label: 'None', value: 'none', selected: settings.colorBlindMode, onTap: () { settings.setColorBlindMode('none'); Navigator.of(ctx).pop(); }),
-            _ColorBlindOption(label: 'Deuteranopia (green-blind)', value: 'deuteranopia', selected: settings.colorBlindMode, onTap: () { settings.setColorBlindMode('deuteranopia'); Navigator.of(ctx).pop(); }),
-            _ColorBlindOption(label: 'Protanopia (red-blind)', value: 'protanopia', selected: settings.colorBlindMode, onTap: () { settings.setColorBlindMode('protanopia'); Navigator.of(ctx).pop(); }),
-            _ColorBlindOption(label: 'Tritanopia (blue-blind)', value: 'tritanopia', selected: settings.colorBlindMode, onTap: () { settings.setColorBlindMode('tritanopia'); Navigator.of(ctx).pop(); }),
+            _ColorBlindOption(label: 'None', value: 'none', selected: settings.colorBlindMode, onTap: () { SfxService.tap(); settings.setColorBlindMode('none'); Navigator.of(ctx).pop(); }),
+            _ColorBlindOption(label: 'Deuteranopia (green-blind)', value: 'deuteranopia', selected: settings.colorBlindMode, onTap: () { SfxService.tap(); settings.setColorBlindMode('deuteranopia'); Navigator.of(ctx).pop(); }),
+            _ColorBlindOption(label: 'Protanopia (red-blind)', value: 'protanopia', selected: settings.colorBlindMode, onTap: () { SfxService.tap(); settings.setColorBlindMode('protanopia'); Navigator.of(ctx).pop(); }),
+            _ColorBlindOption(label: 'Tritanopia (blue-blind)', value: 'tritanopia', selected: settings.colorBlindMode, onTap: () { SfxService.tap(); settings.setColorBlindMode('tritanopia'); Navigator.of(ctx).pop(); }),
           ],
         ),
       ),
@@ -118,6 +121,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
   }
 
   Future<void> _confirmUnlink() async {
+    SfxService.tap();
     final student = context.read<StudentProvider>().currentStudent;
     if (student == null || student.id == null) return;
 
@@ -195,7 +199,14 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  IconButton(onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary), padding: EdgeInsets.zero),
+                  IconButton(
+                    onPressed: () {
+                      SfxService.tap();
+                      Navigator.of(context).pop();
+                    },
+                    icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                    padding: EdgeInsets.zero,
+                  ),
                   const SizedBox(width: AppSpacing.sm),
                   const Expanded(
                     child: Column(
@@ -213,63 +224,67 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
               const SizedBox(height: AppSpacing.lg),
 
               // Profile card
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(AppRadius.large), border: Border.all(color: AppColors.border)),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: const BoxDecoration(color: AppColors.accentTeal, shape: BoxShape.circle),
-                      child: ClipOval(
-                        child: Image.asset(
-                          avatarAssetPath(student.avatarIndex),
-                          width: 56,
-                          height: 56,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Center(
-                            child: Text(
-                              student.displayName.isNotEmpty ? student.displayName[0].toUpperCase() : '?',
-                              style: const TextStyle(fontFamily: 'Nunito', fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white),
+              GestureDetector(
+                onTap: () async {
+                  SfxService.tap();
+                  final canProceed = await _checkLinkedStudent();
+                  if (!canProceed || !context.mounted) return;
+                  Navigator.of(context).pushNamed('/edit-profile');
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(AppRadius.large), border: Border.all(color: AppColors.border)),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: const BoxDecoration(color: AppColors.accentTeal, shape: BoxShape.circle),
+                        child: ClipOval(
+                          child: Image.asset(
+                            avatarAssetPath(student.avatarIndex),
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Center(
+                              child: Text(
+                                student.displayName.isNotEmpty ? student.displayName[0].toUpperCase() : '?',
+                                style: const TextStyle(fontFamily: 'Nunito', fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(student.displayName, style: const TextStyle(fontFamily: 'Nunito', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                          Text('Grade ${student.gradeLevel} • ${student.username}', style: AppText.caption),
-                        ],
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(student.displayName, style: const TextStyle(fontFamily: 'Nunito', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                            Text('Grade ${student.gradeLevel} • ${student.username}', style: AppText.caption),
+                          ],
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      onPressed: () async {
-                        final canProceed = await _checkLinkedStudent();
-                        if (!canProceed || !context.mounted) return;
-                        Navigator.of(context).pushNamed('/edit-profile');
-                      },
-                      icon: const Icon(Icons.edit_rounded, color: AppColors.accentTeal),
-                    ),
-                  ],
+                      const Icon(Icons.edit_rounded, color: AppColors.accentTeal),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.xl),
 
-              // AUDIO TOGGLE
-              _SettingCard(
-                icon: Icons.volume_up_rounded,
-                iconColor: AppColors.accentTeal,
-                label: 'Audio',
-                subtitle: settings.audioEnabled ? 'Sounds on' : 'Sounds off',
-                trailing: Switch(value: settings.audioEnabled, onChanged: (value) => settings.setAudioEnabled(value), activeThumbColor: AppColors.accentTeal),
+              // --- AUDIO SECTION ---
+              const Text(
+                'AUDIO',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textMuted,
+                  letterSpacing: 1.2,
+                ),
               ),
-              const SizedBox(height: AppSpacing.md),
-
+              const SizedBox(height: AppSpacing.sm),
+              
               // SFX VOLUME SLIDER
               _SettingCard(
                 icon: Icons.music_note_rounded,
@@ -281,6 +296,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                   child: Slider(
                     value: settings.sfxVolume,
                     onChanged: (val) => settings.setSfxVolume(val),
+                    onChangeEnd: (_) => SfxService.tap(), // Play tap sound to preview
                     activeColor: AppColors.accentOrange,
                   ),
                 ),
@@ -302,7 +318,21 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.md),
+              
+              const SizedBox(height: AppSpacing.xl),
+
+              // --- ACCESSIBILITY SECTION ---
+              const Text(
+                'ACCESSIBILITY',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textMuted,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
 
               // TEXT SIZE
               _SettingCard(
@@ -313,15 +343,39 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _SizeButton(label: 'A', size: 12, selected: settings.textScale == 0.85, onTap: () => settings.setTextScale(0.85)),
+                    _SizeButton(label: 'A', size: 12, selected: settings.textScale == 0.85, onTap: () { SfxService.tap(); settings.setTextScale(0.85); }),
                     const SizedBox(width: 6),
-                    _SizeButton(label: 'A', size: 15, selected: settings.textScale == 1.0, onTap: () => settings.setTextScale(1.0)),
+                    _SizeButton(label: 'A', size: 15, selected: settings.textScale == 1.0, onTap: () { SfxService.tap(); settings.setTextScale(1.0); }),
                     const SizedBox(width: 6),
-                    _SizeButton(label: 'A', size: 18, selected: settings.textScale == 1.15, onTap: () => settings.setTextScale(1.15)),
+                    _SizeButton(label: 'A', size: 18, selected: settings.textScale == 1.15, onTap: () { SfxService.tap(); settings.setTextScale(1.15); }),
                   ],
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
+
+              // COLOR BLIND MODE
+              _SettingCard(
+                icon: Icons.visibility_rounded,
+                iconColor: AppColors.accentOrange,
+                label: 'Color Blind Mode',
+                subtitle: _colorBlindLabel(settings.colorBlindMode),
+                trailing: IconButton(onPressed: () => _showColorBlindDialog(settings), icon: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted)),
+              ),
+
+              const SizedBox(height: AppSpacing.xl),
+
+              // --- PROFILE & CONNECTIONS SECTION ---
+              const Text(
+                'PROFILE & CONNECTIONS',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textMuted,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
 
               // AVATAR
               _SettingCard(
@@ -331,6 +385,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                 subtitle: 'Choose your look',
                 trailing: InkWell(
                   onTap: () async {
+                    SfxService.tap();
                     final changed = await Navigator.of(context).pushNamed('/avatar-picker');
                     if (changed == true && mounted) setState(() {});
                   },
@@ -349,23 +404,19 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
               ),
               const SizedBox(height: AppSpacing.md),
 
-              // COLOR BLIND MODE
-              _SettingCard(
-                icon: Icons.visibility_rounded,
-                iconColor: AppColors.accentOrange,
-                label: 'Color Blind Mode',
-                subtitle: _colorBlindLabel(settings.colorBlindMode),
-                trailing: IconButton(onPressed: () => _showColorBlindDialog(settings), icon: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted)),
-              ),
-              const SizedBox(height: AppSpacing.md),
-
               // Join Class
               _SettingCard(
                 icon: Icons.group_add_rounded,
                 iconColor: AppColors.accentTeal,
                 label: 'Join a Class',
                 subtitle: student.className != null ? 'Currently in: ${student.className}' : 'Enter your teacher\'s code',
-                trailing: IconButton(onPressed: () => Navigator.of(context).pushNamed('/join-class'), icon: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted)),
+                trailing: IconButton(
+                  onPressed: () {
+                    SfxService.tap();
+                    Navigator.of(context).pushNamed('/join-class');
+                  },
+                  icon: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+                ),
               ),
               const SizedBox(height: AppSpacing.md),
 
@@ -376,7 +427,13 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                   iconColor: AppColors.accentPurple,
                   label: 'Link to Parent',
                   subtitle: 'Enter a code from your parent',
-                  trailing: IconButton(onPressed: () => Navigator.of(context).pushNamed('/link-parent'), icon: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted)),
+                  trailing: IconButton(
+                    onPressed: () {
+                      SfxService.tap();
+                      Navigator.of(context).pushNamed('/link-parent');
+                    },
+                    icon: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+                  ),
                 )
               else
                 _SettingCard(
@@ -396,6 +453,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                 subtitle: 'Update your 4-digit PIN',
                 trailing: IconButton(
                   onPressed: () async {
+                    SfxService.tap();
                     final canProceed = await _checkLinkedStudent();
                     if (!canProceed || !context.mounted) return;
                     Navigator.of(context).pushNamed('/change-pin');

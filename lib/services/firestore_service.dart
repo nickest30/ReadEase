@@ -30,9 +30,9 @@ class FirestoreService {
         'createdAt': FieldValue.serverTimestamp(),
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint('🔥 Firestore: saveTeacher($firebaseUid) OK');
+      debugPrint('Firestore: saveTeacher($firebaseUid) OK');
     } catch (e) {
-      debugPrint('🔥 Firestore saveTeacher ERROR: $e');
+      debugPrint('Firestore saveTeacher ERROR: $e');
     }
   }
 
@@ -42,7 +42,7 @@ class FirestoreService {
       if (!doc.exists) return null;
       return doc.data();
     } catch (e) {
-      debugPrint('🔥 Firestore getTeacherByUid ERROR: $e');
+      debugPrint('Firestore getTeacherByUid ERROR: $e');
       return null;
     }
   }
@@ -74,9 +74,9 @@ class FirestoreService {
         'createdAt': FieldValue.serverTimestamp(),
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint('🔥 Firestore: saveParent($parentUid) OK');
+      debugPrint('Firestore: saveParent($parentUid) OK');
     } catch (e) {
-      debugPrint('🔥 Firestore saveParent ERROR: $e');
+      debugPrint('Firestore saveParent ERROR: $e');
     }
   }
 
@@ -89,7 +89,7 @@ class FirestoreService {
       if (!doc.exists) return null;
       return {'uid': doc.id, ...doc.data()!};
     } catch (e) {
-      debugPrint('🔥 Firestore getParentByUid ERROR: $e');
+      debugPrint('Firestore getParentByUid ERROR: $e');
       return null;
     }
   }
@@ -98,9 +98,7 @@ class FirestoreService {
   // STUDENTS
   // ============================================================
 
-  /// Save or update a student's basic profile in Firestore.
-  /// Called after signup so teacher enrollment rules can verify identity.
-    Future<bool> saveStudent(
+  Future<bool> saveStudent(
     String studentUid,
     String displayName,
     int gradeLevel, {
@@ -134,7 +132,6 @@ class FirestoreService {
         data['parentId'] = parentFirebaseUid;
         data['isLinked'] = true;
       } else if (parentId != null) {
-        // legacy path
         data['parentId'] = parentId;
         data['isLinked'] = true;
       }
@@ -143,15 +140,14 @@ class FirestoreService {
             data,
             SetOptions(merge: true),
           );
-      debugPrint('🔥 Firestore: saveStudent($studentUid) OK');
+      debugPrint('Firestore: saveStudent($studentUid) OK');
       return true;
     } catch (e) {
-      debugPrint('🔥 Firestore saveStudent ERROR: $e');
+      debugPrint('Firestore saveStudent ERROR: $e');
       return false;
     }
   }
 
-  /// Look up a student by username (queries Firestore for cross-device login).
   Future<Map<String, dynamic>?> getStudentByUsername(String username) async {
     try {
       final snapshot = await _db
@@ -161,16 +157,12 @@ class FirestoreService {
           .get(const GetOptions(source: Source.server))
           .timeout(const Duration(seconds: 10));
 
-      if (snapshot.docs.isEmpty) {
-        debugPrint('🔥 getStudentByUsername: "$username" not found in cloud');
-        return null;
-      }
+      if (snapshot.docs.isEmpty) return null;
 
       final doc = snapshot.docs.first;
-      debugPrint('🔥 getStudentByUsername: found "$username" (${doc.id})');
       return {'uid': doc.id, ...doc.data()};
     } catch (e) {
-      debugPrint('🔥 getStudentByUsername ERROR: $e');
+      debugPrint('Firestore getStudentByUsername ERROR: $e');
       return null;
     }
   }
@@ -181,10 +173,11 @@ class FirestoreService {
     required String displayName,
     required int gradeLevel,
     required String parentUid,
-    String? pinHash,              // NEW
+    String? pinHash,
     int totalPoints = 0,
     int badgeCount = 0,
     bool isLinked = true,
+    int? avatarIndex,
   }) async {
     try {
       final data = <String, dynamic>{
@@ -199,20 +192,20 @@ class FirestoreService {
         'lastUpdated': FieldValue.serverTimestamp(),
       };
       if (pinHash != null) data['pinHash'] = pinHash;
+      if (avatarIndex != null) data['avatarIndex'] = avatarIndex;
 
       await _db.collection('students').doc(childUid).set(
             data,
             SetOptions(merge: true),
           );
-      debugPrint('🔥 Firestore: saveLinkedChild($childUid) OK');
+      debugPrint('Firestore: saveLinkedChild($childUid) OK');
       return true;
     } catch (e) {
-      debugPrint('🔥 Firestore saveLinkedChild ERROR: $e');
+      debugPrint('Firestore saveLinkedChild ERROR: $e');
       return false;
     }
   }
 
-  /// Fetch all children linked to a parent's UID.
   Future<List<Map<String, dynamic>>> getChildrenOfParent(
       String parentUid) async {
     try {
@@ -226,17 +219,15 @@ class FirestoreService {
           .map((doc) => {'uid': doc.id, ...doc.data()})
           .toList();
     } catch (e) {
-      debugPrint('🔥 Firestore getChildrenOfParent ERROR: $e');
+      debugPrint('Firestore getChildrenOfParent ERROR: $e');
       return [];
     }
   }
 
-
   // ============================================================
-  // LINK CODES, Parent generates, child redeems
+  // LINK CODES
   // ============================================================
 
-  /// Generate a 6-char link code valid for 24 hours.
   Future<String?> generateLinkCode({
     required String parentUid,
     required String parentName,
@@ -246,12 +237,6 @@ class FirestoreService {
       final now = DateTime.now();
       final expiresAt = now.add(const Duration(hours: 24));
 
-      debugPrint('🔥 generateLinkCode: START');
-      debugPrint('🔥   code: $code');
-      debugPrint('🔥   parentUid: $parentUid');
-      debugPrint('🔥   parentName: $parentName');
-      debugPrint('🔥   expiresAt: ${expiresAt.toIso8601String()}');
-
       await _db.collection('link_codes').doc(code).set({
         'parentUid': parentUid,
         'parentName': parentName,
@@ -259,34 +244,25 @@ class FirestoreService {
         'expiresAt': Timestamp.fromDate(expiresAt),
       });
 
-      debugPrint('🔥 generateLinkCode: SUCCESS → $code');
       return code;
-    } catch (e, stackTrace) {
-      debugPrint('🔥 generateLinkCode ERROR: $e');
-      debugPrint('🔥 STACKTRACE: $stackTrace');
+    } catch (e) {
+      debugPrint('Firestore generateLinkCode ERROR: $e');
       return null;
     }
   }
 
-  /// Validate a link code. Returns parent info if valid.
   Future<Map<String, dynamic>?> validateLinkCode(String rawCode) async {
     try {
       final code = rawCode.trim().toUpperCase();
       final doc = await _db.collection('link_codes').doc(code).get();
 
-      if (!doc.exists) {
-        debugPrint('🔥 validateLinkCode: code not found');
-        return null;
-      }
+      if (!doc.exists) return null;
 
       final data = doc.data()!;
       final expiresAt = data['expiresAt'] as Timestamp?;
       if (expiresAt == null) return null;
 
-      if (expiresAt.toDate().isBefore(DateTime.now())) {
-        debugPrint('🔥 validateLinkCode: code expired');
-        return null;
-      }
+      if (expiresAt.toDate().isBefore(DateTime.now())) return null;
 
       return {
         'code': doc.id,
@@ -295,12 +271,11 @@ class FirestoreService {
         'expiresAt': expiresAt.toDate().toIso8601String(),
       };
     } catch (e) {
-      debugPrint('🔥 Firestore validateLinkCode ERROR: $e');
+      debugPrint('Firestore validateLinkCode ERROR: $e');
       return null;
     }
   }
 
-  /// Link a student to a parent via a validated code.
   Future<bool> linkStudentToParent({
     required String studentUid,
     required String parentUid,
@@ -311,10 +286,9 @@ class FirestoreService {
         'isLinked': true,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint('🔥 Firestore: linkStudentToParent OK');
       return true;
     } catch (e) {
-      debugPrint('🔥 Firestore linkStudentToParent ERROR: $e');
+      debugPrint('Firestore linkStudentToParent ERROR: $e');
       return false;
     }
   }
@@ -326,10 +300,9 @@ class FirestoreService {
         'isLinked': FieldValue.delete(),
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint('🔥 Firestore: unlinkStudentFromParent OK');
       return true;
     } catch (e) {
-      debugPrint('🔥 Firestore unlinkStudentFromParent ERROR: $e');
+      debugPrint('Firestore unlinkStudentFromParent ERROR: $e');
       return false;
     }
   }
@@ -353,16 +326,14 @@ class FirestoreService {
             await doc.reference.delete();
           }
         } catch (e) {
-          // Continue with other subcollections even if one fails.
-          debugPrint('🔥 cascade: $sub delete failed: $e');
+          debugPrint('Firestore cascade delete failed for $sub: $e');
         }
       }
 
       await docRef.delete();
-      debugPrint('🔥 Firestore: deleteStudentCascade($studentUid) OK');
       return true;
     } catch (e) {
-      debugPrint('🔥 deleteStudentCascade ERROR: $e');
+      debugPrint('Firestore deleteStudentCascade ERROR: $e');
       return false;
     }
   }
@@ -379,9 +350,6 @@ class FirestoreService {
     return code;
   }
 
-
-
-  /// Fetch a student's quiz results from Firestore.
   Future<List<Map<String, dynamic>>> getStudentResultsFromCloud(
       String studentUid) async {
     try {
@@ -393,15 +361,9 @@ class FirestoreService {
           .get(const GetOptions(source: Source.server))
           .timeout(const Duration(seconds: 10));
 
-      debugPrint(
-        '🔥 getStudentResultsFromCloud($studentUid): '
-        '${snapshot.docs.length} results',
-      );
-
       return snapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
-      debugPrint('🔥 Firestore getStudentResultsFromCloud ERROR: $e');
-      // Fall back to cache
+      debugPrint('Firestore getStudentResultsFromCloud ERROR: $e');
       try {
         final snapshot = await _db
             .collection('students')
@@ -425,11 +387,9 @@ class FirestoreService {
       if (!doc.exists) return null;
       return {'uid': doc.id, ...doc.data()!};
     } catch (e) {
-      debugPrint('🔥 Firestore getStudentByUid ERROR: $e');
-      // Fall back to cache
+      debugPrint('Firestore getStudentByUid ERROR: $e');
       try {
-        final doc =
-            await _db.collection('students').doc(studentUid).get();
+        final doc = await _db.collection('students').doc(studentUid).get();
         if (!doc.exists) return null;
         return {'uid': doc.id, ...doc.data()!};
       } catch (_) {
@@ -439,13 +399,9 @@ class FirestoreService {
   }
 
   // ============================================================
-  // CLASSES (FLAT, top-level collection)
+  // CLASSES
   // ============================================================
 
-  /// Save a new class.
-  /// Writes to BOTH:
-  ///   - classes/{classId}                (flat, for join-code lookup)
-  ///   - teachers/{uid}/classes/{classId} (nested, for teacher's own list)
   Future<String> saveClassGroup(
     ClassGroup group,
     String teacherUid, {
@@ -459,31 +415,23 @@ class FirestoreService {
         'createdAt': FieldValue.serverTimestamp(),
       };
 
-      // --- Step 1: Nested write ---
-      debugPrint('🔥 [1/2] Nested write to teachers/$teacherUid/classes/...');
       final nestedRef = await _db
           .collection('teachers')
           .doc(teacherUid)
           .collection('classes')
           .add(payload);
       final classId = nestedRef.id;
-      debugPrint('🔥 [1/2] Nested OK → classId=$classId');
 
-      // --- Step 2: Flat write ---
-      debugPrint('🔥 [2/2] Flat write to classes/$classId');
       await _db.collection('classes').doc(classId).set({
         ...payload,
         'teacherUid': teacherUid,
         'teacherName': teacherName ?? '',
         'studentCount': 0,
       });
-      debugPrint('🔥 [2/2] Flat OK');
 
-      debugPrint('✅ saveClassGroup COMPLETE → $classId');
       return classId;
-    } catch (e, stackTrace) {
-      debugPrint('❌ saveClassGroup ERROR: $e');
-      debugPrint('❌ STACKTRACE: $stackTrace');
+    } catch (e) {
+      debugPrint('Firestore saveClassGroup ERROR: $e');
       return '';
     }
   }
@@ -497,12 +445,11 @@ class FirestoreService {
       if (!doc.exists) return null;
       return {'uid': doc.id, ...doc.data()!};
     } catch (e) {
-      debugPrint('🔥 Firestore getTeacherByUidFull ERROR: $e');
+      debugPrint('Firestore getTeacherByUidFull ERROR: $e');
       return null;
     }
   }
 
-  /// Fetch all classes created by a teacher.
   Future<List<Map<String, dynamic>>> getClassesForTeacher(
       String teacherUid) async {
     try {
@@ -516,17 +463,14 @@ class FirestoreService {
           .map((doc) => {'firestoreId': doc.id, ...doc.data()})
           .toList();
     } catch (e) {
-      debugPrint('🔥 Firestore getClassesForTeacher ERROR: $e');
+      debugPrint('Firestore getClassesForTeacher ERROR: $e');
       return [];
     }
   }
 
-  /// Look up a class by join code.
-  /// Queries the FLAT classes collection, no collection group needed.
   Future<Map<String, dynamic>?> getClassByJoinCode(String joinCode) async {
     try {
       final upperCode = joinCode.toUpperCase();
-      debugPrint('🔥 Firestore: searching for joinCode = "$upperCode"');
 
       final snapshot = await _db
           .collection('classes')
@@ -535,16 +479,11 @@ class FirestoreService {
           .get()
           .timeout(const Duration(seconds: 10));
 
-      debugPrint('🔥 Firestore: found ${snapshot.docs.length} classes');
-
       if (snapshot.docs.isEmpty) return null;
 
       final doc = snapshot.docs.first;
       final data = doc.data();
       final teacherUid = data['teacherUid'] as String? ?? '';
-
-      debugPrint('🔥 Firestore: matched class "${data['className']}" '
-          'from teacher $teacherUid');
 
       return {
         'firestoreId': doc.id,
@@ -552,7 +491,7 @@ class FirestoreService {
         ...data,
       };
     } catch (e) {
-      debugPrint('🔥 Firestore getClassByJoinCode ERROR: $e');
+      debugPrint('Firestore getClassByJoinCode ERROR: $e');
       return null;
     }
   }
@@ -561,16 +500,15 @@ class FirestoreService {
   // ENROLLMENTS
   // ============================================================
 
-  /// Enroll a student in a class.
   Future<bool> enrollStudent({
     required String classId,
     required String studentUid,
     required String studentName,
     required int gradeLevel,
     int totalPoints = 0,
+    int? avatarIndex,
   }) async {
     try {
-      // 1. Create enrollment doc
       await _db
           .collection('classes')
           .doc(classId)
@@ -580,24 +518,18 @@ class FirestoreService {
         'studentName': studentName,
         'gradeLevel': gradeLevel,
         'totalPoints': totalPoints,
+        'avatarIndex': avatarIndex ?? 1,
         'enrolledAt': FieldValue.serverTimestamp(),
       });
-      debugPrint('🔥 [1/2] Enrollment doc created');
 
-      // 2. Update student's classId
       await _db.collection('students').doc(studentUid).set({
         'classId': classId,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint('🔥 [2/2] Student doc updated');
 
-      // Note: studentCount is not incremented here.
-      // The teacher-side view computes it from the enrollments list.
-
-      debugPrint('🔥 Firestore: enrollStudent OK ($studentUid → $classId)');
       return true;
     } catch (e) {
-      debugPrint('🔥 Firestore enrollStudent ERROR: $e');
+      debugPrint('Firestore enrollStudent ERROR: $e');
       return false;
     }
   }
@@ -606,12 +538,10 @@ class FirestoreService {
     String classId,
   ) async {
     try {
-      // 1. Get enrollment docs
       final enrollments = await getEnrollmentsForClass(classId);
 
       if (enrollments.isEmpty) return [];
 
-      // 2. Enrich each with student profile data
       final List<Map<String, dynamic>> detailed = [];
       for (final e in enrollments) {
         final uid = e['uid'] as String;
@@ -623,23 +553,21 @@ class FirestoreService {
           'gradeLevel': e['gradeLevel'] ?? profile?['gradeLevel'] ?? 0,
           'totalPoints': profile?['totalPoints'] ?? e['totalPoints'] ?? 0,
           'badgeCount': profile?['badgeCount'] ?? 0,
-          'avatarIndex': (profile?['avatarIndex'] as int?) ?? 1,
+          'avatarIndex': (profile?['avatarIndex'] as int?) ?? (e['avatarIndex'] as int?) ?? 1,
           'enrolledAt': e['enrolledAt'],
         });
       }
 
-      // 3. Sort by points (highest first)
       detailed.sort((a, b) =>
           (b['totalPoints'] as int).compareTo(a['totalPoints'] as int));
 
       return detailed;
     } catch (e) {
-      debugPrint('🔥 Firestore getEnrolledStudentsDetailed ERROR: $e');
+      debugPrint('Firestore getEnrolledStudentsDetailed ERROR: $e');
       return [];
     }
   }
 
-  /// Get all enrollments for a class (for teacher view).
   Future<List<Map<String, dynamic>>> getEnrollmentsForClass(
       String classId) async {
     try {
@@ -654,28 +582,22 @@ class FirestoreService {
           .map((doc) => {'uid': doc.id, ...doc.data()})
           .toList();
     } catch (e) {
-      debugPrint('🔥 Firestore getEnrollmentsForClass ERROR: $e');
+      debugPrint('Firestore getEnrollmentsForClass ERROR: $e');
       return [];
     }
   }
 
-    Future<bool> transferStudent({
+  Future<bool> transferStudent({
     required String oldClassId,
     required String newClassId,
     required String studentUid,
     required String studentName,
     required int gradeLevel,
     required int totalPoints,
+    int? avatarIndex,
   }) async {
     try {
-      debugPrint('🔥 transferStudent: START');
-      debugPrint('🔥   oldClassId: "$oldClassId"');
-      debugPrint('🔥   newClassId: "$newClassId"');
-      debugPrint('🔥   studentUid: $studentUid');
-
-      // 1. Remove old enrollment
       if (oldClassId.isNotEmpty && oldClassId != newClassId) {
-        debugPrint('🔥 [1/5] Deleting old enrollment...');
         try {
           await _db
               .collection('classes')
@@ -683,21 +605,16 @@ class FirestoreService {
               .collection('enrollments')
               .doc(studentUid)
               .delete();
-          debugPrint('🔥 [1/5] Old enrollment deleted ✓');
         } catch (e) {
-          debugPrint('🔥 [1/5] Could not delete old enrollment (continuing): $e');
+          debugPrint('Firestore: could not delete old enrollment: $e');
         }
         try {
           await _db.collection('classes').doc(oldClassId).update({
             'studentCount': FieldValue.increment(-1),
           });
         } catch (_) {}
-      } else {
-        debugPrint('🔥 [1/5] Skipped, no old class');
       }
 
-      // 2. Add new enrollment
-      debugPrint('🔥 [2/5] Creating new enrollment...');
       try {
         await _db
             .collection('classes')
@@ -708,31 +625,27 @@ class FirestoreService {
           'studentName': studentName,
           'gradeLevel': gradeLevel,
           'totalPoints': totalPoints,
+          'avatarIndex': avatarIndex ?? 1,
           'enrolledAt': FieldValue.serverTimestamp(),
         });
-        debugPrint('🔥 [2/5] New enrollment created ✓');
       } catch (e) {
-        debugPrint('🔥 [2/5] FAILED to create enrollment: $e');
+        debugPrint('Firestore: FAILED to create enrollment: $e');
         return false;
       }
 
-      // 3. Update leaderboard
-      debugPrint('🔥 [3/5] Updating leaderboard...');
       try {
         await _db.collection('leaderboard').doc(studentUid).set({
           'displayName': studentName,
           'totalPoints': totalPoints,
           'gradeLevel': gradeLevel,
           'classId': newClassId,
+          'avatarIndex': avatarIndex ?? 1,
           'lastUpdated': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
-        debugPrint('🔥 [3/5] Leaderboard updated ✓');
       } catch (e) {
-        debugPrint('🔥 [3/5] Leaderboard update failed (continuing): $e');
+        debugPrint('Firestore: leaderboard update failed: $e');
       }
 
-      // 4. Update student record
-      debugPrint('🔥 [4/5] Updating student record...');
       try {
         await _db.collection('students').doc(studentUid).set({
           'classId': newClassId,
@@ -740,52 +653,50 @@ class FirestoreService {
           'gradeLevel': gradeLevel,
           'totalPoints': totalPoints,
           'firebaseUid': studentUid,
+          'avatarIndex': avatarIndex ?? 1,
           'lastUpdated': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
-        debugPrint('🔥 [4/5] Student record updated ✓');
       } catch (e) {
-        debugPrint('🔥 [4/5] FAILED to update student record: $e');
+        debugPrint('Firestore: FAILED to update student record: $e');
         return false;
       }
 
-      // 5. Increment new class count (best-effort)
       try {
         await _db.collection('classes').doc(newClassId).update({
           'studentCount': FieldValue.increment(1),
         });
       } catch (_) {}
 
-      debugPrint('🔥 transferStudent: COMPLETE ✓');
       return true;
-    } catch (e, stackTrace) {
-      debugPrint('🔥 transferStudent ERROR: $e');
-      debugPrint('🔥 STACKTRACE: $stackTrace');
+    } catch (e) {
+      debugPrint('Firestore transferStudent ERROR: $e');
       return false;
     }
   }
 
-  /// Update a student's points snapshot in their class enrollment doc.
-  /// Called after every quiz so the teacher view stays fresh.
   Future<void> updateEnrollmentSnapshot({
     required String classId,
     required String studentUid,
     required int totalPoints,
     required int badgeCount,
+    int? avatarIndex,
   }) async {
     try {
+      final data = <String, dynamic>{
+        'totalPoints': totalPoints,
+        'badgeCount': badgeCount,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      };
+      if (avatarIndex != null) data['avatarIndex'] = avatarIndex;
+
       await _db
           .collection('classes')
           .doc(classId)
           .collection('enrollments')
           .doc(studentUid)
-          .set({
-        'totalPoints': totalPoints,
-        'badgeCount': badgeCount,
-        'lastUpdated': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-      debugPrint('🔥 Firestore: enrollment snapshot updated');
+          .set(data, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('🔥 Firestore updateEnrollmentSnapshot ERROR: $e');
+      debugPrint('Firestore updateEnrollmentSnapshot ERROR: $e');
     }
   }
 
@@ -817,9 +728,8 @@ class FirestoreService {
             data,
             SetOptions(merge: true),
           );
-      debugPrint('🔥 Firestore: updateLeaderboardEntry($studentUid) OK');
     } catch (e) {
-      debugPrint('🔥 Firestore updateLeaderboardEntry ERROR: $e');
+      debugPrint('Firestore updateLeaderboardEntry ERROR: $e');
     }
   }
 
@@ -831,32 +741,28 @@ class FirestoreService {
           .collection('leaderboard')
           .orderBy('totalPoints', descending: true)
           .limit(limit)
-          .get()
+          .get(const GetOptions(source: Source.server))
           .timeout(const Duration(seconds: 10));
 
       return snapshot.docs
           .map((doc) => {'uid': doc.id, ...doc.data()})
           .toList();
     } catch (e) {
-      debugPrint('🔥 Firestore getGlobalLeaderboard ERROR: $e');
+      debugPrint('Firestore getGlobalLeaderboard ERROR: $e');
       return [];
     }
   }
 
-  /// Class leaderboard, filter by classId.
   Future<List<Map<String, dynamic>>> getClassLeaderboard({
     required String classId,
     int limit = 100,
   }) async {
     try {
-      debugPrint('🏆 getClassLeaderboard: querying classId=$classId');
       final snapshot = await _db
           .collection('leaderboard')
           .where('classId', isEqualTo: classId)
           .get(const GetOptions(source: Source.server))
           .timeout(const Duration(seconds: 10));
-
-      debugPrint('🏆 getClassLeaderboard: found ${snapshot.docs.length} entries');
 
       final entries = snapshot.docs
           .map((doc) => {'uid': doc.id, ...doc.data()})
@@ -866,17 +772,15 @@ class FirestoreService {
               .compareTo((a['totalPoints'] ?? 0) as int));
       return entries;
     } catch (e) {
-      debugPrint('🏆 getClassLeaderboard ERROR: $e');
+      debugPrint('Firestore getClassLeaderboard ERROR: $e');
       return [];
     }
   }
 
   // ============================================================
-  // PROGRESS SYNC (M4)
+  // PROGRESS SYNC
   // ============================================================
 
-  /// Push a single quiz attempt to students/{uid}/results/{attemptId}.
-  /// Uses a deterministic docId based on completedAt to be idempotent.
   Future<bool> pushQuizAttempt({
     required String studentUid,
     required int localAttemptId,
@@ -907,23 +811,19 @@ class FirestoreService {
         'completedAt': completedAt,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint('🔥 pushQuizAttempt($docId) OK');
       return true;
     } catch (e) {
-      debugPrint('🔥 pushQuizAttempt ERROR: $e');
+      debugPrint('Firestore pushQuizAttempt ERROR: $e');
       return false;
     }
   }
 
-  /// Legacy method, kept for any remaining callers.
-  /// @Deprecated: use pushQuizAttempt for the new QuizAttempt flow.
   Future<void> syncStudentProgress(
     String studentUid,
     String studentName,
     int totalPoints,
     List<QuizResult> results,
   ) async {
-    // Kept as-is for backward compat, but new code should use pushQuizAttempt.
     try {
       for (final r in results) {
         if (r.id == null) continue;
@@ -948,17 +848,14 @@ class FirestoreService {
         'totalPoints': totalPoints,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-
-      debugPrint('🔥 Firestore: syncStudentProgress($studentUid) OK');
     } catch (e) {
-      debugPrint('🔥 Firestore syncStudentProgress ERROR: $e');
+      debugPrint('Firestore syncStudentProgress ERROR: $e');
     }
   }
 
-  /// Sync a badge to Firestore under students/{uid}/badges/.
   Future<void> syncBadge({
     required String studentUid,
-    required String badgeKey,  // "grade-difficulty", e.g. "1-easy"
+    required String badgeKey,
     required int gradeLevel,
     required String difficulty,
     required String badgeName,
@@ -978,20 +875,15 @@ class FirestoreService {
         'pointsEarned': pointsEarned,
         'earnedAt': earnedAt,
       }, SetOptions(merge: true));
-      debugPrint('🔥 Firestore: syncBadge($badgeKey) OK');
     } catch (e) {
-      debugPrint('🔥 Firestore syncBadge ERROR: $e');
+      debugPrint('Firestore syncBadge ERROR: $e');
     }
   }
-
 
   // ============================================================
   // ATOMIC UPDATES
   // ============================================================
 
-  /// Atomically increment a student's total points.
-  /// Use this instead of absolute `saveStudent(totalPoints: X)` to avoid
-  /// lost updates when two devices sync simultaneously.
   Future<void> incrementStudentPoints(String studentUid, int delta) async {
     if (delta == 0) return;
     try {
@@ -999,17 +891,15 @@ class FirestoreService {
         'totalPoints': FieldValue.increment(delta),
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint('🔥 Firestore: incrementStudentPoints($studentUid, +$delta)');
     } catch (e) {
-      debugPrint('🔥 incrementStudentPoints ERROR: $e');
+      debugPrint('Firestore incrementStudentPoints ERROR: $e');
     }
   }
 
   // ============================================================
-  // EMAIL / PHONE VERIFICATION MARKERS
+  // VERIFICATION MARKERS
   // ============================================================
 
-  /// Mark email as verified in Firestore for parent or teacher.
   Future<void> markEmailVerified(String uid, String role) async {
     final collection = role == 'parent' ? 'parents' : 'teachers';
     try {
@@ -1017,13 +907,11 @@ class FirestoreService {
         'emailVerified': true,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint('🔥 Firestore: markEmailVerified($uid, $role)');
     } catch (e) {
-      debugPrint('🔥 markEmailVerified ERROR: $e');
+      debugPrint('Firestore markEmailVerified ERROR: $e');
     }
   }
 
-  /// Mark phone as verified in Firestore for parent or teacher.
   Future<void> markPhoneVerified(String uid, String role) async {
     final collection = role == 'parent' ? 'parents' : 'teachers';
     try {
@@ -1032,18 +920,12 @@ class FirestoreService {
         'phoneVerifiedAt': DateTime.now().toIso8601String(),
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint('🔥 Firestore: markPhoneVerified($uid, $role)');
     } catch (e) {
-      debugPrint('🔥 markPhoneVerified ERROR: $e');
+      debugPrint('Firestore markPhoneVerified ERROR: $e');
     }
   }
 
-  /// Save the backup code bcrypt hash at signup time.
-  Future<void> saveBackupCodeHash(
-    String uid,
-    String role,
-    String hash,
-  ) async {
+  Future<void> saveBackupCodeHash(String uid, String role, String hash) async {
     final collection = role == 'parent' ? 'parents' : 'teachers';
     try {
       await _db.collection(collection).doc(uid).set({
@@ -1051,19 +933,12 @@ class FirestoreService {
         'backupCodeUsed': false,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint('🔥 Firestore: saveBackupCodeHash($uid, $role)');
     } catch (e) {
-      debugPrint('🔥 saveBackupCodeHash ERROR: $e');
+      debugPrint('Firestore saveBackupCodeHash ERROR: $e');
     }
   }
 
-  /// Replace the backup code hash after a successful use.
-  /// Backup codes are single-use; a new one is always generated.
-  Future<void> rotateBackupCode(
-    String uid,
-    String role,
-    String newHash,
-  ) async {
+  Future<void> rotateBackupCode(String uid, String role, String newHash) async {
     final collection = role == 'parent' ? 'parents' : 'teachers';
     try {
       await _db.collection(collection).doc(uid).set({
@@ -1072,17 +947,15 @@ class FirestoreService {
         'backupCodeRotatedAt': FieldValue.serverTimestamp(),
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint('🔥 Firestore: rotateBackupCode($uid, $role)');
     } catch (e) {
-      debugPrint('🔥 rotateBackupCode ERROR: $e');
+      debugPrint('Firestore rotateBackupCode ERROR: $e');
     }
   }
 
   // ============================================================
-  // WORD ANALYTICS SYNC (mastery, encounters, starred)
+  // WORD ANALYTICS SYNC
   // ============================================================
 
-  /// Push a word_mastery row to students/{uid}/mastery/{wordId}.
   Future<void> syncWordMastery({
     required String studentUid,
     required int wordId,
@@ -1103,11 +976,10 @@ class FirestoreService {
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('🔥 syncWordMastery ERROR: $e');
+      debugPrint('Firestore syncWordMastery ERROR: $e');
     }
   }
 
-  /// Push a word_encounter row to students/{uid}/encounters/{wordId}.
   Future<void> syncWordEncounter({
     required String studentUid,
     required int wordId,
@@ -1126,11 +998,10 @@ class FirestoreService {
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('🔥 syncWordEncounter ERROR: $e');
+      debugPrint('Firestore syncWordEncounter ERROR: $e');
     }
   }
 
-  /// Push a starred word to students/{uid}/starred/{wordId}.
   Future<void> syncStarredWord({
     required String studentUid,
     required int wordId,
@@ -1147,11 +1018,10 @@ class FirestoreService {
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('🔥 syncStarredWord ERROR: $e');
+      debugPrint('Firestore syncStarredWord ERROR: $e');
     }
   }
 
-  /// Remove a starred word from cloud (when unstarred).
   Future<void> unsyncStarredWord({
     required String studentUid,
     required int wordId,
@@ -1164,13 +1034,12 @@ class FirestoreService {
           .doc(wordId.toString())
           .delete();
     } catch (e) {
-      debugPrint('🔥 unsyncStarredWord ERROR: $e');
+      debugPrint('Firestore unsyncStarredWord ERROR: $e');
     }
   }
 
-
   // ============================================================
-  // WORD ANALYTICS PULL (for cross-device download)
+  // WORD ANALYTICS PULL
   // ============================================================
 
   Future<List<Map<String, dynamic>>> pullStudentMastery(String studentUid) async {
@@ -1185,7 +1054,7 @@ class FirestoreService {
           .map((d) => {'wordId': int.tryParse(d.id), ...d.data()})
           .toList();
     } catch (e) {
-      debugPrint('🔥 pullStudentMastery ERROR: $e');
+      debugPrint('Firestore pullStudentMastery ERROR: $e');
       return [];
     }
   }
@@ -1202,7 +1071,7 @@ class FirestoreService {
           .map((d) => {'wordId': int.tryParse(d.id), ...d.data()})
           .toList();
     } catch (e) {
-      debugPrint('🔥 pullStudentEncounters ERROR: $e');
+      debugPrint('Firestore pullStudentEncounters ERROR: $e');
       return [];
     }
   }
@@ -1219,7 +1088,7 @@ class FirestoreService {
           .map((d) => {'wordId': int.tryParse(d.id), ...d.data()})
           .toList();
     } catch (e) {
-      debugPrint('🔥 pullStudentStarred ERROR: $e');
+      debugPrint('Firestore pullStudentStarred ERROR: $e');
       return [];
     }
   }
@@ -1234,12 +1103,11 @@ class FirestoreService {
           .timeout(const Duration(seconds: 10));
       return snap.docs.map((d) => {'badgeKey': d.id, ...d.data()}).toList();
     } catch (e) {
-      debugPrint('🔥 pullStudentBadges ERROR: $e');
+      debugPrint('Firestore pullStudentBadges ERROR: $e');
       return [];
     }
   }
 
-  /// Full parent doc with uid field (mirrors getTeacherByUidFull).
   Future<Map<String, dynamic>?> getParentByUidFull(String parentUid) async {
     try {
       final doc = await _db
@@ -1250,8 +1118,7 @@ class FirestoreService {
       if (!doc.exists) return null;
       return {'uid': doc.id, ...doc.data()!};
     } catch (e) {
-      debugPrint('🔥 getParentByUidFull ERROR: $e');
-      // Fall back to cache
+      debugPrint('Firestore getParentByUidFull ERROR: $e');
       try {
         final doc = await _db.collection('parents').doc(parentUid).get();
         if (!doc.exists) return null;
@@ -1262,15 +1129,7 @@ class FirestoreService {
     }
   }
 
-
-  /// Save the raw phone number at signup, before verification.
-  /// `phoneVerified` is set to false; a separate call to
-  /// `markPhoneVerified()` flips it after the OTP succeeds.
-  Future<void> markPhoneNumber(
-    String uid,
-    String role,
-    String phoneNumber,
-  ) async {
+  Future<void> markPhoneNumber(String uid, String role, String phoneNumber) async {
     final collection = role == 'parent' ? 'parents' : 'teachers';
     try {
       await _db.collection(collection).doc(uid).set({
@@ -1278,14 +1137,11 @@ class FirestoreService {
         'phoneVerified': false,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint('🔥 Firestore: markPhoneNumber($uid, $role)');
     } catch (e) {
-      debugPrint('🔥 markPhoneNumber ERROR: $e');
+      debugPrint('Firestore markPhoneNumber ERROR: $e');
     }
   }
 
-  /// Update a parent's or teacher's phone number + verification state.
-  /// Used by the Account Security screen when changing a phone.
   Future<void> updatePhoneNumber({
     required String uid,
     required String role,
@@ -1300,10 +1156,8 @@ class FirestoreService {
         if (verified) 'phoneVerifiedAt': DateTime.now().toIso8601String(),
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint('🔥 Firestore: updatePhoneNumber($uid, $role)');
     } catch (e) {
-      debugPrint('🔥 updatePhoneNumber ERROR: $e');
+      debugPrint('Firestore updatePhoneNumber ERROR: $e');
     }
   }
-
 }

@@ -14,15 +14,13 @@ import '../../providers/connectivity_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
-import '../../services/game_sfx.dart';
 import '../../services/sfx_service.dart';
-import '../../services/hint_service.dart';
-import '../../widgets/hint_button.dart';
+import '../../services/bgm_service.dart';
 import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/game_score.dart';
+import '../../widgets/info_button.dart';
 
-/// Word Hunt, Grade 5 Hard.
 class WordHuntScreen extends StatefulWidget {
   const WordHuntScreen({super.key});
 
@@ -41,15 +39,14 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
   static const double _logicalCellSize = _logicalGridSide / _gridSize;
 
   static const List<Color> _palette = [
-    Color(0xFF4A9EFF), // blue
-    Color(0xFF4CAF50), // green
-    Color(0xFFFF9800), // orange
-    Color(0xFF9C27B0), // purple
-    Color(0xFFE91E63), // pink
-    Color(0xFF009688), // teal
+    Color(0xFF4A9EFF),
+    Color(0xFF4CAF50),
+    Color(0xFFFF9800),
+    Color(0xFF9C27B0),
+    Color(0xFFE91E63),
+    Color(0xFF009688),
   ];
 
-  /// Bright orange for revealed-but-not-found words on time-up.
   static const Color _missedColor = Color(0xFFFF5722);
 
   bool _loading = true;
@@ -81,14 +78,13 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
   int _revealCountdown = _revealCountdownSeconds;
   final Set<int> _hintCells = {};
 
-  final HintService _hintService = HintService();
-
   final AudioPlayer _audioPlayer = AudioPlayer();
   final List<int> _wrongWordIds = [];
 
   @override
   void initState() {
     super.initState();
+    BgmService.playTrack(BgmTrack.game);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadGame());
   }
 
@@ -96,32 +92,35 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
   void dispose() {
     _ticker?.cancel();
     _audioPlayer.dispose();
-    _hintService.dispose();
     super.dispose();
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Load
-  // ────────────────────────────────────────────────────────────
-
   Future<void> _loadGame() async {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
-    final batchId = args['batchId'] as int;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/student-home', (route) => false);
+        }
+      });
+      return;
+    }
+
+    final batchId = args['batchId'] as int?;
     final gradeLevel = (args['gradeLevel'] as int?) ?? 5;
     final difficulty = (args['difficulty'] as String?) ?? 'hard';
     final student = context.read<StudentProvider>().currentStudent;
 
-    if (student == null || student.id == null) {
+    if (batchId == null || student == null || student.id == null) {
       setState(() {
         _loading = false;
-        _error = 'Not signed in.';
+        _error = 'Not signed in or missing data.';
       });
       return;
     }
 
     try {
-      final words =
-          await DatabaseService.instance.getSampledWordsForBatch(batchId);
+      final words = await DatabaseService.instance.getSampledWordsForBatch(batchId);
 
       if (words.length < _wordsPerRound) {
         setState(() {
@@ -181,17 +180,13 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
       setState(() => _elapsedSeconds++);
 
       if (!_hintFired && _elapsedSeconds >= _hintAfterSeconds) {
-        _fireHint(automatic: true);
+        _fireAutomaticHint();
       }
       if (!_autoRevealFired && _elapsedSeconds >= _autoRevealAfterSeconds) {
         _fireAutoReveal();
       }
     });
   }
-
-  // ────────────────────────────────────────────────────────────
-  // Grid generation
-  // ────────────────────────────────────────────────────────────
 
   _GridResult? _generateGridWithRetry(List<Word> allWords) {
     final rng = Random();
@@ -287,10 +282,6 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
     return _GridResult(cells: cells, placedWords: placements);
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Rounded-end helper for path highlighting
-  // ────────────────────────────────────────────────────────────
-
   BorderRadius _radiusForPathPosition(List<int> path, int i) {
     const r = 14.0;
     if (path.length == 1) return BorderRadius.circular(r);
@@ -317,10 +308,6 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
       bottomRight: (dr >= 0 && dc >= 0) ? Radius.circular(r) : Radius.zero,
     );
   }
-
-  // ────────────────────────────────────────────────────────────
-  // Drag
-  // ────────────────────────────────────────────────────────────
 
   int? _cellIndexFromLocal(Offset p) {
     const cs = _logicalCellSize;
@@ -391,7 +378,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
 
     if (match == null) {
       HapticFeedback.mediumImpact();
-      GameSfx.instance.playWrong();
+      SfxService.wrong();
       final capturedPath = List<int>.from(_previewPath);
       setState(() {
         _dragStartIndex = null;
@@ -447,8 +434,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
 
   Future<void> _onWordFound(_PlacedWord match) async {
     HapticFeedback.heavyImpact();
-    GameSfx.instance.playCorrect();
-    SfxService.correct(); // Phase 3: SFX
+    SfxService.correct();
 
     final colorIdx = _foundWords.length % _palette.length;
     final color = _palette[colorIdx];
@@ -489,28 +475,16 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource(clean));
     } catch (e) {
-      debugPrint('Word audio failed (continuing): $e');
+      debugPrint('Word audio failed: $e');
     }
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Hint + auto-reveal
-  // ────────────────────────────────────────────────────────────
-
-  void _fireHint({bool automatic = false}) {
-    if (automatic) {
-      _hintFired = true;
-    } else {
-      if (!_hintService.canUse()) return;
-      _hintService.use();
-      SfxService.tap();
-    }
-
+  void _fireAutomaticHint() {
+    _hintFired = true;
     final unfound =
         _placedWords.where((p) => !_foundWords.contains(p.word)).toList();
     if (unfound.isEmpty) return;
 
-    // Pick a random unfound word
     final pick = unfound[Random().nextInt(unfound.length)];
     final startIdx = pick.startRow * _gridSize + pick.startCol;
 
@@ -537,25 +511,25 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
         }
       }
     });
-    GameSfx.instance.playWrong();
     SfxService.wrong();
   }
-
-  // ────────────────────────────────────────────────────────────
-  // Finish
-  // ────────────────────────────────────────────────────────────
 
   Future<void> _finishGame() async {
     if (_ticker?.isActive ?? false) _ticker!.cancel();
     try {
-      if (!_autoRevealFired && _foundCount >= _placedWords.length) {
-        GameSfx.instance.playCelebration();
+      final totalRounds = _placedWords.length;
+      final isPassing = totalRounds > 0 && (_foundCount / totalRounds) >= 0.70;
+
+      if (isPassing) {
         SfxService.celebration();
-        await Future.delayed(const Duration(milliseconds: 1200));
+        await Future.delayed(const Duration(milliseconds: 1500));
+      } else {
+        SfxService.fail();
+        await Future.delayed(const Duration(milliseconds: 1500));
       }
+
       if (!mounted) return;
 
-      final totalRounds = _placedWords.length;
       final wrongWordIds = List<int>.from(_wrongWordIds);
 
       final args = ModalRoute.of(context)!.settings.arguments as Map;
@@ -588,8 +562,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
 
       for (final p in _placedWords) {
         final wasCorrect = !_wrongWordIds.contains(p.wordId);
-        await DatabaseService.instance
-            .recordWordEncounter(_studentId, p.wordId);
+        await DatabaseService.instance.recordWordEncounter(_studentId, p.wordId);
         await DatabaseService.instance.updateWordMastery(
           studentId: _studentId,
           wordId: p.wordId,
@@ -602,11 +575,8 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
       }
 
       bool isNewBadge = false;
-      final isPassing =
-          totalRounds > 0 && (_foundCount / totalRounds) >= 0.70;
       if (isPassing) {
-        final badgeName =
-            AchievementBadge.nameFor(_gradeLevel, _difficulty);
+        final badgeName = AchievementBadge.nameFor(_gradeLevel, _difficulty);
         final badge = AchievementBadge(
           studentId: _studentId,
           gradeLevel: _gradeLevel,
@@ -618,8 +588,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
         isNewBadge = await DatabaseService.instance.awardBadge(badge);
       }
 
-      final updated =
-          await DatabaseService.instance.getStudentById(_studentId);
+      final updated = await DatabaseService.instance.getStudentById(_studentId);
       if (!mounted) return;
 
       if (updated != null) {
@@ -627,6 +596,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
 
         final connectivity = context.read<ConnectivityProvider>();
         final authProvider = context.read<AuthProvider>();
+
         unawaited(
           SyncService.instance.syncAll(
             student: updated,
@@ -638,18 +608,20 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
         if (updated.classFirestoreId != null &&
             updated.classFirestoreId!.isNotEmpty &&
             updated.firebaseUid != null) {
-          try {
-            final badges = await DatabaseService.instance
-                .getBadgesForStudent(updated.id!);
-            await FirestoreService.instance.updateEnrollmentSnapshot(
-              classId: updated.classFirestoreId!,
-              studentUid: updated.firebaseUid!,
-              totalPoints: updated.totalPoints,
-              badgeCount: badges.length,
-            );
-          } catch (e) {
-            debugPrint('Enrollment snapshot failed: $e');
-          }
+          unawaited(() async {
+            try {
+              final badges = await DatabaseService.instance.getBadgesForStudent(updated.id!);
+              await FirestoreService.instance.updateEnrollmentSnapshot(
+                classId: updated.classFirestoreId!,
+                studentUid: updated.firebaseUid!,
+                totalPoints: updated.totalPoints,
+                badgeCount: badges.length,
+                avatarIndex: updated.avatarIndex,
+              );
+            } catch (e) {
+              debugPrint('Enrollment snapshot failed: $e');
+            }
+          }());
         }
       }
 
@@ -678,10 +650,6 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
     }
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Build
-  // ────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -703,8 +671,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 64, color: AppColors.textMuted),
+            const Icon(Icons.error_outline_rounded, size: 64, color: AppColors.textMuted),
             const SizedBox(height: AppSpacing.lg),
             Text(_error!, textAlign: TextAlign.center, style: AppText.body),
             const SizedBox(height: AppSpacing.xl),
@@ -720,9 +687,9 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
 
   Color _gridGlowColor() {
     if (_gameOver) return _missedColor;
-    if (_elapsedSeconds < 45) return const Color(0xFF4CAF50); // green
-    if (_elapsedSeconds < 90) return const Color(0xFFFF9800); // orange
-    return const Color(0xFFE53935); // red
+    if (_elapsedSeconds < 45) return const Color(0xFF4CAF50);
+    if (_elapsedSeconds < 90) return const Color(0xFFFF9800);
+    return const Color(0xFFE53935);
   }
 
   String _ysePose() {
@@ -736,9 +703,10 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
   }
 
   Widget _buildGame() {
-    return Stack(
-      children: [
-        Column(
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 700),
+        child: Column(
           children: [
             _buildHeader(),
             Expanded(
@@ -749,12 +717,12 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
                 ),
                 child: Column(
                   children: [
-                    // Yse, pose depends on game state
                     Flexible(
                       flex: 2,
                       child: Image.asset(
                         _ysePose(),
                         fit: BoxFit.contain,
+                        cacheWidth: 300,
                         errorBuilder: (_, _, _) => const Icon(
                           Icons.search_rounded,
                           size: 80,
@@ -765,19 +733,14 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
 
                     const SizedBox(height: 4),
 
-                    // Reveal banner on time-up
                     if (_gameOver)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 4),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: _missedColor.withValues(alpha: 0.15),
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.medium),
+                            borderRadius: BorderRadius.circular(AppRadius.medium),
                             border: Border.all(color: _missedColor, width: 2),
                           ),
                           child: Text(
@@ -796,7 +759,6 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
                     _buildWordList(),
                     const SizedBox(height: 6),
 
-                    // Grid
                     Flexible(
                       flex: 6,
                       child: FittedBox(
@@ -841,8 +803,7 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
                             backgroundColor: AppColors.accentTeal,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.large),
+                              borderRadius: BorderRadius.circular(AppRadius.large),
                             ),
                           ),
                           child: const Text(
@@ -857,29 +818,14 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
                       ),
                     ],
 
-                    const SizedBox(height: 60), // Extra space for floating hint button
+                    const SizedBox(height: 10),
                   ],
                 ),
               ),
             ),
           ],
         ),
-        
-        // Phase 4: Hint Button floating at the bottom right
-        if (!_gameOver)
-          Positioned(
-            bottom: 20,
-            right: 20,
-            child: HintButton(
-              hintsRemaining: _hintService.remaining,
-              onCooldown: _hintService.onCooldown,
-              onTap: () {
-                _fireHint();
-                setState(() {}); // Update UI for hint count
-              },
-            ),
-          ),
-      ],
+      ),
     );
   }
 
@@ -900,13 +846,28 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
             padding: EdgeInsets.zero,
           ),
           const SizedBox(width: AppSpacing.sm),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Find the Words!', style: AppText.h2),
-                SizedBox(height: 2),
-                Text(
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Find the Words!', style: AppText.h2),
+                    const InfoButton(
+                      title: 'How to Hunt',
+                      description: 'Find all the hidden words in the grid.',
+                      steps: [
+                        'Look at the words listed above the grid.',
+                        'Drag your finger across the letters to spell a word.',
+                        'Words can be horizontal, vertical, or diagonal.',
+                        'When you find a word, it will light up!',
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                const Text(
                   'Drag from first letter to last letter',
                   style: AppText.caption,
                 ),
@@ -925,16 +886,12 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
       runSpacing: 6,
       children: _placedWords.map((p) {
         final found = _foundWords.contains(p.word);
-        final missed = _gameOver &&
-            !_foundWords.contains(p.word) &&
-            _autoRevealFired;
+        final missed = _gameOver && !_foundWords.contains(p.word) && _autoRevealFired;
         final color = _wordColors[p.word] ?? AppColors.accentTeal;
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: (found || missed)
-                ? color.withValues(alpha: 0.15)
-                : AppColors.surface,
+            color: (found || missed) ? color.withValues(alpha: 0.15) : AppColors.surface,
             borderRadius: BorderRadius.circular(AppRadius.small),
             border: Border.all(
               color: (found || missed) ? color : AppColors.border,
@@ -1122,10 +1079,6 @@ class _WordHuntScreenState extends State<WordHuntScreen> {
     return '$m:${s.toString().padLeft(2, '0')}';
   }
 }
-
-// ═══════════════════════════════════════════════════════════════
-// Data classes
-// ═══════════════════════════════════════════════════════════════
 
 class _GridResult {
   final List<List<String>> cells;

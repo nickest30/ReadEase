@@ -12,22 +12,14 @@ import '../../providers/connectivity_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
-import '../../services/game_sfx.dart';
+import '../../services/sfx_service.dart';
+import '../../services/bgm_service.dart';
 import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
+import '../../widgets/info_button.dart';
 import 'yse_reaction.dart';
 import '../../utils/game_score.dart';
 
-/// Drag & Drop, replaces the MCQ quiz for Grade 1 Hard.
-///
-/// 10 rounds. Each round: an image shown large in the center, 4 word
-/// tiles below. Drag the correct word onto the image.
-///
-/// Wrong drops: tile bounces back, retry allowed. After 3 wrong drops
-/// in a round, highlight the correct answer, animate it in, advance
-/// with 0 points. That cap protects the learner from getting stuck.
-///
-/// Writes same SQLite schema as the other games.
 class DragDropScreen extends StatefulWidget {
   const DragDropScreen({super.key});
 
@@ -36,11 +28,9 @@ class DragDropScreen extends StatefulWidget {
 }
 
 class _DragDropScreenState extends State<DragDropScreen> {
-  // ── Loading ──
   bool _loading = true;
   String? _error;
 
-  // ── Game data ──
   List<_RoundData> _rounds = [];
   Map<int, QuizQuestion> _questionByWordId = {};
 
@@ -49,22 +39,19 @@ class _DragDropScreenState extends State<DragDropScreen> {
   int _gradeLevel = 1;
   String _difficulty = 'hard';
 
-  // ── Round state ──
   int _currentIndex = 0;
   int _correctCount = 0;
   int _wrongAttemptsThisRound = 0;
-  bool _roundResolved = false; // true once correct answer placed or cap hit
-  int? _forcedCorrectWordId; // set when we auto-show the answer
+  bool _roundResolved = false;
+  int? _forcedCorrectWordId;
   DateTime? _roundStart;
   int? _lastResponseTimeMs;
-  bool _showWrongFeedback = false; // BUG-008 Fix: Red flash on wrong drop
+  bool _showWrongFeedback = false;
 
-  // ── [GAME-LAYER] Yse reactions + streak ──
   final YseReactionController _reaction = YseReactionController();
   int _currentStreak = 0;
   final List<int> _wrongWordIds = [];
 
-  // ── Audio ──
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   static const int _maxWrongAttempts = 3;
@@ -72,6 +59,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
   @override
   void initState() {
     super.initState();
+    BgmService.playTrack(BgmTrack.game);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadGame());
   }
 
@@ -82,28 +70,32 @@ class _DragDropScreenState extends State<DragDropScreen> {
     super.dispose();
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Load
-  // ────────────────────────────────────────────────────────────
-
   Future<void> _loadGame() async {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
-    final batchId = args['batchId'] as int;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/student-home', (route) => false);
+        }
+      });
+      return;
+    }
+
+    final batchId = args['batchId'] as int?;
     final gradeLevel = (args['gradeLevel'] as int?) ?? 1;
     final difficulty = (args['difficulty'] as String?) ?? 'easy';
     final student = context.read<StudentProvider>().currentStudent;
 
-    if (student == null || student.id == null) {
+    if (batchId == null || student == null || student.id == null) {
       setState(() {
         _loading = false;
-        _error = 'Not signed in.';
+        _error = 'Not signed in or missing data.';
       });
       return;
     }
 
     try {
-      final words = await DatabaseService.instance
-          .getSampledWordsForBatch(batchId);
+      final words = await DatabaseService.instance.getSampledWordsForBatch(batchId);
       if (words.length < 4) {
         setState(() {
           _loading = false;
@@ -112,11 +104,9 @@ class _DragDropScreenState extends State<DragDropScreen> {
         return;
       }
 
-      // Cap at 10 rounds (Hard quiz size)
       final gameWords = words.toList();
 
-      final questions =
-          await DatabaseService.instance.getQuestionsForBatch(batchId);
+      final questions = await DatabaseService.instance.getQuestionsForBatch(batchId);
       final qMap = <int, QuizQuestion>{};
       for (final q in questions) {
         qMap.putIfAbsent(q.wordId, () => q);
@@ -126,26 +116,19 @@ class _DragDropScreenState extends State<DragDropScreen> {
       final rounds = <_RoundData>[];
 
       for (final correct in gameWords) {
-        // Distractor selection: prefer other words whose text is a
-        // near-visual twin of the correct word (same length, similar
-        // shape). Fall back to any other word in the batch.
         final pool = gameWords.where((w) => w.id != correct.id).toList();
 
-        // Score by similarity: same length first, then first letter
         pool.sort((a, b) {
           int score(String candidate) {
             int s = 0;
             if (candidate.length == correct.text.length) s += 2;
             if (candidate.isNotEmpty &&
                 correct.text.isNotEmpty &&
-                candidate[0].toLowerCase() ==
-                    correct.text[0].toLowerCase()) {
+                candidate[0].toLowerCase() == correct.text[0].toLowerCase()) {
               s += 1;
             }
             return s;
           }
-
-          // Descending score
           return score(b.text).compareTo(score(a.text));
         });
 
@@ -185,7 +168,6 @@ class _DragDropScreenState extends State<DragDropScreen> {
         _roundStart = DateTime.now();
       });
 
-      // LET'S GO, persistent
       await Future.delayed(const Duration(milliseconds: 400));
       if (!mounted) return;
       _reaction.show(YseReaction.letsGo, persistent: true);
@@ -199,10 +181,6 @@ class _DragDropScreenState extends State<DragDropScreen> {
     }
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Drop handling
-  // ────────────────────────────────────────────────────────────
-
   Future<void> _onTileDropped(_WordTile tile) async {
     if (_roundResolved) return;
     final round = _rounds[_currentIndex];
@@ -212,14 +190,12 @@ class _DragDropScreenState extends State<DragDropScreen> {
         : DateTime.now().difference(_roundStart!).inMilliseconds;
 
     if (tile.isCorrect) {
-      // Correct!
       _lastResponseTimeMs = responseTimeMs;
       setState(() => _roundResolved = true);
 
       _playWordAudio(round.correctAudioPath);
-      GameSfx.instance.playCorrect();
+      SfxService.correct();
 
-      // Only award points if this was the first attempt
       final firstAttempt = _wrongAttemptsThisRound == 0;
       if (firstAttempt) {
         setState(() => _correctCount++);
@@ -230,7 +206,6 @@ class _DragDropScreenState extends State<DragDropScreen> {
           _reaction.show(YseReaction.nice, persistent: true);
         }
       } else {
-        // Correct but after wrong attempts, still celebrate, no points
         _currentStreak = 0;
         _reaction.show(YseReaction.nice, persistent: true);
       }
@@ -239,24 +214,20 @@ class _DragDropScreenState extends State<DragDropScreen> {
       if (!mounted) return;
       _advanceRound();
     } else {
-      // Wrong
       _wrongAttemptsThisRound++;
       _currentStreak = 0;
-      GameSfx.instance.playWrong();
+      SfxService.wrong();
       _reaction.show(YseReaction.tryAgain, persistent: true);
 
-      // BUG-008 Fix: Flash red border on wrong drop
       setState(() => _showWrongFeedback = true);
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) setState(() => _showWrongFeedback = false);
       });
 
       if (_wrongAttemptsThisRound >= _maxWrongAttempts) {
-        // Give up on this round, show the answer, advance, 0 points
         setState(() => _roundResolved = true);
         _wrongWordIds.add(round.correctWordId);
 
-        // Play correct word audio so learner hears the answer
         await Future.delayed(const Duration(milliseconds: 400));
         _playWordAudio(round.correctAudioPath);
 
@@ -265,7 +236,6 @@ class _DragDropScreenState extends State<DragDropScreen> {
         if (!mounted) return;
         _advanceRound();
       }
-      // else: just a shake-and-return, we don't set _roundResolved
     }
   }
 
@@ -291,22 +261,27 @@ class _DragDropScreenState extends State<DragDropScreen> {
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource(clean));
     } catch (e) {
-      debugPrint('Word audio failed (continuing): $e');
+      debugPrint('Word audio failed: $e');
     }
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Finish
-  // ────────────────────────────────────────────────────────────
-
   Future<void> _finishGame() async {
     try {
-      _reaction.show(YseReaction.youDidIt, persistent: true);
-      GameSfx.instance.playCelebration();
-      await Future.delayed(const Duration(milliseconds: 1200));
+      final totalRounds = _rounds.length;
+      final isPassing = totalRounds > 0 && (_correctCount / totalRounds) >= 0.70;
+
+      if (isPassing) {
+        _reaction.show(YseReaction.youDidIt, persistent: true);
+        SfxService.celebration();
+        await Future.delayed(const Duration(milliseconds: 1500));
+      } else {
+        _reaction.show(YseReaction.tryAgain, persistent: true);
+        SfxService.fail();
+        await Future.delayed(const Duration(milliseconds: 1500));
+      }
+
       if (!mounted) return;
 
-      final totalRounds = _rounds.length;
       final wrongWordIds = List<int>.from(_wrongWordIds);
 
       final args = ModalRoute.of(context)!.settings.arguments as Map;
@@ -316,8 +291,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
         gameTotal: _rounds.length,
       );
 
-      final pointsDelta =
-          await DatabaseService.instance.computePointsDeltaForBatch(
+      final pointsDelta = await DatabaseService.instance.computePointsDeltaForBatch(
         studentId: _studentId,
         batchId: _batchId,
         newScore: score.correct,
@@ -330,9 +304,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
           score: score.correct,
           totalQuestions: score.total,
           pointsEarned: pointsDelta,
-          wrongWordIdsJson: wrongWordIds.isEmpty
-              ? null
-              : '[${wrongWordIds.join(',')}]',
+          wrongWordIdsJson: wrongWordIds.isEmpty ? null : '[${wrongWordIds.join(',')}]',
           completedAt: DateTime.now().toIso8601String(),
         ),
       );
@@ -368,11 +340,8 @@ class _DragDropScreenState extends State<DragDropScreen> {
       }
 
       bool isNewBadge = false;
-      final isPassing = totalRounds > 0 &&
-          (_correctCount / totalRounds) >= 0.70;
       if (isPassing) {
-        final badgeName =
-            AchievementBadge.nameFor(_gradeLevel, _difficulty);
+        final badgeName = AchievementBadge.nameFor(_gradeLevel, _difficulty);
         final badge = AchievementBadge(
           studentId: _studentId,
           gradeLevel: _gradeLevel,
@@ -384,8 +353,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
         isNewBadge = await DatabaseService.instance.awardBadge(badge);
       }
 
-      final updated =
-          await DatabaseService.instance.getStudentById(_studentId);
+      final updated = await DatabaseService.instance.getStudentById(_studentId);
       if (!mounted) return;
 
       if (updated != null) {
@@ -393,6 +361,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
 
         final connectivity = context.read<ConnectivityProvider>();
         final authProvider = context.read<AuthProvider>();
+        
         unawaited(
           SyncService.instance.syncAll(
             student: updated,
@@ -404,18 +373,20 @@ class _DragDropScreenState extends State<DragDropScreen> {
         if (updated.classFirestoreId != null &&
             updated.classFirestoreId!.isNotEmpty &&
             updated.firebaseUid != null) {
-          try {
-            final badges = await DatabaseService.instance
-                .getBadgesForStudent(updated.id!);
-            await FirestoreService.instance.updateEnrollmentSnapshot(
-              classId: updated.classFirestoreId!,
-              studentUid: updated.firebaseUid!,
-              totalPoints: updated.totalPoints,
-              badgeCount: badges.length,
-            );
-          } catch (e) {
-            debugPrint('Enrollment snapshot failed: $e');
-          }
+          unawaited(() async {
+            try {
+              final badges = await DatabaseService.instance.getBadgesForStudent(updated.id!);
+              await FirestoreService.instance.updateEnrollmentSnapshot(
+                classId: updated.classFirestoreId!,
+                studentUid: updated.firebaseUid!,
+                totalPoints: updated.totalPoints,
+                badgeCount: badges.length,
+                avatarIndex: updated.avatarIndex,
+              );
+            } catch (e) {
+              debugPrint('Enrollment snapshot failed: $e');
+            }
+          }());
         }
       }
 
@@ -444,10 +415,6 @@ class _DragDropScreenState extends State<DragDropScreen> {
     }
   }
 
-  // ────────────────────────────────────────────────────────────
-  // Build
-  // ────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -457,12 +424,8 @@ class _DragDropScreenState extends State<DragDropScreen> {
   }
 
   Widget _buildBody() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_error != null) {
-      return _buildError();
-    }
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) return _buildError();
     return _buildGame();
   }
 
@@ -473,8 +436,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 64, color: AppColors.textMuted),
+            const Icon(Icons.error_outline_rounded, size: 64, color: AppColors.textMuted),
             const SizedBox(height: AppSpacing.lg),
             Text(_error!, textAlign: TextAlign.center, style: AppText.body),
             const SizedBox(height: AppSpacing.xl),
@@ -491,44 +453,45 @@ class _DragDropScreenState extends State<DragDropScreen> {
   Widget _buildGame() {
     final round = _rounds[_currentIndex];
 
-    return Column(
-      children: [
-        _buildHeader(),
-        const SizedBox(height: AppSpacing.sm),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 700),
+        child: Column(
+          children: [
+            _buildHeader(),
+            const SizedBox(height: AppSpacing.sm),
 
-        // Image drop zone
-        Expanded(
-          flex: 6,
-          child: _buildDropZone(round),
-        ),
-
-        const SizedBox(height: AppSpacing.sm),
-
-        // Instruction line
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Text(
-            _wrongAttemptsThisRound == 0
-                ? 'Drag the word onto the picture'
-                : 'Try again, which word is this?',
-            style: AppText.caption.copyWith(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
+            Expanded(
+              flex: 6,
+              child: _buildDropZone(round),
             ),
-            textAlign: TextAlign.center,
-          ),
+
+            const SizedBox(height: AppSpacing.sm),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Text(
+                _wrongAttemptsThisRound == 0
+                    ? 'Drag the word onto the picture'
+                    : 'Try again, which word is this?',
+                style: AppText.caption.copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.sm),
+
+            _buildTileRow(round),
+
+            const SizedBox(height: AppSpacing.sm),
+
+            _buildBottomArea(),
+          ],
         ),
-
-        const SizedBox(height: AppSpacing.sm),
-
-        // Word tiles row
-        _buildTileRow(round),
-
-        const SizedBox(height: AppSpacing.sm),
-
-        // BUG-008 Fix: Mascot + Points/Rounds moved here
-        _buildBottomArea(),
-      ],
+      ),
     );
   }
 
@@ -541,14 +504,31 @@ class _DragDropScreenState extends State<DragDropScreen> {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back,
-                color: AppColors.textPrimary),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(context).pop();
+            },
+            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
             padding: EdgeInsets.zero,
           ),
           const SizedBox(width: AppSpacing.sm),
-          const Expanded(
-            child: Text('Drag the Word', style: AppText.h2),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Drag the Word', style: AppText.h2),
+                const InfoButton(
+                  title: 'How to Play',
+                  description: 'Match the word to the correct picture.',
+                  steps: [
+                    'Look at the picture in the center.',
+                    'Read the 4 word tiles below.',
+                    'Drag the correct word onto the picture.',
+                    'If you get it wrong, you can try again!',
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -556,10 +536,8 @@ class _DragDropScreenState extends State<DragDropScreen> {
   }
 
   Widget _buildDropZone(_RoundData round) {
-    final showCorrectHighlight =
-        _roundResolved && _forcedCorrectWordId == round.correctWordId;
-    final showSuccessGlow =
-        _roundResolved && _wrongAttemptsThisRound == 0;
+    final showCorrectHighlight = _roundResolved && _forcedCorrectWordId == round.correctWordId;
+    final showSuccessGlow = _roundResolved && _wrongAttemptsThisRound == 0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -617,12 +595,12 @@ class _DragDropScreenState extends State<DragDropScreen> {
               border: Border.all(color: borderColor, width: borderWidth),
               boxShadow: shadows,
             ),
-            // BUG-008 Fix: Reduced padding to make card shorter
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Center(
               child: Image.asset(
                 round.imagePath,
                 fit: BoxFit.contain,
+                cacheWidth: 400,
                 errorBuilder: (_, _, _) => const Icon(
                   Icons.image_outlined,
                   size: 72,
@@ -674,8 +652,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.star_rounded,
-                  size: 20, color: AppColors.accentYellow),
+              const Icon(Icons.star_rounded, size: 20, color: AppColors.accentYellow),
               const SizedBox(width: 6),
               Text(
                 '${_correctCount * 5} pts',
@@ -687,8 +664,7 @@ class _DragDropScreenState extends State<DragDropScreen> {
                 ),
               ),
               const SizedBox(width: AppSpacing.lg),
-              const Icon(Icons.flag_rounded,
-                  size: 20, color: AppColors.accentTeal),
+              const Icon(Icons.flag_rounded, size: 20, color: AppColors.accentTeal),
               const SizedBox(width: 6),
               Text(
                 'Round ${_currentIndex + 1} / ${_rounds.length}',
@@ -706,10 +682,6 @@ class _DragDropScreenState extends State<DragDropScreen> {
     );
   }
 }
-
-// ═══════════════════════════════════════════════════════════════
-// Data models
-// ═══════════════════════════════════════════════════════════════
 
 class _RoundData {
   final int correctWordId;
@@ -738,10 +710,6 @@ class _WordTile {
     required this.isCorrect,
   });
 }
-
-// ═══════════════════════════════════════════════════════════════
-// Draggable word tile
-// ═══════════════════════════════════════════════════════════════
 
 class _DraggableWordTile extends StatefulWidget {
   final _WordTile tile;
@@ -843,8 +811,6 @@ class _DraggableWordTileState extends State<_DraggableWordTile>
       );
     }
 
-    // Wrap in LongPressDraggable so drag starts after a press,
-    // giving tap-scrolling a chance to work on the rest of the screen.
     return LongPressDraggable<_WordTile>(
       data: tile,
       feedback: Material(

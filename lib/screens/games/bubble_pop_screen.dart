@@ -12,22 +12,14 @@ import '../../providers/connectivity_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
-import '../../services/game_sfx.dart';
+import '../../services/sfx_service.dart';
 import '../../services/sync_service.dart';
 import '../../utils/app_theme.dart';
 import 'yse_reaction.dart';
+import '../../widgets/info_button.dart';
 import '../../utils/game_score.dart';
 
 /// Bubble Pop, replaces the MCQ quiz for Grade 1 Medium.
-///
-/// 7 rounds. Each round: word shown at top, 4 floating bubbles with
-/// images below. Tap the bubble matching the word. Correct → +5 pts.
-///
-/// Writes same SQLite schema as quiz_play_screen:
-///   - quiz_attempts row (score = correct rounds)
-///   - quiz_question_responses rows (one per round)
-///   - word mastery + encounters
-///   - badge if passing (≥70%)
 class BubblePopScreen extends StatefulWidget {
   const BubblePopScreen({super.key});
 
@@ -56,6 +48,7 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
   bool _answered = false;         // locked for the current round
   DateTime? _roundStart;
   int? _lastResponseTimeMs;       // latest round's response time
+  final List<int> _wrongWordIds = [];
 
   // ── [GAME-LAYER] Yse reactions + streak ──
   final YseReactionController _reaction = YseReactionController();
@@ -102,13 +95,11 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
       if (words.length < 4) {
         setState(() {
           _loading = false;
-          _error =
-              'Not enough words in this lesson to play. Need at least 4.';
+          _error = 'Not enough words in this lesson to play. Need at least 4.';
         });
         return;
       }
 
-      // Cap at 7 rounds (Medium quiz size)
       final gameWords = words.toList();
 
       final questions =
@@ -118,19 +109,15 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
         qMap.putIfAbsent(q.wordId, () => q);
       }
 
-      // Build rounds: 1 correct + 3 distractors per round
       final rnd = Random();
       final rounds = <_RoundData>[];
 
       for (final correct in gameWords) {
-        // Candidate distractors = other words in the batch
         final pool = gameWords.where((w) => w.id != correct.id).toList();
         pool.shuffle(rnd);
         final distractors = pool.take(3).toList();
 
-        // Should always have 3, since we required >=4 words
         while (distractors.length < 3) {
-          // Safety fallback, duplicate a distractor rather than crash
           distractors.add(pool[rnd.nextInt(pool.length)]);
         }
 
@@ -165,12 +152,14 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
         _roundStart = DateTime.now();
       });
 
-      // [GAME-LAYER] LET'S GO, persistent
+      // Play word audio for the FIRST round automatically
+      _playWordAudio(_rounds[0].correctAudioPath);
+
       await Future.delayed(const Duration(milliseconds: 400));
       if (!mounted) return;
       _reaction.show(YseReaction.letsGo, persistent: true);
     } catch (e) {
-      debugPrint('🫧 BubblePop load ERROR: $e');
+      debugPrint('BubblePop load ERROR: $e');
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -197,8 +186,9 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
       _lastResponseTimeMs = responseTimeMs;
     });
 
-    // Play the tapped word's audio immediately for feedback
-    _playWordAudio(round.correctAudioPath);
+    // We DO NOT play the word audio here anymore. 
+    // It was already played at the start of the round.
+    // We just play the Correct/Wrong SFX immediately.
 
     final isCorrect = choice.isCorrect;
 
@@ -206,7 +196,7 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
       setState(() => _correctCount++);
       _currentStreak++;
 
-      GameSfx.instance.playCorrect();
+      SfxService.correct();
 
       if (_currentStreak >= 3) {
         _reaction.show(YseReaction.hwaiting, persistent: true);
@@ -215,12 +205,11 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
       }
     } else {
       _currentStreak = 0;
-      _wrongWordIds.add(round.correctWordId);   // ← ADD THIS
-      GameSfx.instance.playWrong();
+      _wrongWordIds.add(round.correctWordId); 
+      SfxService.wrong();
       _reaction.show(YseReaction.tryAgain, persistent: true);
     }
 
-    // Hold the highlighted state briefly so the learner sees result
     await Future.delayed(Duration(milliseconds: isCorrect ? 900 : 1300));
     if (!mounted) return;
 
@@ -231,6 +220,9 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
         _answered = false;
         _roundStart = DateTime.now();
       });
+      
+      // Play the word audio for the NEW round
+      _playWordAudio(_rounds[_currentIndex].correctAudioPath);
     } else {
       await _finishGame();
     }
@@ -244,23 +236,31 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource(clean));
     } catch (e) {
-      debugPrint('🔊 Word audio failed (continuing): $e');
+      debugPrint('Word audio failed (continuing): $e');
     }
   }
 
   // ────────────────────────────────────────────────────────────
-  // Finish, same DB writes as quiz/memory-match
+  // Finish
   // ────────────────────────────────────────────────────────────
 
   Future<void> _finishGame() async {
     try {
-      // [GAME-LAYER] YOU DID IT before transitioning
-      _reaction.show(YseReaction.youDidIt, persistent: true);
-      GameSfx.instance.playCelebration();
-      await Future.delayed(const Duration(milliseconds: 1200));
+      final totalRounds = _rounds.length;
+      final isPassing = totalRounds > 0 && (_correctCount / totalRounds) >= 0.70;
+
+      if (isPassing) {
+        _reaction.show(YseReaction.youDidIt, persistent: true);
+        SfxService.celebration();
+        await Future.delayed(const Duration(milliseconds: 1500));
+      } else {
+        _reaction.show(YseReaction.tryAgain, persistent: true);
+        SfxService.fail();
+        await Future.delayed(const Duration(milliseconds: 1500));
+      }
+      
       if (!mounted) return;
 
-      final totalRounds = _rounds.length;
       final wrongWordIds = List<int>.from(_wrongWordIds);
 
       final args = ModalRoute.of(context)!.settings.arguments as Map;
@@ -284,14 +284,11 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
           score: score.correct,
           totalQuestions: score.total,
           pointsEarned: pointsDelta,
-          wrongWordIdsJson: wrongWordIds.isEmpty
-              ? null
-              : '[${wrongWordIds.join(',')}]',
+          wrongWordIdsJson: wrongWordIds.isEmpty ? null : '[${wrongWordIds.join(',')}]',
           completedAt: DateTime.now().toIso8601String(),
         ),
       );
 
-      // One response per round
       for (final round in _rounds) {
         final q = _questionByWordId[round.correctWordId];
         if (q == null) continue;
@@ -323,11 +320,8 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
       }
 
       bool isNewBadge = false;
-      final isPassing = totalRounds > 0 &&
-          (_correctCount / totalRounds) >= 0.70;
       if (isPassing) {
-        final badgeName =
-            AchievementBadge.nameFor(_gradeLevel, _difficulty);
+        final badgeName = AchievementBadge.nameFor(_gradeLevel, _difficulty);
         final badge = AchievementBadge(
           studentId: _studentId,
           gradeLevel: _gradeLevel,
@@ -339,8 +333,7 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
         isNewBadge = await DatabaseService.instance.awardBadge(badge);
       }
 
-      final updated =
-          await DatabaseService.instance.getStudentById(_studentId);
+      final updated = await DatabaseService.instance.getStudentById(_studentId);
       if (!mounted) return;
 
       if (updated != null) {
@@ -360,8 +353,7 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
             updated.classFirestoreId!.isNotEmpty &&
             updated.firebaseUid != null) {
           try {
-            final badges = await DatabaseService.instance
-                .getBadgesForStudent(updated.id!);
+            final badges = await DatabaseService.instance.getBadgesForStudent(updated.id!);
             await FirestoreService.instance.updateEnrollmentSnapshot(
               classId: updated.classFirestoreId!,
               studentUid: updated.firebaseUid!,
@@ -369,7 +361,7 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
               badgeCount: badges.length,
             );
           } catch (e) {
-            debugPrint('🔥 Enrollment snapshot failed: $e');
+            debugPrint('Enrollment snapshot failed: $e');
           }
         }
       }
@@ -388,7 +380,7 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
         },
       );
     } catch (e) {
-      debugPrint('🫧 BubblePop finish ERROR: $e');
+      debugPrint('BubblePop finish ERROR: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -398,9 +390,6 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
       );
     }
   }
-
-  // Track wrong rounds during play so we can write them at the end
-  final List<int> _wrongWordIds = [];
 
   // ────────────────────────────────────────────────────────────
   // Build
@@ -465,14 +454,21 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 4),
-              Text(
-                round.correctText.toUpperCase(),
-                style: AppText.display.copyWith(
-                  fontSize: 40,
-                  letterSpacing: 1.5,
-                  color: AppColors.textPrimary,
+              SizedBox(
+                height: 50,
+                width: double.infinity,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    round.correctText.toUpperCase(),
+                    style: AppText.display.copyWith(
+                      fontSize: 40,
+                      letterSpacing: 1.5,
+                      color: AppColors.textPrimary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -483,13 +479,13 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
         // Bubbles
         Expanded(child: _buildBubbleField(round)),
 
-        // Yse bottom bar
+        // Yse bottom bar, reduced from 130 to 100 to give bubbles more space
         Container(
-          height: 130,
+          height: 100,
           alignment: Alignment.center,
           child: YseReactionOverlay(
             controller: _reaction,
-            size: 120,
+            size: 100,
           ),
         ),
       ],
@@ -506,9 +502,11 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back,
-                color: AppColors.textPrimary),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(context).pop();
+            },
+            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
             padding: EdgeInsets.zero,
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -516,30 +514,48 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Pop the Picture!', style: AppText.h2),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Pop the Picture!', style: AppText.h2),
+                    const InfoButton(
+                      title: 'How to Pop',
+                      description: 'Match the word to the correct picture.',
+                      steps: [
+                        'Read the word at the top of the screen.',
+                        'Look at the 4 floating bubbles.',
+                        'Tap the bubble that shows the correct picture.',
+                        'If you are right, the bubble turns green!',
+                      ],
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 2),
                 Row(
                   children: [
                     const Icon(Icons.star_rounded,
-                        size: 14, color: AppColors.accentYellow),
-                    const SizedBox(width: 3),
+                        size: 20, color: AppColors.accentYellow),
+                    const SizedBox(width: 6),
                     Text(
                       '${_correctCount * 5} pts',
                       style: const TextStyle(
                         fontFamily: 'Nunito',
-                        fontSize: 12,
+                        fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textYellow,
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.md),
+                    const SizedBox(width: AppSpacing.lg),
                     const Icon(Icons.flag_rounded,
-                        size: 14, color: AppColors.accentTeal),
-                    const SizedBox(width: 3),
+                        size: 20, color: AppColors.accentTeal),
+                    const SizedBox(width: 6),
                     Text(
                       'Round ${_currentIndex + 1} / ${_rounds.length}',
-                      style: AppText.caption.copyWith(
-                        fontWeight: FontWeight.w700,
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textTeal,
                       ),
                     ),
                   ],
@@ -547,15 +563,12 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
               ],
             ),
           ),
-          const SizedBox(width: 8),
         ],
       ),
     );
   }
 
   Widget _buildBubbleField(_RoundData round) {
-    // 2×2 grid with vertical offset for organic bubble feel.
-    // Odd rows are indented slightly; each bubble also bobs up/down.
     final choices = round.choices;
 
     return Padding(
@@ -567,7 +580,7 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
         builder: (context, constraints) {
           final colW = constraints.maxWidth / 2;
           final rowH = constraints.maxHeight / 2;
-          final bubbleSize = min(colW, rowH) * 0.78;
+          final bubbleSize = min(colW, rowH) * 0.82;
 
           return Stack(
             children: [
@@ -593,18 +606,14 @@ class _BubblePopScreenState extends State<BubblePopScreen> {
     required double rowH,
     required double bubbleSize,
   }) {
-    // 2×2 grid positions
     final col = index % 2;
     final row = index ~/ 2;
 
-    // Slight vertical offset per bubble for organic look
     final verticalJitter = (index.isEven ? -8.0 : 8.0);
 
-    // Bubble center in local coords
     final left = col * colW + (colW - bubbleSize) / 2;
     final top = row * rowH + (rowH - bubbleSize) / 2 + verticalJitter;
 
-    // Determine visual state
     final isTapped = _tappedChoiceWordId == choice.wordId;
     final showCorrect = _answered && choice.isCorrect;
     final showWrong = _answered && isTapped && !choice.isCorrect;
@@ -724,9 +733,8 @@ class _FloatingBubbleState extends State<_FloatingBubble>
     return AnimatedBuilder(
       animation: _floatController,
       builder: (context, child) {
-        // Sine wave produces smooth up/down motion
         final t = _floatController.value * 2 * pi + widget.phaseOffset;
-        final dy = sin(t) * 8.0; // ±8 px
+        final dy = sin(t) * 8.0;
 
         return Transform.translate(
           offset: Offset(0, dy),
@@ -755,7 +763,7 @@ class _FloatingBubbleState extends State<_FloatingBubble>
                 ),
               ],
             ),
-            padding: EdgeInsets.all(widget.size * 0.14),
+            padding: EdgeInsets.all(widget.size * 0.10),
             child: widget.child,
           ),
         ),
