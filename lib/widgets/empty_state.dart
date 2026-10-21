@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../services/sfx_service.dart';
 import '../utils/app_theme.dart';
 
 /// Reusable empty-state card for screens with no data yet.
@@ -70,7 +72,10 @@ class EmptyState extends StatelessWidget {
             SizedBox(
               height: 48,
               child: ElevatedButton(
-                onPressed: onAction,
+                onPressed: () {
+                  SfxService.tap();
+                  onAction!();
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accentTeal,
                   foregroundColor: Colors.white,

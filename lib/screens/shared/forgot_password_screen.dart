@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/validators.dart';
 import '../../widgets/app_form.dart';
@@ -40,14 +41,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _handleSend() async {
     if (!_formKey.currentState!.validate()) return;
 
+    SfxService.tap();
+
     setState(() => _isSubmitting = true);
 
     final authProvider = context.read<AuthProvider>();
     final email = _emailController.text.trim().toLowerCase();
 
-    // Fire and forget, we always show success to avoid leaking
-    // whether the email is registered.
-    await authProvider.sendPasswordResetEmail(email);
+    try {
+      // We always show success to avoid leaking whether the email is registered.
+      await authProvider.sendPasswordResetEmail(email);
+    } catch (e) {
+      // Silently swallow network errors so the user still sees the confirmation
+      // screen. This prevents email enumeration attacks.
+      debugPrint('Password reset email failed: $e');
+    }
 
     if (!mounted) return;
     setState(() {
@@ -61,35 +69,35 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Scaffold(
       backgroundColor: widget.role.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppSpacing.md),
-
-              IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.arrow_back,
-                    color: AppColors.textPrimary),
-                alignment: Alignment.centerLeft,
-                padding: EdgeInsets.zero,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: AppSpacing.md),
+                  IconButton(
+                    onPressed: () {
+                      SfxService.tap();
+                      Navigator.of(context).pop();
+                    },
+                    icon: const Icon(Icons.arrow_back,
+                        color: AppColors.textPrimary),
+                    alignment: Alignment.centerLeft,
+                    padding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  if (_sent) _buildConfirmation() else _buildRequestForm(),
+                ],
               ),
-
-              const SizedBox(height: AppSpacing.sm),
-
-              if (_sent)
-                _buildConfirmation()
-              else
-                _buildRequestForm(),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
-
-  // ── Request state ────────────────────────────────────────────────
 
   Widget _buildRequestForm() {
     return Form(
@@ -103,7 +111,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             color: AppColors.accentPurple,
           ),
           const SizedBox(height: AppSpacing.md),
-
           Text(
             'Forgot Password?',
             style: AppText.h1,
@@ -116,9 +123,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             style: AppText.caption,
             textAlign: TextAlign.center,
           ),
-
           const SizedBox(height: AppSpacing.xl),
-
           const FieldLabel('Email'),
           TextFormField(
             controller: _emailController,
@@ -131,9 +136,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               focusColor: AppColors.accentPurple,
             ),
           ),
-
           const SizedBox(height: AppSpacing.xl),
-
           SizedBox(
             height: 56,
             child: ElevatedButton(
@@ -163,11 +166,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
             ),
           ),
-
           const SizedBox(height: AppSpacing.md),
-
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(context).pop();
+            },
             child: const Text(
               'Back to Login',
               style: TextStyle(
@@ -182,8 +186,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  // ── Confirmation state ───────────────────────────────────────────
-
   Widget _buildConfirmation() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -195,14 +197,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           color: AppColors.accentGreen,
         ),
         const SizedBox(height: AppSpacing.lg),
-
         const Text(
           'Check Your Email',
           style: AppText.h1,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: AppSpacing.sm),
-
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: Text(
@@ -213,13 +213,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             textAlign: TextAlign.center,
           ),
         ),
-
         const SizedBox(height: AppSpacing.xxl),
-
         SizedBox(
           height: 56,
           child: ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(context).pop();
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentPurple,
               foregroundColor: Colors.white,

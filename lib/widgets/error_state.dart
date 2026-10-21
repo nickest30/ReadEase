@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../services/sfx_service.dart';
 import '../utils/app_theme.dart';
 
 /// Reusable error card with optional retry button.
@@ -67,7 +69,10 @@ class ErrorState extends StatelessWidget {
             SizedBox(
               height: 48,
               child: OutlinedButton.icon(
-                onPressed: onRetry,
+                onPressed: () {
+                  SfxService.tap();
+                  onRetry!();
+                },
                 icon: const Icon(Icons.refresh_rounded, size: 20),
                 label: const Text(
                   'Try Again',

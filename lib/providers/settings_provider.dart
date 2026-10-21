@@ -8,8 +8,8 @@ class SettingsProvider extends ChangeNotifier {
   static const _keyColorBlindMode = 'settings.colorBlindMode';
 
   double _textScale = 1.0;
-  double _sfxVolume = 1.0; // Default 100%
-  double _bgmVolume = 0.3; // Default 30%
+  double _sfxVolume = 1.0;
+  double _bgmVolume = 0.3;
   String _colorBlindMode = 'none';
 
   double get textScale => _textScale;
@@ -17,7 +17,6 @@ class SettingsProvider extends ChangeNotifier {
   double get bgmVolume => _bgmVolume;
   String get colorBlindMode => _colorBlindMode;
 
-  // Helper getters
   bool get sfxEnabled => _sfxVolume > 0;
   bool get bgmEnabled => _bgmVolume > 0;
 
@@ -27,7 +26,7 @@ class SettingsProvider extends ChangeNotifier {
     _sfxVolume = prefs.getDouble(_keySfxVolume) ?? 1.0;
     _bgmVolume = prefs.getDouble(_keyBgmVolume) ?? 0.3;
     _colorBlindMode = prefs.getString(_keyColorBlindMode) ?? 'none';
-    
+
     notifyListeners();
   }
 

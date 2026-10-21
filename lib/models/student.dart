@@ -1,13 +1,19 @@
 class Student {
   final int? id;
   final String username;
-  final String? passwordHash;                  // nullable, linked children have no password
+  
+  // Nullable because linked children created by parents have no password.
+  final String? passwordHash; 
+  
   final String displayName;
   final int gradeLevel;
   final String? pinHash;
   final bool isLinked;
   final int? parentId;
-  final String? parentFirebaseUid;             // string, replaces hash hack
+  
+  // String representation used for cross-device parent linking.
+  final String? parentFirebaseUid; 
+  
   final int totalPoints;
   final String? recoveryEmail;
   final bool recoveryEmailVerified;
@@ -17,7 +23,8 @@ class Student {
   final String? className;
   final String? lastSyncedAt;
   final bool pendingSync;
-  final int avatarIndex;                       // 1–12, default 1 (Yse)
+  
+  final int avatarIndex; 
 
   Student({
     this.id,
@@ -78,8 +85,7 @@ class Student {
       parentFirebaseUid: map['parent_firebase_uid'] as String?,
       totalPoints: (map['total_points'] as int?) ?? 0,
       recoveryEmail: map['recovery_email'] as String?,
-      recoveryEmailVerified:
-          ((map['recovery_email_verified'] as int?) ?? 0) == 1,
+      recoveryEmailVerified: ((map['recovery_email_verified'] as int?) ?? 0) == 1,
       createdAt: map['created_at'] as String,
       firebaseUid: map['firebase_uid'] as String?,
       classFirestoreId: map['class_firestore_id'] as String?,
@@ -116,8 +122,7 @@ class Student {
       parentFirebaseUid: parentFirebaseUid ?? this.parentFirebaseUid,
       totalPoints: totalPoints ?? this.totalPoints,
       recoveryEmail: recoveryEmail ?? this.recoveryEmail,
-      recoveryEmailVerified:
-          recoveryEmailVerified ?? this.recoveryEmailVerified,
+      recoveryEmailVerified: recoveryEmailVerified ?? this.recoveryEmailVerified,
       createdAt: createdAt,
       firebaseUid: firebaseUid ?? this.firebaseUid,
       classFirestoreId: classFirestoreId ?? this.classFirestoreId,

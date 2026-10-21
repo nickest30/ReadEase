@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../services/sfx_service.dart';
 import '../utils/app_theme.dart';
 
-/// Shared About dialog for all three roles (student, parent, teacher).
-/// Shows app info, team credits, and the data-privacy note.
+/// Shared About dialog, accessible from all three roles.
+/// Shows app info, team credits, and the Data Privacy Act compliance note.
 class AboutModal {
   static Future<void> show(BuildContext context) async {
     await showDialog<void>(
@@ -25,12 +26,12 @@ class AboutModal {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ── Header: Yse salute + app name ──
                   Center(
                     child: Image.asset(
                       'assets/images/mascot/yse_salute.png',
                       width: 110,
                       height: 110,
+                      cacheWidth: 220,
                       fit: BoxFit.contain,
                       errorBuilder: (_, _, _) => const SizedBox(
                         width: 110,
@@ -77,7 +78,6 @@ class AboutModal {
                   Container(height: 1, color: AppColors.border),
                   const SizedBox(height: AppSpacing.lg),
 
-                  // ── Description ──
                   const Text(
                     'A gamified reading aid application designed for '
                     'Filipino elementary learners in Grades 1–6 who '
@@ -182,7 +182,10 @@ class AboutModal {
                   SizedBox(
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
+                      onPressed: () {
+                        SfxService.tap();
+                        Navigator.of(ctx).pop();
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accentTeal,
                         foregroundColor: Colors.white,

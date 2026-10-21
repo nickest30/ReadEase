@@ -1,4 +1,3 @@
-/// Word content model, bundled with app, seeded from JSON.
 class Word {
   final int? id;
   final String text;
@@ -17,8 +16,6 @@ class Word {
   final bool sensitivityReviewed;
   final String? sensitivityNotes;
 
-  // Legacy fields, kept until M5.2 rebuilds Lesson/Quiz screens.
-  // These will be removed once quiz_questions takes over.
   final List<String> quizChoices;
   final String correctAnswer;
 
@@ -86,8 +83,9 @@ class Word {
       sensitivityReviewed:
           ((map['sensitivity_reviewed'] as int?) ?? 0) == 1,
       sensitivityNotes: map['sensitivity_notes'] as String?,
-      quizChoices:
-          (choicesRaw == null || choicesRaw.isEmpty) ? const [] : choicesRaw.split('|'),
+      quizChoices: (choicesRaw == null || choicesRaw.isEmpty)
+          ? const []
+          : choicesRaw.split('|'),
       correctAnswer: (map['correct_answer'] as String?) ?? '',
     );
   }

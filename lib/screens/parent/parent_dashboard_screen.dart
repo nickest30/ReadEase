@@ -3,13 +3,15 @@ import 'package:provider/provider.dart';
 
 import '../../models/student.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../providers/parent_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
-import '../../widgets/error_state.dart';
-import '../../widgets/email_verification_banner.dart';
 import '../../utils/avatar_helper.dart';
+import '../../widgets/email_verification_banner.dart';
+import '../../widgets/error_state.dart';
 
 class ParentDashboardScreen extends StatefulWidget {
   const ParentDashboardScreen({super.key});
@@ -18,7 +20,8 @@ class ParentDashboardScreen extends StatefulWidget {
   State<ParentDashboardScreen> createState() => _ParentDashboardScreenState();
 }
 
-class _ParentDashboardScreenState extends State<ParentDashboardScreen> with WidgetsBindingObserver {
+class _ParentDashboardScreenState extends State<ParentDashboardScreen>
+    with WidgetsBindingObserver {
   List<Student> _children = [];
   bool _loading = true;
   String? _error;
@@ -49,6 +52,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
   Future<void> _loadChildren() async {
     final parent = context.read<ParentProvider>().currentParent;
     final authProvider = context.read<AuthProvider>();
+    final connectivity = context.read<ConnectivityProvider>();
 
     if (parent == null) {
       if (mounted) {
@@ -72,14 +76,14 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
       final parentFirebaseUid = authProvider.uid;
 
       List<Student> cloudChildren = [];
-      if (parentFirebaseUid != null) {
+      if (parentFirebaseUid != null && connectivity.isOnline) {
         try {
           final cloudDocs = await FirestoreService.instance
               .getChildrenOfParent(parentFirebaseUid);
 
           cloudChildren = cloudDocs.map((doc) {
             return Student(
-              id: null, // cloud-only, no local ID yet
+              id: null,
               username: (doc['username'] ?? '') as String,
               passwordHash: '',
               displayName: (doc['displayName'] ?? 'Unknown') as String,
@@ -89,17 +93,16 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
               totalPoints: (doc['totalPoints'] ?? 0) as int,
               createdAt: DateTime.now().toIso8601String(),
               firebaseUid: (doc['uid'] ?? '') as String,
+              avatarIndex: (doc['avatarIndex'] as int?) ?? 1,
             );
           }).toList();
         } catch (e) {
-          // Cloud fetch failed but local may still have data, log and continue.
-          debugPrint('🔥 Cloud children load failed: $e');
+          debugPrint('Cloud children load failed: $e');
         }
       }
 
       if (!mounted) return;
 
-      // Merge, dedupe by firebaseUid
       final Map<String, Student> merged = {};
       for (final c in localChildren) {
         final key = c.firebaseUid ?? 'local-${c.id}';
@@ -117,7 +120,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
         _loading = false;
       });
     } catch (e) {
-      debugPrint('👨‍👩‍👧 Load children ERROR: $e');
+      debugPrint('Load children ERROR: $e');
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -129,18 +132,16 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
   Future<void> _checkEmailVerification() async {
     final parent = context.read<ParentProvider>().currentParent;
     if (parent == null || parent.firebaseUid == null) return;
-    if (parent.emailVerified) return; // already verified, nothing to do
+    if (parent.emailVerified) return;
 
     final authProvider = context.read<AuthProvider>();
     final verified = await authProvider.checkEmailVerified();
     if (!verified || !mounted) return;
 
-    // Update local + cloud
     await DatabaseService.instance.markParentEmailVerified(parent.id!);
     await FirestoreService.instance
         .markEmailVerified(parent.firebaseUid!, 'parent');
 
-    // Refresh provider so the banner disappears
     final updated = await DatabaseService.instance.getParentById(parent.id!);
     if (updated != null && mounted) {
       context.read<ParentProvider>().setParent(updated);
@@ -148,6 +149,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
   }
 
   Future<void> _handleLogout() async {
+    SfxService.tap();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -169,7 +171,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(false);
+            },
             child: const Text(
               'Cancel',
               style: TextStyle(
@@ -211,7 +216,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
   }
 
   Future<void> _deleteChild(Student child) async {
-    // Confirmation
+    SfxService.tap();
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -249,7 +254,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(false);
+            },
             child: const Text(
               'Cancel',
               style: TextStyle(
@@ -281,17 +289,15 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
 
     if (confirmed != true || !mounted) return;
 
-    // Cloud cascade first, if it fails, we still proceed with local delete.
     if (child.firebaseUid != null && child.firebaseUid!.isNotEmpty) {
       try {
         await FirestoreService.instance
             .deleteStudentCascade(child.firebaseUid!);
       } catch (e) {
-        debugPrint('🔥 cascade failed (continuing): $e');
+        debugPrint('cascade failed (continuing): $e');
       }
     }
 
-    // Local SQLite delete, requires a local id.
     if (child.id != null) {
       await DatabaseService.instance.deleteStudent(child.id!);
     }
@@ -334,35 +340,37 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
     return Scaffold(
       backgroundColor: AppColors.parentBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppSpacing.md),
-              _buildHeader(parent.fullName),
-              const SizedBox(height: AppSpacing.md),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: AppSpacing.md),
+                  _buildHeader(parent.fullName),
+                  const SizedBox(height: AppSpacing.md),
 
-              // Email verification banner (only shows if not verified)
-              if (parent.firebaseUid != null && !parent.emailVerified)
-                EmailVerificationBanner(
-                  accentColor: AppColors.accentPurple,
-                  role: 'parent',
-                ),
+                  if (parent.firebaseUid != null && !parent.emailVerified)
+                    EmailVerificationBanner(
+                      accentColor: AppColors.accentPurple,
+                      role: 'parent',
+                    ),
 
-              const SizedBox(height: AppSpacing.sm),
-              Expanded(child: _buildBody()),
-              const SizedBox(height: AppSpacing.md),
-              _buildActions(),
-              const SizedBox(height: AppSpacing.md),
-            ],
+                  const SizedBox(height: AppSpacing.sm),
+                  Expanded(child: _buildBody()),
+                  const SizedBox(height: AppSpacing.md),
+                  _buildActions(),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
-
-  // ── Header ───────────────────────────────────────────────────────
 
   Widget _buildHeader(String fullName) {
     final firstName = fullName.split(' ').first;
@@ -384,6 +392,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
           width: 70,
           height: 70,
           fit: BoxFit.contain,
+          cacheWidth: 150,
           errorBuilder: (_, _, _) => Container(
             width: 70,
             height: 70,
@@ -405,8 +414,6 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
       ],
     );
   }
-
-  // ── Body: loading / error / empty / grid ─────────────────────────
 
   Widget _buildBody() {
     if (_loading) {
@@ -433,32 +440,40 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
     return RefreshIndicator(
       onRefresh: _loadChildren,
       color: AppColors.accentPurple,
-      child: GridView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        gridDelegate:
-            const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: AppSpacing.md,
-          crossAxisSpacing: AppSpacing.md,
-          childAspectRatio: 0.95,
-        ),
-        itemCount: _children.length,
-        itemBuilder: (context, index) {
-          final child = _children[index];
-          return _ChildCard(
-            child: child,
-            onTap: () => Navigator.of(context).pushNamed(
-              '/child-progress',
-              arguments: {'child': child},
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          int crossAxisCount = 2;
+          if (constraints.maxWidth > 600) crossAxisCount = 3;
+          if (constraints.maxWidth > 800) crossAxisCount = 4;
+
+          return GridView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              mainAxisSpacing: AppSpacing.md,
+              crossAxisSpacing: AppSpacing.md,
+              childAspectRatio: 0.95,
             ),
-            onLongPress: () => _deleteChild(child),
+            itemCount: _children.length,
+            itemBuilder: (context, index) {
+              final child = _children[index];
+              return _ChildCard(
+                child: child,
+                onTap: () {
+                  SfxService.tap();
+                  Navigator.of(context).pushNamed(
+                    '/child-progress',
+                    arguments: {'child': child},
+                  );
+                },
+                onLongPress: () => _deleteChild(child),
+              );
+            },
           );
         },
       ),
     );
   }
-
-  // ── Bottom actions ───────────────────────────────────────────────
 
   Widget _buildActions() {
     final canAddMore = _children.length < 4;
@@ -470,8 +485,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
           SizedBox(
             height: 52,
             child: OutlinedButton.icon(
-              onPressed: () =>
-                  Navigator.of(context).pushNamed('/generate-link-code'),
+              onPressed: () {
+                SfxService.tap();
+                Navigator.of(context).pushNamed('/generate-link-code');
+              },
               icon: const Icon(Icons.qr_code_rounded),
               label: const Text(
                 'Link Code for Your Kids',
@@ -499,6 +516,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
             height: 56,
             child: ElevatedButton.icon(
               onPressed: () async {
+                SfxService.tap();
                 await Navigator.of(context).pushNamed('/add-child');
                 _loadChildren();
               },
@@ -519,15 +537,16 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
               ),
             ),
           ),
-                    const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.sm),
         ],
 
-        // Settings
         SizedBox(
           height: 46,
           child: OutlinedButton.icon(
-            onPressed: () =>
-                Navigator.of(context).pushNamed('/parent-settings'),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(context).pushNamed('/parent-settings');
+            },
             icon: const Icon(Icons.settings_outlined, size: 18),
             label: const Text(
               'Settings',
@@ -573,8 +592,6 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
     );
   }
 
-  // ── Empty state ──────────────────────────────────────────────────
-
   Widget _buildEmptyState() {
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -588,6 +605,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
             width: 160,
             height: 160,
             fit: BoxFit.contain,
+            cacheWidth: 300,
             errorBuilder: (_, _, _) => Container(
               width: 160,
               height: 160,
@@ -627,6 +645,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
             height: 52,
             child: ElevatedButton.icon(
               onPressed: () async {
+                SfxService.tap();
                 await Navigator.of(context).pushNamed('/add-child');
                 _loadChildren();
               },
@@ -656,10 +675,6 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> with Widg
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────
-// _ChildCard
-// ─────────────────────────────────────────────────────────
 
 class _ChildCard extends StatelessWidget {
   final Student child;
@@ -695,7 +710,6 @@ class _ChildCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Avatar with purple ring
             Container(
               width: 60,
               height: 60,
@@ -712,6 +726,7 @@ class _ChildCard extends StatelessWidget {
                 child: Image.asset(
                   avatarAssetPath(child.avatarIndex),
                   fit: BoxFit.cover,
+                  cacheWidth: 150,
                   errorBuilder: (_, _, _) {
                     final initial = child.displayName.isNotEmpty
                         ? child.displayName[0].toUpperCase()

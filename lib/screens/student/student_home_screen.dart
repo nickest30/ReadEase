@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -8,10 +10,10 @@ import '../../providers/connectivity_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/sync_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/avatar_helper.dart';
 import '../../providers/auth_provider.dart';
-
 
 class StudentHomeScreen extends StatefulWidget {
   const StudentHomeScreen({super.key});
@@ -48,11 +50,18 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     final connectivity = context.read<ConnectivityProvider>();
     if (student == null) return;
 
-    SyncService.instance.syncAll(
-      student: student,
-      connectivity: connectivity,
-      authProvider: context.read<AuthProvider>(),
-    );
+    // Fire-and-forget cloud sync to prevent UI freezes if offline.
+    unawaited(() async {
+      try {
+        await SyncService.instance.syncAll(
+          student: student,
+          connectivity: connectivity,
+          authProvider: context.read<AuthProvider>(),
+        );
+      } catch (e) {
+        debugPrint('Background sync failed: $e');
+      }
+    }());
 
     // Load Word of the Day
     await _loadWordOfDay();
@@ -68,7 +77,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       if (!mounted) return;
       setState(() => _wordOfDay = word);
     } catch (e) {
-      debugPrint('📖 Word of the Day error: $e');
+      debugPrint('Word of the Day error: $e');
     }
   }
 
@@ -80,11 +89,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource(cleanPath));
     } catch (e) {
-      debugPrint('🔊 Audio failed: $e');
+      debugPrint('Audio failed: $e');
     }
   }
 
   void _showWordDetail(Word word) {
+    SfxService.tap();
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
@@ -130,7 +140,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(false);
+            },
             child: const Text(
               'No',
               style: TextStyle(
@@ -141,7 +154,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             ),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(true);
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentCoral,
               foregroundColor: Colors.white,
@@ -177,7 +193,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   Widget build(BuildContext context) {
     final student = context.watch<StudentProvider>().currentStudent;
 
-    // Guard: no session → redirect to profile list
+    // Guard: no session → redirect to profile list safely.
     if (student == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) {
@@ -196,129 +212,132 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     return Scaffold(
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _Header(student: student),
-                      const SizedBox(height: 20),
-
-                      // Word of the Day
-                      if (_wordOfDay != null) ...[
-                        _WordOfDayCard(
-                          word: _wordOfDay!,
-                          onTap: () => _showWordDetail(_wordOfDay!),
-                        ),
-                        const SizedBox(height: 20),
-                      ],
-
-                      _HomeCard(
-                        icon: Icons.menu_book_rounded,
-                        label: 'Start Learning',
-                        sublabel: 'Pick a grade and lesson',
-                        color: AppColors.accentCoral,
-                        onTap: () => Navigator.of(context).pushNamed(
-                          '/grade-selection',
-                        ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
                       ),
-                      const SizedBox(height: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _Header(student: student),
+                          const SizedBox(height: 20),
 
-                      _HomeCard(
-                        icon: Icons.emoji_events_rounded,
-                        label: 'My Badges',
-                        sublabel: 'See what you earned',
-                        color: AppColors.accentYellow,
-                        onTap: () =>
-                            Navigator.of(context).pushNamed('/badges'),
-                      ),
-                      const SizedBox(height: 12),
+                          if (_wordOfDay != null) ...[
+                            _WordOfDayCard(
+                              word: _wordOfDay!,
+                              onTap: () => _showWordDetail(_wordOfDay!),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
 
-                      _HomeCard(
-                        icon: Icons.bar_chart_rounded,
-                        label: 'Progress',
-                        sublabel: 'Track your journey',
-                        color: AppColors.accentTeal,
-                        onTap: () =>
-                            Navigator.of(context).pushNamed('/progress'),
-                      ),
-                      const SizedBox(height: 12),
-
-                      _HomeCard(
-                        icon: Icons.menu_book_rounded,
-                        label: 'My Dictionary',
-                        sublabel: 'Words you discovered',
-                        color: AppColors.accentGreen,
-                        onTap: () => Navigator.of(context)
-                            .pushNamed('/my-dictionary'),
-                      ),
-                      const SizedBox(height: 12),
-
-                      _HomeCard(
-                        icon: Icons.leaderboard_rounded,
-                        label: 'Leaderboard',
-                        sublabel: 'See your ranking',
-                        color: AppColors.accentPurple,
-                        onTap: () =>
-                            Navigator.of(context).pushNamed('/leaderboard'),
-                      ),
-                      const SizedBox(height: 12),
-
-                      _HomeCard(
-                        icon: Icons.settings_rounded,
-                        label: 'Settings',
-                        sublabel: 'Edit profile and audio',
-                        color: AppColors.textMuted,
-                        onTap: () =>
-                            Navigator.of(context).pushNamed('/settings'),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      SizedBox(
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: () => _confirmExit(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accentCoral,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                          _HomeCard(
+                            icon: Icons.menu_book_rounded,
+                            label: 'Start Learning',
+                            sublabel: 'Pick a grade and lesson',
+                            color: AppColors.accentCoral,
+                            onTap: () => Navigator.of(context).pushNamed(
+                              '/grade-selection',
                             ),
                           ),
-                          child: const Text(
-                            'Save & Exit',
-                            style: TextStyle(
-                              fontFamily: 'Nunito',
-                              fontWeight: FontWeight.w700,
-                              fontSize: 15,
+                          const SizedBox(height: 12),
+
+                          _HomeCard(
+                            icon: Icons.emoji_events_rounded,
+                            label: 'My Badges',
+                            sublabel: 'See what you earned',
+                            color: AppColors.accentYellow,
+                            onTap: () =>
+                                Navigator.of(context).pushNamed('/badges'),
+                          ),
+                          const SizedBox(height: 12),
+
+                          _HomeCard(
+                            icon: Icons.bar_chart_rounded,
+                            label: 'Progress',
+                            sublabel: 'Track your journey',
+                            color: AppColors.accentTeal,
+                            onTap: () =>
+                                Navigator.of(context).pushNamed('/progress'),
+                          ),
+                          const SizedBox(height: 12),
+
+                          _HomeCard(
+                            icon: Icons.menu_book_rounded,
+                            label: 'My Dictionary',
+                            sublabel: 'Words you discovered',
+                            color: AppColors.accentGreen,
+                            onTap: () => Navigator.of(context)
+                                .pushNamed('/my-dictionary'),
+                          ),
+                          const SizedBox(height: 12),
+
+                          _HomeCard(
+                            icon: Icons.leaderboard_rounded,
+                            label: 'Leaderboard',
+                            sublabel: 'See your ranking',
+                            color: AppColors.accentPurple,
+                            onTap: () =>
+                                Navigator.of(context).pushNamed('/leaderboard'),
+                          ),
+                          const SizedBox(height: 12),
+
+                          _HomeCard(
+                            icon: Icons.settings_rounded,
+                            label: 'Settings',
+                            sublabel: 'Edit profile and audio',
+                            color: AppColors.textMuted,
+                            onTap: () =>
+                                Navigator.of(context).pushNamed('/settings'),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          SizedBox(
+                            height: 56,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                SfxService.tap();
+                                _confirmExit(context);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.accentCoral,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: const Text(
+                                'Save & Exit',
+                                style: TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            );
-          },
+                );
+              },
+            ),
+          ),
         ),
       ),
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────
-// Header with avatar + online/offline chip
-// ─────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
   final Student student;
@@ -332,7 +351,6 @@ class _Header extends StatelessWidget {
       children: [
         Row(
           children: [
-            // Avatar with soft teal ring
             Container(
               width: 48,
               height: 48,
@@ -349,6 +367,7 @@ class _Header extends StatelessWidget {
                 child: Image.asset(
                   avatarAssetPath(student.avatarIndex),
                   fit: BoxFit.cover,
+                  cacheWidth: 96,
                   errorBuilder: (_, _, _) => const Icon(
                     Icons.person,
                     color: Colors.white,
@@ -385,8 +404,6 @@ class _Header extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
-
-        // Session state chip
         Align(
           alignment: Alignment.centerLeft,
           child: Container(
@@ -437,10 +454,6 @@ class _Header extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────
-// Home card
-// ─────────────────────────────────────────────────────────
-
 class _HomeCard extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -459,7 +472,10 @@ class _HomeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        SfxService.tap();
+        onTap();
+      },
       borderRadius: BorderRadius.circular(AppRadius.large),
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -512,10 +528,6 @@ class _HomeCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────
-// Word of the Day card
-// ─────────────────────────────────────────────────────────
-
 class _WordOfDayCard extends StatelessWidget {
   final Word word;
   final VoidCallback onTap;
@@ -528,7 +540,10 @@ class _WordOfDayCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        SfxService.tap();
+        onTap();
+      },
       borderRadius: BorderRadius.circular(AppRadius.large),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -549,7 +564,6 @@ class _WordOfDayCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Word image
             Container(
               width: 72,
               height: 72,
@@ -562,6 +576,7 @@ class _WordOfDayCard extends StatelessWidget {
               child: Image.asset(
                 word.imageAsset,
                 fit: BoxFit.contain,
+                cacheWidth: 144,
                 errorBuilder: (_, _, _) => const Icon(
                   Icons.auto_awesome_rounded,
                   color: AppColors.accentYellow,
@@ -621,10 +636,6 @@ class _WordOfDayCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────
-// Word of the Day bottom sheet
-// ─────────────────────────────────────────────────────────
-
 class _WordOfDaySheet extends StatelessWidget {
   final Word word;
   final VoidCallback onPlayAudio;
@@ -641,7 +652,6 @@ class _WordOfDaySheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag handle
           Container(
             width: 40,
             height: 4,
@@ -651,14 +661,13 @@ class _WordOfDaySheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-
-          // Word image
           SizedBox(
             width: 140,
             height: 140,
             child: Image.asset(
               word.imageAsset,
               fit: BoxFit.contain,
+              cacheWidth: 280,
               errorBuilder: (_, _, _) => const Icon(
                 Icons.image_outlined,
                 size: 60,
@@ -667,15 +676,11 @@ class _WordOfDaySheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-
-          // Word
           Text(
             word.text,
             style: AppText.display.copyWith(fontSize: 36),
           ),
           const SizedBox(height: AppSpacing.xs),
-
-          // Grade pill
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: 10,
@@ -695,9 +700,7 @@ class _WordOfDaySheet extends StatelessWidget {
               ),
             ),
           ),
-
           const SizedBox(height: AppSpacing.lg),
-
           if (word.definition.isNotEmpty) ...[
             _label('MEANING'),
             const SizedBox(height: 4),
@@ -708,7 +711,6 @@ class _WordOfDaySheet extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
           ],
-
           if (word.sampleSentence.isNotEmpty) ...[
             _label('SAMPLE SENTENCE'),
             const SizedBox(height: 4),
@@ -719,13 +721,14 @@ class _WordOfDaySheet extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
           ],
-
-          // Listen button
           SizedBox(
             width: double.infinity,
             height: 52,
             child: ElevatedButton.icon(
-              onPressed: onPlayAudio,
+              onPressed: () {
+                SfxService.tap();
+                onPlayAudio();
+              },
               icon: const Icon(Icons.volume_up_rounded),
               label: const Text(
                 'LISTEN',

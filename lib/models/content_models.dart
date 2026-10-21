@@ -3,7 +3,7 @@ import 'dart:convert';
 // Content-side models, bundled with app, seeded from JSON.
 // These represent the DATABANK, not user progress.
 
-/// A small batch of 3-5 words within a level.
+/// A small batch of words within a level.
 class LessonBatch {
   final int? id;
   final int gradeLevel;
@@ -13,6 +13,7 @@ class LessonBatch {
   final String? culturalElementsJson;
   final String? gameType;
   final String? passageId;
+
   LessonBatch({
     this.id,
     required this.gradeLevel,
@@ -47,92 +48,6 @@ class LessonBatch {
       );
 
   String get lessonKey => 'grade${gradeLevel}_$difficulty';
-}
-
-/// Grade 1 opening frame (Yse speaks before lesson).
-class OpeningFrame {
-  final int? id;
-  final int gradeLevel;
-  final String difficulty;
-  final String visualAsset;
-  final String audioAsset;
-  final String displayText;
-  final String triggerType;
-
-  OpeningFrame({
-    this.id,
-    required this.gradeLevel,
-    required this.difficulty,
-    required this.visualAsset,
-    required this.audioAsset,
-    required this.displayText,
-    this.triggerType = 'first_visit_only',
-  });
-
-  Map<String, dynamic> toMap() => {
-        'id': id,
-        'grade_level': gradeLevel,
-        'difficulty': difficulty,
-        'visual_asset': visualAsset,
-        'audio_asset': audioAsset,
-        'display_text': displayText,
-        'trigger_type': triggerType,
-      };
-
-  factory OpeningFrame.fromMap(Map<String, dynamic> m) => OpeningFrame(
-        id: m['id'] as int?,
-        gradeLevel: m['grade_level'] as int,
-        difficulty: m['difficulty'] as String,
-        visualAsset: m['visual_asset'] as String,
-        audioAsset: m['audio_asset'] as String,
-        displayText: m['display_text'] as String,
-        triggerType: m['trigger_type'] as String,
-      );
-}
-
-/// Grade 2+ story frame, 2-3 screens before lesson.
-class StoryFrame {
-  final int? id;
-  final int gradeLevel;
-  final String difficulty;
-  final int frameIndex;
-  final String visualAsset;
-  final String audioAsset;
-  final String displayText;
-  final int? wordIntroducedId;
-
-  StoryFrame({
-    this.id,
-    required this.gradeLevel,
-    required this.difficulty,
-    required this.frameIndex,
-    required this.visualAsset,
-    required this.audioAsset,
-    required this.displayText,
-    this.wordIntroducedId,
-  });
-
-  Map<String, dynamic> toMap() => {
-        'id': id,
-        'grade_level': gradeLevel,
-        'difficulty': difficulty,
-        'frame_index': frameIndex,
-        'visual_asset': visualAsset,
-        'audio_asset': audioAsset,
-        'display_text': displayText,
-        'word_introduced_id': wordIntroducedId,
-      };
-
-  factory StoryFrame.fromMap(Map<String, dynamic> m) => StoryFrame(
-        id: m['id'] as int?,
-        gradeLevel: m['grade_level'] as int,
-        difficulty: m['difficulty'] as String,
-        frameIndex: m['frame_index'] as int,
-        visualAsset: m['visual_asset'] as String,
-        audioAsset: m['audio_asset'] as String,
-        displayText: m['display_text'] as String,
-        wordIntroducedId: m['word_introduced_id'] as int?,
-      );
 }
 
 /// A single quiz question tied to a batch and word.
@@ -219,9 +134,9 @@ class QuizConfig {
         gradeLevel: m['grade_level'] as int,
         difficulty: m['difficulty'] as String,
         quizSize: m['quiz_size'] as int,
-        bufferSize: m['buffer_size'] as int,
-        randomized: (m['randomized'] as int) == 1,
-        passingThreshold: m['passing_threshold'] as int,
+        bufferSize: (m['buffer_size'] as int?) ?? 0,
+        randomized: ((m['randomized'] as int?) ?? 0) == 1,
+        passingThreshold: (m['passing_threshold'] as int?) ?? 70,
       );
 }
 
@@ -291,8 +206,8 @@ class WordMastery {
         id: m['id'] as int?,
         studentId: m['student_id'] as int,
         wordId: m['word_id'] as int,
-        correctCount: m['correct_count'] as int,
-        wrongCount: m['wrong_count'] as int,
+        correctCount: (m['correct_count'] as int?) ?? 0,
+        wrongCount: (m['wrong_count'] as int?) ?? 0,
         masteredAt: m['mastered_at'] as String?,
       );
 }
@@ -387,7 +302,7 @@ class LessonProgress {
         studentId: m['student_id'] as int,
         batchId: m['batch_id'] as int,
         currentPhase: m['current_phase'] as String,
-        currentIndex: m['current_index'] as int,
+        currentIndex: (m['current_index'] as int?) ?? 0,
         lastUpdated: m['last_updated'] as String,
       );
 }
@@ -747,7 +662,7 @@ class PassageQuestion {
     this.stemAudio,
   });
 
-    Map<String, dynamic> toMap() => {
+  Map<String, dynamic> toMap() => {
         'id': id,
         'passage_id': passageId,
         'stem': stem,

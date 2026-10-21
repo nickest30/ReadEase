@@ -5,10 +5,9 @@ import 'package:provider/provider.dart';
 import '../../models/content_models.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 
-/// Game Intro, shown before each game session.
-/// Layout: everything centered vertically (Yse, header, body, button).
 class GameIntroScreen extends StatefulWidget {
   const GameIntroScreen({super.key});
 
@@ -36,7 +35,19 @@ class _GameIntroScreenState extends State<GameIntroScreen> {
   }
 
   Future<void> _load() async {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/student-home',
+            (route) => false,
+          );
+        }
+      });
+      return;
+    }
+
     final gameType = args['gameType'] as String?;
 
     final student = context.read<StudentProvider>().currentStudent;
@@ -75,13 +86,17 @@ class _GameIntroScreenState extends State<GameIntroScreen> {
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource('audio/intros/$filename'));
     } catch (e) {
-      debugPrint('🔊 Game intro audio missing: $e');
+      debugPrint('Game intro audio missing: $e');
     }
   }
 
   void _onReady() {
+    SfxService.tap();
     _audioPlayer.stop();
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
+    
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map) return;
+    
     _navigateToGame(args['gameType'] as String?, args);
   }
 
@@ -124,8 +139,10 @@ class _GameIntroScreenState extends State<GameIntroScreen> {
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Text(_error ?? 'Could not load intro.',
-                style: AppText.body),
+            child: Text(
+              _error ?? 'Could not load intro.',
+              style: AppText.body,
+            ),
           ),
         ),
       );
@@ -136,74 +153,78 @@ class _GameIntroScreenState extends State<GameIntroScreen> {
     return Scaffold(
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset(
-                  'assets/images/mascot/${intro.poseAsset}',
-                  width: 220,
-                  height: 220,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => const SizedBox(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset(
+                    'assets/images/mascot/${intro.poseAsset}',
                     width: 220,
                     height: 220,
-                    child: Icon(
-                      Icons.auto_stories_rounded,
-                      size: 140,
-                      color: AppColors.accentTeal,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  intro.header,
-                  textAlign: TextAlign.center,
-                  style: AppText.h1.copyWith(
-                    fontSize: 30,
-                    height: 1.2,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  intro.body,
-                  textAlign: TextAlign.center,
-                  style: AppText.body.copyWith(
-                    fontSize: 18,
-                    height: 1.5,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xxl),
-                SizedBox(
-                  height: 64,
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _onReady,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentTeal,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.large),
-                      ),
-                      elevation: 3,
-                    ),
-                    child: Text(
-                      intro.buttonLabel,
-                      style: const TextStyle(
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w800,
-                        fontSize: 20,
-                        letterSpacing: 0.5,
+                    cacheWidth: 440,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => const SizedBox(
+                      width: 220,
+                      height: 220,
+                      child: Icon(
+                        Icons.auto_stories_rounded,
+                        size: 140,
+                        color: AppColors.accentTeal,
                       ),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
+                    intro.header,
+                    textAlign: TextAlign.center,
+                    style: AppText.h1.copyWith(
+                      fontSize: 30,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    intro.body,
+                    textAlign: TextAlign.center,
+                    style: AppText.body.copyWith(
+                      fontSize: 18,
+                      height: 1.5,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxl),
+                  SizedBox(
+                    height: 64,
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _onReady,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accentTeal,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.large),
+                        ),
+                        elevation: 3,
+                      ),
+                      child: Text(
+                        intro.buttonLabel,
+                        style: const TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w800,
+                          fontSize: 20,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

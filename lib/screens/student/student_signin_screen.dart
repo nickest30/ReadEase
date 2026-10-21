@@ -7,6 +7,7 @@ import '../../models/student.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/cloud_sync_service.dart';
+import '../../services/sfx_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../utils/app_theme.dart';
@@ -52,7 +53,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
 
     final identifier = _usernameController.text.trim().toLowerCase();
 
-    // ── Rate limit gate ──
+    // Rate limit gate
     final remaining = await DatabaseService.instance
         .loginRateLimitRemaining(identifier);
     if (remaining != null) {
@@ -74,7 +75,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
       final username = _usernameController.text.trim().toLowerCase();
       final password = _passwordController.text;
 
-      // ── STEP 1: Try local SQLite first ──
+      // Try local SQLite login first
       Student? localStudent =
           await DatabaseService.instance.getStudentByUsername(username);
 
@@ -119,7 +120,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
               password,
             );
           } catch (_) {
-            // Offline, proceed
+            // Offline, proceed with local session
           }
         }
 
@@ -131,10 +132,10 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
         return;
       }
 
-      // ── STEP 2: Not found locally → try cloud login ──
-      debugPrint('🔑 Local miss, trying cloud for "$username"');
+      // Not found locally, try cloud login
+      debugPrint('Local miss, trying cloud for "$username"');
 
-      // 2a. Firebase Auth with synthetic email
+      // Firebase Auth with synthetic email
       final syntheticEmail = '$username@readease.app';
       final firebaseOk = await authProvider.signIn(syntheticEmail, password);
 
@@ -152,7 +153,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
         return;
       }
 
-      // 2b. Fetch profile by UID
+      // Fetch profile by UID
       final uid = authProvider.uid;
       if (uid == null) {
         await DatabaseService.instance.recordLoginAttempt(
@@ -184,7 +185,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
         return;
       }
 
-      // 2c. Save to local SQLite
+      // Save to local SQLite
       final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
 
       final newLocalStudent = Student(
@@ -217,11 +218,10 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
         return;
       }
 
-      debugPrint(
-        '🔑 Cloud login succeeded, local profile created ($newLocalId)',
-      );
+      debugPrint('Cloud login succeeded, local profile created ($newLocalId)');
 
       // Hydrate cloud data (results, badges, mastery, encounters, starred)
+      // Fire-and-forget to keep navigation instant.
       unawaited(
         CloudSyncService.instance.downloadStudentData(
           localStudentId: createdLocal.id!,
@@ -235,7 +235,7 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
       studentProvider.setStudent(createdLocal);
       _navigateAfterLogin(createdLocal);
     } catch (e) {
-      debugPrint('🔑 SignIn ERROR: $e');
+      debugPrint('SignIn error: $e');
       if (!mounted) return;
       setState(() {
         _errorMessage = 'Something went wrong. Please try again.';
@@ -261,93 +261,101 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
     return Scaffold(
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.arrow_back,
-                      color: AppColors.textPrimary),
-                  alignment: Alignment.centerLeft,
-                  padding: EdgeInsets.zero,
-                ),
-                const SizedBox(height: 16),
-                const Text('Sign In', style: AppText.h1),
-                const Text(
-                  'Log in with your credentials',
-                  style: AppText.caption,
-                ),
-                const SizedBox(height: 28),
-
-                const FieldLabel('Username'),
-                TextFormField(
-                  controller: _usernameController,
-                  textInputAction: TextInputAction.next,
-                  validator: Validators.username,
-                  decoration: buildInputDecoration(
-                    hint: 'Enter your username',
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                const FieldLabel('Password'),
-                PasswordField(
-                  controller: _passwordController,
-                  hintText: 'Enter your password',
-                  textInputAction: TextInputAction.done,
-                  validator: (v) => (v == null || v.isEmpty)
-                      ? 'Please enter your password'
-                      : null,
-                ),
-
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 14),
-                  Text(
-                    _errorMessage!,
-                    style: const TextStyle(
-                      color: AppColors.textCoral,
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w600,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        SfxService.tap();
+                        Navigator.of(context).pop();
+                      },
+                      icon: const Icon(Icons.arrow_back,
+                          color: AppColors.textPrimary),
+                      alignment: Alignment.centerLeft,
+                      padding: EdgeInsets.zero,
                     ),
-                  ),
-                ],
-
-                const SizedBox(height: 28),
-
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isSubmitting ? null : _handleSignIn,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentTeal,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                    const SizedBox(height: 16),
+                    const Text('Sign In', style: AppText.h1),
+                    const Text(
+                      'Log in with your credentials',
+                      style: AppText.caption,
+                    ),
+                    const SizedBox(height: 28),
+                    const FieldLabel('Username'),
+                    TextFormField(
+                      controller: _usernameController,
+                      textInputAction: TextInputAction.next,
+                      validator: Validators.username,
+                      decoration: buildInputDecoration(
+                        hint: 'Enter your username',
                       ),
                     ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : const Text(
-                            'LOGIN',
-                            style: TextStyle(
-                              fontFamily: 'Nunito',
-                              fontWeight: FontWeight.w700,
-                            ),
+                    const SizedBox(height: 16),
+                    const FieldLabel('Password'),
+                    PasswordField(
+                      controller: _passwordController,
+                      hintText: 'Enter your password',
+                      textInputAction: TextInputAction.done,
+                      validator: (v) => (v == null || v.isEmpty)
+                          ? 'Please enter your password'
+                          : null,
+                    ),
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: 14),
+                      Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                          color: AppColors.textCoral,
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 28),
+                    SizedBox(
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _isSubmitting
+                            ? null
+                            : () {
+                                SfxService.tap();
+                                _handleSignIn();
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accentTeal,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                  ),
+                        ),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : const Text(
+                                'LOGIN',
+                                style: TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

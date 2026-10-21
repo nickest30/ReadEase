@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../models/teacher.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/sfx_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/teacher_provider.dart';
 import '../../utils/app_theme.dart';
@@ -63,8 +64,8 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
 
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
+    SfxService.tap();
 
-    // Terms & Data Privacy, required before account creation.
     final agreed = await TermsModal.show(context);
     if (!agreed) return;
     if (!mounted) return;
@@ -83,7 +84,6 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
       final normalizedPhone =
           phoneRaw.isNotEmpty ? _normalizePhone(phoneRaw) : null;
 
-      // Local uniqueness check
       final existing = await DatabaseService.instance
           .getTeacherByUsername(_usernameController.text.trim());
       if (existing != null) {
@@ -136,7 +136,6 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
 
       teacherProvider.setTeacher(createdTeacher);
 
-      // Save credentials for silent Firebase re-auth
       await authProvider.saveCredentials(
         uid: firebaseUid,
         email: email,
@@ -147,10 +146,9 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
         await FirestoreService.instance
             .saveTeacher(createdTeacher, firebaseUid);
       } catch (e) {
-        debugPrint('🔥 saveTeacher failed: $e');
+        debugPrint('saveTeacher failed: $e');
       }
 
-      // Save phone number to cloud if provided (before verification)
       if (normalizedPhone != null) {
         await FirestoreService.instance.markPhoneNumber(
           firebaseUid,
@@ -161,10 +159,8 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
 
       if (!mounted) return;
 
-      // Send email verification in background (non-blocking)
       unawaited(_sendEmailVerification(authProvider));
 
-      // ── Phone path or skip ──
       if (normalizedPhone != null) {
         await _runPhoneVerificationFlow(
           normalizedPhone: normalizedPhone,
@@ -178,7 +174,7 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
         );
       }
     } catch (e) {
-      debugPrint('👩‍🏫 Teacher signup ERROR: $e');
+      debugPrint('Teacher signup ERROR: $e');
       if (!mounted) return;
       setState(() {
         _errorMessage = 'Something went wrong. Please try again.';
@@ -190,9 +186,9 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
   Future<void> _sendEmailVerification(AuthProvider authProvider) async {
     try {
       await authProvider.sendVerificationEmail();
-      debugPrint('📧 Verification email sent');
+      debugPrint('Verification email sent');
     } catch (e) {
-      debugPrint('📧 sendVerificationEmail failed: $e');
+      debugPrint('sendVerificationEmail failed: $e');
     }
   }
 
@@ -202,8 +198,6 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
     required Teacher teacher,
     required AuthProvider authProvider,
   }) async {
-    // Kick off phone verification, the pending verification ID is
-    // stored inside AuthService, OTP screen reads from there.
     final completer = Completer<void>();
     bool codeSent = false;
 
@@ -248,7 +242,6 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
 
     if (!mounted || !codeSent) return;
 
-    // Navigate to OTP screen
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => OtpVerificationScreen(
@@ -261,9 +254,8 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
       ),
     );
 
-        if (!mounted) return;
+    if (!mounted) return;
 
-    // Mark phone verified in Firestore (OTP was just passed)
     if (teacher.firebaseUid != null) {
       await FirestoreService.instance
           .markPhoneVerified(teacher.firebaseUid!, 'teacher');
@@ -355,7 +347,10 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
         ),
         actions: [
           ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop();
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentYellow,
               foregroundColor: AppColors.textPrimary,
@@ -389,239 +384,240 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
     return Scaffold(
       backgroundColor: AppColors.teacherBg,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: AppSpacing.md),
-
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.arrow_back,
-                      color: AppColors.textPrimary),
-                  alignment: Alignment.centerLeft,
-                  padding: EdgeInsets.zero,
-                ),
-
-                const SizedBox(height: AppSpacing.sm),
-
-                // Header row with Groo
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Create Account', style: AppText.h1),
-                          SizedBox(height: 2),
-                          Text(
-                            'Set up your teacher profile',
-                            style: AppText.caption,
-                          ),
-                        ],
-                      ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    IconButton(
+                      onPressed: () {
+                        SfxService.tap();
+                        Navigator.of(context).pop();
+                      },
+                      icon: const Icon(Icons.arrow_back,
+                          color: AppColors.textPrimary),
+                      alignment: Alignment.centerLeft,
+                      padding: EdgeInsets.zero,
                     ),
-                    Image.asset(
-                      'assets/images/mascot/groo_welcoming.png',
-                      width: 120,
-                      height: 120,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color:
-                              AppColors.accentYellow.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.accentYellow,
-                            width: 2,
+
+                    const SizedBox(height: AppSpacing.sm),
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Create Account', style: AppText.h1),
+                              SizedBox(height: 2),
+                              Text(
+                                'Set up your teacher profile',
+                                style: AppText.caption,
+                              ),
+                            ],
                           ),
                         ),
-                        child: const Icon(
-                          Icons.school_rounded,
-                          color: AppColors.accentYellow,
-                          size: 42,
+                        Image.asset(
+                          'assets/images/mascot/groo_welcoming.png',
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.contain,
+                          cacheWidth: 240,
+                          errorBuilder: (_, _, _) => Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              color:
+                                  AppColors.accentYellow.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.accentYellow,
+                                width: 2,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.school_rounded,
+                              color: AppColors.accentYellow,
+                              size: 42,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: AppSpacing.xl),
+
+                    const FieldLabel('Full Name'),
+                    TextFormField(
+                      controller: _fullNameController,
+                      textInputAction: TextInputAction.next,
+                      validator: Validators.displayName,
+                      decoration: buildInputDecoration(
+                        hint: 'Enter your full name',
+                        focusColor: AppColors.accentYellow,
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    const FieldLabel('Username'),
+                    TextFormField(
+                      controller: _usernameController,
+                      textInputAction: TextInputAction.next,
+                      validator: Validators.username,
+                      decoration: buildInputDecoration(
+                        hint: 'Pick a username',
+                        focusColor: AppColors.accentYellow,
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    const FieldLabel('Email'),
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      validator: Validators.email,
+                      decoration: buildInputDecoration(
+                        hint: 'name@example.com',
+                        focusColor: AppColors.accentYellow,
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    const FieldLabel('School Name'),
+                    TextFormField(
+                      controller: _schoolNameController,
+                      textInputAction: TextInputAction.next,
+                      validator: Validators.schoolName,
+                      decoration: buildInputDecoration(
+                        hint: 'Enter your school name',
+                        focusColor: AppColors.accentYellow,
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    const FieldLabel('Phone Number (optional)'),
+                    TextFormField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      textInputAction: TextInputAction.next,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'[\d\s\+\-\(\)]'),
+                        ),
+                      ],
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return null;
+                        if (_normalizePhone(v) == null) {
+                          return 'Enter a valid PH number (e.g. 9123456789)';
+                        }
+                        return null;
+                      },
+                      decoration: buildInputDecoration(
+                        hint: '912 345 6789',
+                        focusColor: AppColors.accentYellow,
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 6, left: 4),
+                      child: Text(
+                        'Recommended. We\'ll send a one-time code to this number '
+                        'when you sign in on a new device. You can skip this and '
+                        'add it later in Settings.',
+                        style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontSize: 11,
+                          color: AppColors.textMuted,
+                          height: 1.4,
                         ),
                       ),
                     ),
-                  ],
-                ),
 
-                const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.md),
 
-                // Full Name
-                const FieldLabel('Full Name'),
-                TextFormField(
-                  controller: _fullNameController,
-                  textInputAction: TextInputAction.next,
-                  validator: Validators.displayName,
-                  decoration: buildInputDecoration(
-                    hint: 'Enter your full name',
-                    focusColor: AppColors.accentYellow,
-                  ),
-                ),
-
-                const SizedBox(height: AppSpacing.md),
-
-                // Username
-                const FieldLabel('Username'),
-                TextFormField(
-                  controller: _usernameController,
-                  textInputAction: TextInputAction.next,
-                  validator: Validators.username,
-                  decoration: buildInputDecoration(
-                    hint: 'Pick a username',
-                    focusColor: AppColors.accentYellow,
-                  ),
-                ),
-
-                const SizedBox(height: AppSpacing.md),
-
-                // Email
-                const FieldLabel('Email'),
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  validator: Validators.email,
-                  decoration: buildInputDecoration(
-                    hint: 'name@example.com',
-                    focusColor: AppColors.accentYellow,
-                  ),
-                ),
-
-                const SizedBox(height: AppSpacing.md),
-
-                // School Name
-                const FieldLabel('School Name'),
-                TextFormField(
-                  controller: _schoolNameController,
-                  textInputAction: TextInputAction.next,
-                  validator: Validators.schoolName,
-                  decoration: buildInputDecoration(
-                    hint: 'Enter your school name',
-                    focusColor: AppColors.accentYellow,
-                  ),
-                ),
-
-                const SizedBox(height: AppSpacing.md),
-
-                // ── Phone (optional) ──
-                const FieldLabel('Phone Number (optional)'),
-                TextFormField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  textInputAction: TextInputAction.next,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'[\d\s\+\-\(\)]'),
+                    const FieldLabel('Password'),
+                    PasswordField(
+                      controller: _passwordController,
+                      hintText: 'At least 8 chars, mix letters/numbers',
+                      textInputAction: TextInputAction.next,
+                      focusColor: AppColors.accentYellow,
+                      validator: (v) => Validators.password(v),
                     ),
-                  ],
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return null;
-                    if (_normalizePhone(v) == null) {
-                      return 'Enter a valid PH number (e.g. 9123456789)';
-                    }
-                    return null;
-                  },
-                  decoration: buildInputDecoration(
-                    hint: '912 345 6789',
-                    focusColor: AppColors.accentYellow,
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.only(top: 6, left: 4),
-                  child: Text(
-                    'Recommended. We\'ll send a one-time code to this number '
-                    'when you sign in on a new device. You can skip this and '
-                    'add it later in Settings.',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 11,
-                      color: AppColors.textMuted,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
 
-                const SizedBox(height: AppSpacing.md),
+                    const SizedBox(height: AppSpacing.md),
 
-                // Password
-                const FieldLabel('Password'),
-                PasswordField(
-                  controller: _passwordController,
-                  hintText: 'At least 8 chars, mix letters/numbers',
-                  textInputAction: TextInputAction.next,
-                  focusColor: AppColors.accentYellow,
-                  validator: (v) => Validators.password(v),
-                ),
-
-                const SizedBox(height: AppSpacing.md),
-
-                // Confirm Password
-                const FieldLabel('Confirm Password'),
-                PasswordField(
-                  controller: _confirmController,
-                  hintText: 'Re-enter your password',
-                  textInputAction: TextInputAction.done,
-                  focusColor: AppColors.accentYellow,
-                  validator: (v) => Validators.confirmPassword(
-                    v,
-                    _passwordController.text,
-                  ),
-                ),
-
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    _errorMessage!,
-                    style: const TextStyle(
-                      color: AppColors.textCoral,
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: AppSpacing.xl),
-
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isSubmitting ? null : _handleSignup,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentYellow,
-                      foregroundColor: AppColors.textPrimary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.large),
+                    const FieldLabel('Confirm Password'),
+                    PasswordField(
+                      controller: _confirmController,
+                      hintText: 'Re-enter your password',
+                      textInputAction: TextInputAction.done,
+                      focusColor: AppColors.accentYellow,
+                      validator: (v) => Validators.confirmPassword(
+                        v,
+                        _passwordController.text,
                       ),
                     ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              color: AppColors.textPrimary,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : const Text(
-                            'CREATE ACCOUNT',
-                            style: TextStyle(
-                              fontFamily: 'Nunito',
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                  ),
-                ),
 
-                const SizedBox(height: AppSpacing.xl),
-              ],
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                          color: AppColors.textCoral,
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: AppSpacing.xl),
+
+                    SizedBox(
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _isSubmitting ? null : _handleSignup,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accentYellow,
+                          foregroundColor: AppColors.textPrimary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.large),
+                          ),
+                        ),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  color: AppColors.textPrimary,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : const Text(
+                                'CREATE ACCOUNT',
+                                style: TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.xl),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

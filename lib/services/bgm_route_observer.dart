@@ -28,26 +28,42 @@ class BgmRouteObserver extends NavigatorObserver {
     final routeName = route.settings.name;
     if (routeName == null) return;
 
-    // 1. SILENCE BGM on these screens
+    // Silence on splash + role selection
     if (routeName == '/role-selection' || routeName == '/') {
       BgmService.stop();
-    } 
-    // 2. Relax music for parent/teacher
-    else if (['/parent-dashboard', '/teacher-dashboard', '/parent-welcome', '/teacher-welcome'].contains(routeName)) {
-      BgmService.playTrack(BgmTrack.relax);
-    } 
-    // 3. Lesson music
-    else if (['/lesson-play', '/passage', '/lesson-intro'].contains(routeName)) {
-      BgmService.playTrack(BgmTrack.lesson);
-    } 
-    // 4. Game music
+    }
+    // Relax track for parent/teacher
     else if ([
-      '/memory-match', '/bubble-pop', '/drag-drop', '/word-scramble', 
-      '/sentence-builder', '/floor-is-lava', '/word-hunt', '/category-sort', '/quiz-play'
+      '/parent-dashboard',
+      '/teacher-dashboard',
+      '/parent-welcome',
+      '/teacher-welcome',
+    ].contains(routeName)) {
+      BgmService.playTrack(BgmTrack.relax);
+    }
+    // Lesson track
+    else if ([
+      '/lesson-play',
+      '/passage',
+      '/lesson-intro',
+    ].contains(routeName)) {
+      BgmService.playTrack(BgmTrack.lesson);
+    }
+    // Game track
+    else if ([
+      '/memory-match',
+      '/bubble-pop',
+      '/drag-drop',
+      '/word-scramble',
+      '/sentence-builder',
+      '/floor-is-lava',
+      '/word-hunt',
+      '/category-sort',
+      '/quiz-play',
     ].contains(routeName)) {
       BgmService.playTrack(BgmTrack.game);
-    } 
-    // 5. Default to Main Menu music for everything else
+    }
+    // Main menu music for everything else
     else {
       BgmService.playTrack(BgmTrack.main);
     }

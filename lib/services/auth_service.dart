@@ -59,15 +59,9 @@ class AuthService {
   /// Get the current user's Firebase UID.
   String? get currentUid => _auth.currentUser?.uid;
 
-
   Future<void> sendPasswordResetEmail(String email) async {
     await _auth.sendPasswordResetEmail(email: email);
   }
-
-
-  // ────────────────────────────────────────────────────────────────
-  // EMAIL VERIFICATION (parent + teacher)
-  // ────────────────────────────────────────────────────────────────
 
   /// Send a verification email to the currently signed-in user.
   /// Safe to call multiple times, Firebase rate-limits.
@@ -77,9 +71,9 @@ class AuthService {
     if (user.emailVerified) return;
     try {
       await user.sendEmailVerification();
-      debugPrint('📧 Verification email sent to ${user.email}');
+      debugPrint('Verification email sent to ${user.email}');
     } catch (e) {
-      debugPrint('📧 sendEmailVerification failed: $e');
+      debugPrint('sendEmailVerification failed: $e');
     }
   }
 
@@ -91,14 +85,10 @@ class AuthService {
       await user.reload();
       return _auth.currentUser?.emailVerified ?? false;
     } catch (e) {
-      debugPrint('📧 isEmailVerified check failed: $e');
+      debugPrint('isEmailVerified check failed: $e');
       return false;
     }
   }
-
-  // ────────────────────────────────────────────────────────────────
-  // PHONE VERIFICATION (Tier 2 OTP)
-  // ────────────────────────────────────────────────────────────────
 
   String? _pendingVerificationId;
   int? _pendingResendToken;
@@ -133,13 +123,13 @@ class AuthService {
             }
             onAutoVerified();
           } catch (e) {
-            debugPrint('📱 Auto-verify link failed: $e');
+            debugPrint('Auto-verify link failed: $e');
             onError(e.toString());
           }
         },
 
         verificationFailed: (FirebaseAuthException e) {
-          debugPrint('📱 Phone verification failed: ${e.code} - ${e.message}');
+          debugPrint('Phone verification failed: ${e.code} - ${e.message}');
           onError(e.message ?? 'Phone verification failed');
         },
 
@@ -156,7 +146,7 @@ class AuthService {
         forceResendingToken: _pendingResendToken,
       );
     } catch (e) {
-      debugPrint('📱 startPhoneVerification error: $e');
+      debugPrint('startPhoneVerification error: $e');
       onError(e.toString());
     }
   }
@@ -167,7 +157,7 @@ class AuthService {
   Future<bool> confirmPhoneCode(String smsCode) async {
     final verificationId = _pendingVerificationId;
     if (verificationId == null) {
-      debugPrint('📱 No pending verification ID');
+      debugPrint('No pending verification ID');
       return false;
     }
 
@@ -180,23 +170,20 @@ class AuthService {
       final user = _auth.currentUser;
       if (user != null) {
         await user.linkWithCredential(credential);
-        debugPrint('📱 Phone linked to ${user.uid}');
+        debugPrint('Phone linked to ${user.uid}');
       } else {
         await _auth.signInWithCredential(credential);
-        debugPrint('📱 Signed in via phone');
+        debugPrint('Signed in via phone');
       }
       return true;
     } on FirebaseAuthException catch (e) {
-      debugPrint('📱 confirmPhoneCode failed: ${e.code} - ${e.message}');
+      debugPrint('confirmPhoneCode failed: ${e.code} - ${e.message}');
       return false;
     } catch (e) {
-      debugPrint('📱 confirmPhoneCode error: $e');
+      debugPrint('confirmPhoneCode error: $e');
       return false;
     }
   }
 
-  /// Get the phone number linked to the current user (if any).
   String? get currentPhoneNumber => _auth.currentUser?.phoneNumber;
-
-
 }

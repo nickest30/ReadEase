@@ -7,6 +7,7 @@ import '../../models/parent.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/cloud_sync_service.dart';
+import '../../services/sfx_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/parent_provider.dart';
 import '../../utils/app_theme.dart';
@@ -49,14 +50,13 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
+    SfxService.tap();
 
-    // Capture providers BEFORE any await
     final authProvider = context.read<AuthProvider>();
     final parentProvider = context.read<ParentProvider>();
 
     final identifier = _identifierController.text.trim().toLowerCase();
 
-    // ── Rate limit gate ──
     final remaining = await DatabaseService.instance
         .loginRateLimitRemaining(identifier);
     if (remaining != null) {
@@ -90,7 +90,6 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
         return;
       }
 
-      // Username path (local-only)
       final localParent = await DatabaseService.instance
           .getParentByUsername(input.toLowerCase());
 
@@ -113,9 +112,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
 
         try {
           await authProvider.signIn(localParent.email, password);
-        } catch (_) {
-          // Offline, proceed
-        }
+        } catch (_) {}
 
         await DatabaseService.instance.clearLoginAttempts(identifier);
         if (!mounted) return;
@@ -136,7 +133,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
         _isSubmitting = false;
       });
     } catch (e) {
-      debugPrint('🔑 Parent login ERROR: $e');
+      debugPrint('Parent login ERROR: $e');
       if (!mounted) return;
       setState(() {
         _errorMessage = 'Something went wrong. Please try again.';
@@ -145,7 +142,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
     }
   }
 
-    Future<void> _loginWithEmail({
+  Future<void> _loginWithEmail({
     required String email,
     required String password,
     required String identifier,
@@ -168,7 +165,6 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       return;
     }
 
-    // Fast path, already local
     Parent? localParent;
     final allParents = await DatabaseService.instance.getAllParents();
     for (final p in allParents) {
@@ -192,11 +188,6 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       return;
     }
 
-        // ── Second-factor gate (phone OR backup code) ──
-    // A user has a second factor if either:
-    //   1. phoneVerified == true (SMS OTP available), OR
-    //   2. backupCodeHash is set (backup code usable)
-    // On a new/untrusted device, we challenge for whichever is available.
     final cloudDoc = await FirestoreService.instance.getParentByUidFull(uid);
 
     final phoneVerified = cloudDoc?['phoneVerified'] == true;
@@ -226,10 +217,8 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
 
     if (!mounted) return;
 
-    // Continue with local save + dashboard
     if (localParent != null) {
       await DatabaseService.instance.clearLoginAttempts(identifier);
-      // Refresh classes/children
       if (localParent.firebaseUid != null) {
         try {
           await CloudSyncService.instance.downloadParentChildren(
@@ -237,7 +226,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
             firebaseUid: localParent.firebaseUid!,
           );
         } catch (e) {
-          debugPrint('☁️ Children refresh failed: $e');
+          debugPrint('Children refresh failed: $e');
         }
       }
       if (!mounted) return;
@@ -246,7 +235,6 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       return;
     }
 
-    // Not local, create from cloud doc
     if (cloudDoc == null) {
       if (!mounted) return;
       setState(() {
@@ -299,24 +287,12 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
     Navigator.of(context).pushReplacementNamed('/parent-dashboard');
   }
 
-  /// Show OTP screen with backup-code fallback.
-  /// Returns true if user successfully passed 2FA.
-    /// Runs the 2FA challenge for a returning user on a new device.
-  ///
-  /// Order of preference:
-  ///   1. If a phone is set AND verified, try OTP first.
-  ///   2. If OTP fails (billing disabled, network, etc.), silently fall
-  ///      through to backup code, with a friendly snackbar.
-  ///   3. If only a backup code is available, prompt for it directly.
-  ///
-  /// Returns true if the user successfully completed 2FA.
   Future<bool> _runLogin2FAFlow({
     required AuthProvider authProvider,
     required String? phoneNumber,
     required String? backupHash,
     required String uid,
   }) async {
-    // ── Try OTP first, if a phone is available ──
     if (phoneNumber != null && phoneNumber.isNotEmpty) {
       final otpOk = await _tryOtpFlow(
         authProvider: authProvider,
@@ -328,7 +304,6 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
         return true;
       }
 
-      // OTP failed. Fall through to backup code if we have one.
       if (!mounted) return false;
       if (backupHash != null && backupHash.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -343,9 +318,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
         );
         await Future.delayed(const Duration(milliseconds: 1200));
         if (!mounted) return false;
-        // fall through to backup code
       } else {
-        // No backup code to fall back to
         if (!mounted) return false;
         setState(() {
           _errorMessage =
@@ -356,7 +329,6 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       }
     }
 
-    // ── Backup code path ──
     if (backupHash == null || backupHash.isEmpty) {
       if (!mounted) return false;
       setState(() {
@@ -373,8 +345,6 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
     );
   }
 
-  /// Try to run the OTP flow. Returns true on successful verification.
-  /// Returns false on any failure (billing, network, user cancel).
   Future<bool> _tryOtpFlow({
     required AuthProvider authProvider,
     required String phoneNumber,
@@ -393,7 +363,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
         if (!completer.isCompleted) completer.complete(true);
       },
       onError: (msg) {
-        debugPrint('📱 OTP send failed: $msg');
+        debugPrint('OTP send failed: $msg');
         if (!completer.isCompleted) completer.complete(false);
       },
     );
@@ -417,8 +387,6 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
     return verified == true;
   }
 
-  /// Prompt for backup code entry. On success, rotates the code, shows
-  /// the new code to the user, and trusts the device.
   Future<bool> _runBackupCodeFlow({
     required AuthProvider authProvider,
     required String uid,
@@ -440,13 +408,11 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
 
     if (newCode == null || !mounted) return false;
 
-    // Rotate, hash + save locally + push to cloud
     final newHash = BCrypt.hashpw(newCode, BCrypt.gensalt());
     await FirestoreService.instance.rotateBackupCode(uid, 'parent', newHash);
 
     if (!mounted) return false;
 
-    // Show the new code (single-use pattern)
     await BackupCodeDialog.show(
       context,
       code: newCode,
@@ -462,126 +428,135 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
     return Scaffold(
       backgroundColor: AppColors.parentBg,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: AppSpacing.md),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: AppSpacing.md),
 
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.arrow_back,
-                      color: AppColors.textPrimary),
-                  alignment: Alignment.centerLeft,
-                  padding: EdgeInsets.zero,
-                ),
+                    IconButton(
+                      onPressed: () {
+                        SfxService.tap();
+                        Navigator.of(context).pop();
+                      },
+                      icon: const Icon(Icons.arrow_back,
+                          color: AppColors.textPrimary),
+                      alignment: Alignment.centerLeft,
+                      padding: EdgeInsets.zero,
+                    ),
 
-                const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: AppSpacing.sm),
 
-                const Text('Welcome Back!', style: AppText.h1),
-                const SizedBox(height: 2),
-                const Text('Sign in to continue', style: AppText.caption),
+                    const Text('Welcome Back!', style: AppText.h1),
+                    const SizedBox(height: 2),
+                    const Text('Sign in to continue', style: AppText.caption),
 
-                const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.xl),
 
-                const FieldLabel('Username or Email'),
-                TextFormField(
-                  controller: _identifierController,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  validator: Validators.usernameOrEmail,
-                  decoration: buildInputDecoration(
-                    hint: 'Enter username or email',
-                    focusColor: AppColors.accentPurple,
-                  ),
-                ),
+                    const FieldLabel('Username or Email'),
+                    TextFormField(
+                      controller: _identifierController,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      validator: Validators.usernameOrEmail,
+                      decoration: buildInputDecoration(
+                        hint: 'Enter username or email',
+                        focusColor: AppColors.accentPurple,
+                      ),
+                    ),
 
-                const SizedBox(height: AppSpacing.lg),
+                    const SizedBox(height: AppSpacing.lg),
 
-                const FieldLabel('Password'),
-                PasswordField(
-                  controller: _passwordController,
-                  hintText: 'Enter your password',
-                  textInputAction: TextInputAction.done,
-                  focusColor: AppColors.accentPurple,
-                  validator: (v) => (v == null || v.isEmpty)
-                      ? 'Please enter your password'
-                      : null,
-                ),
+                    const FieldLabel('Password'),
+                    PasswordField(
+                      controller: _passwordController,
+                      hintText: 'Enter your password',
+                      textInputAction: TextInputAction.done,
+                      focusColor: AppColors.accentPurple,
+                      validator: (v) => (v == null || v.isEmpty)
+                          ? 'Please enter your password'
+                          : null,
+                    ),
 
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const ForgotPasswordScreen(
-                            role: ForgotPasswordRole.parent,
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          SfxService.tap();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ForgotPasswordScreen(
+                                role: ForgotPasswordRole.parent,
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Forgot password?',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: AppColors.accentPurple,
                           ),
                         ),
-                      );
-                    },
-                    child: const Text(
-                      'Forgot password?',
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        color: AppColors.accentPurple,
                       ),
                     ),
-                  ),
-                ),
 
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    _errorMessage!,
-                    style: const TextStyle(
-                      color: AppColors.textCoral,
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: AppSpacing.xl),
-
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isSubmitting ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentPurple,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.large),
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                          color: AppColors.textCoral,
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : const Text(
-                            'LOGIN',
-                            style: TextStyle(
-                              fontFamily: 'Nunito',
-                              fontWeight: FontWeight.w700,
-                            ),
+                    ],
+
+                    const SizedBox(height: AppSpacing.xl),
+
+                    SizedBox(
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _isSubmitting ? null : _handleLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accentPurple,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.large),
                           ),
-                  ),
-                ),
+                        ),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : const Text(
+                                'LOGIN',
+                                style: TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                      ),
+                    ),
 
-                const SizedBox(height: AppSpacing.xl),
-              ],
+                    const SizedBox(height: AppSpacing.xl),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../models/parent.dart';
 
 class ParentProvider extends ChangeNotifier {

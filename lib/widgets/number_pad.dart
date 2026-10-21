@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+
 import '../utils/app_theme.dart';
 
 /// Circular numeric keypad used on all PIN screens.
 /// Backspace is rendered with [Icons.backspace_rounded] so it stays
 /// optically centered inside the circle.
+///
+/// Note: this widget is presentation-only. It does NOT play SFX — the
+/// calling screen is responsible for that, since the screen already
+/// knows the semantic context (correct digit, error state, etc.).
 class NumberPad extends StatelessWidget {
   final void Function(String) onDigit;
   final VoidCallback onBackspace;
@@ -33,7 +38,9 @@ class NumberPad extends StatelessWidget {
           return Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: row.map((key) {
-              if (key.isEmpty) return const SizedBox(width: 72, height: 64);
+              if (key.isEmpty) {
+                return const SizedBox(width: 72, height: 64);
+              }
               return Padding(
                 padding: const EdgeInsets.all(6),
                 child: SizedBox(
@@ -41,7 +48,13 @@ class NumberPad extends StatelessWidget {
                   height: 64,
                   child: ElevatedButton(
                     onPressed: enabled
-                        ? () => key == '⌫' ? onBackspace() : onDigit(key)
+                        ? () {
+                            if (key == '⌫') {
+                              onBackspace();
+                            } else {
+                              onDigit(key);
+                            }
+                          }
                         : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.surface,

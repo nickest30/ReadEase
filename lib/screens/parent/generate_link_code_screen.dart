@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../providers/parent_provider.dart';
 import '../../services/firestore_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 
 class GenerateLinkCodeScreen extends StatefulWidget {
@@ -22,13 +24,32 @@ class _GenerateLinkCodeScreenState extends State<GenerateLinkCodeScreen> {
   String? _error;
 
   Future<void> _generate() async {
+    SfxService.tap();
+    
     final authProvider = context.read<AuthProvider>();
     final parentProvider = context.read<ParentProvider>();
+    final connectivity = context.read<ConnectivityProvider>();
     final parent = parentProvider.currentParent;
     final parentUid = authProvider.uid;
 
     if (parent == null || parentUid == null) {
       setState(() => _error = 'Not signed in as parent.');
+      return;
+    }
+
+    if (!connectivity.isOnline) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'You need to be online to generate a link code.',
+              style: TextStyle(fontFamily: 'Nunito'),
+            ),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
       return;
     }
 
@@ -57,6 +78,7 @@ class _GenerateLinkCodeScreenState extends State<GenerateLinkCodeScreen> {
 
   void _copyCode() {
     if (_code == null) return;
+    SfxService.tap();
     Clipboard.setData(ClipboardData(text: _code!));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -84,229 +106,235 @@ class _GenerateLinkCodeScreenState extends State<GenerateLinkCodeScreen> {
     return Scaffold(
       backgroundColor: AppColors.parentBg,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppSpacing.md),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: AppSpacing.md),
 
-              IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.arrow_back,
-                    color: AppColors.textPrimary),
-                alignment: Alignment.centerLeft,
-                padding: EdgeInsets.zero,
-              ),
+                  IconButton(
+                    onPressed: () {
+                      SfxService.tap();
+                      Navigator.of(context).pop();
+                    },
+                    icon: const Icon(Icons.arrow_back,
+                        color: AppColors.textPrimary),
+                    alignment: Alignment.centerLeft,
+                    padding: EdgeInsets.zero,
+                  ),
 
-              const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.sm),
 
-              const Text('Link Code', style: AppText.h1),
-              const SizedBox(height: 2),
-              const Text(
-                'Share this code with your child',
-                style: AppText.caption,
-              ),
+                  const Text('Link Code', style: AppText.h1),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Share this code with your child',
+                    style: AppText.caption,
+                  ),
 
-              const SizedBox(height: AppSpacing.xl),
+                  const SizedBox(height: AppSpacing.xl),
 
-              // Motter
-              Center(
-                child: Image.asset(
-                  'assets/images/mascot/motter_base.png',
-                  width: 140,
-                  height: 140,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => Container(
-                    width: 140,
-                    height: 140,
+                  Center(
+                    child: Image.asset(
+                      'assets/images/mascot/motter_base.png',
+                      width: 140,
+                      height: 140,
+                      fit: BoxFit.contain,
+                      cacheWidth: 280,
+                      errorBuilder: (_, _, _) => Container(
+                        width: 140,
+                        height: 140,
+                        decoration: BoxDecoration(
+                          color: AppColors.accentPurple.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.accentPurple,
+                            width: 2,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.vpn_key_rounded,
+                          size: 60,
+                          color: AppColors.accentPurple,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: AppSpacing.lg),
+
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     decoration: BoxDecoration(
-                      color: AppColors.accentPurple.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.accentPurple,
-                        width: 2,
-                      ),
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.large),
+                      border: Border.all(color: AppColors.border),
                     ),
-                    child: const Icon(
-                      Icons.vpn_key_rounded,
-                      size: 60,
-                      color: AppColors.accentPurple,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'How it works',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        SizedBox(height: AppSpacing.sm),
+                        Text(
+                          '1. Generate a code below\n'
+                          '2. Give it to your child\n'
+                          '3. Child enters it in their app\n'
+                          '4. You can now see their progress',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontSize: 13,
+                            color: AppColors.textMuted,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ),
 
-              const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: AppSpacing.lg),
 
-              // How it works
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.large),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'How it works',
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    SizedBox(height: AppSpacing.sm),
-                    Text(
-                      '1. Generate a code below\n'
-                      '2. Give it to your child\n'
-                      '3. Child enters it in their app\n'
-                      '4. You can now see their progress',
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 13,
-                        color: AppColors.textMuted,
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.lg),
-
-              // Code display
-              if (_code != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.xl),
-                    border: Border.all(
-                      color: AppColors.accentPurple,
-                      width: 3,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.accentPurple.withValues(alpha: 0.2),
-                        blurRadius: 20,
-                        spreadRadius: 3,
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'YOUR CODE',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.5,
-                          color: AppColors.textMuted,
+                  if (_code != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.xl),
+                        border: Border.all(
+                          color: AppColors.accentPurple,
+                          width: 3,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.accentPurple.withValues(alpha: 0.2),
+                            blurRadius: 20,
+                            spreadRadius: 3,
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        _code!,
-                        style: const TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 42,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPurple,
-                          letterSpacing: 8,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        _timeRemaining(),
-                        style: const TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton.icon(
-                          onPressed: _copyCode,
-                          icon: const Icon(Icons.copy_rounded),
-                          label: const Text(
-                            'COPY CODE',
+                      child: Column(
+                        children: [
+                          const Text(
+                            'YOUR CODE',
                             style: TextStyle(
                               fontFamily: 'Nunito',
-                              fontWeight: FontWeight.w700,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.5,
+                              color: AppColors.textMuted,
                             ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accentPurple,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.medium),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            _code!,
+                            style: const TextStyle(
+                              fontFamily: 'Nunito',
+                              fontSize: 42,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPurple,
+                              letterSpacing: 8,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            _timeRemaining(),
+                            style: const TextStyle(
+                              fontFamily: 'Nunito',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textMuted,
                             ),
                           ),
+                          const SizedBox(height: AppSpacing.md),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton.icon(
+                              onPressed: _copyCode,
+                              icon: const Icon(Icons.copy_rounded),
+                              label: const Text(
+                                'COPY CODE',
+                                style: TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.accentPurple,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.medium),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
+
+                  if (_error != null) ...[
+                    Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.textCoral,
+                        fontFamily: 'Nunito',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: _generating ? null : _generate,
+                      icon: _generating
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : const Icon(Icons.refresh_rounded),
+                      label: Text(
+                        _code == null ? 'GENERATE CODE' : 'GENERATE NEW CODE',
+                        style: const TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-              ],
-
-              if (_error != null) ...[
-                Text(
-                  _error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.textCoral,
-                    fontFamily: 'Nunito',
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-              ],
-
-              SizedBox(
-                height: 56,
-                child: ElevatedButton.icon(
-                  onPressed: _generating ? null : _generate,
-                  icon: _generating
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.5,
-                          ),
-                        )
-                      : const Icon(Icons.refresh_rounded),
-                  label: Text(
-                    _code == null ? 'GENERATE CODE' : 'GENERATE NEW CODE',
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accentPurple,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.large),
+                        ),
+                      ),
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentPurple,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.large),
-                    ),
-                  ),
-                ),
+
+                  const SizedBox(height: AppSpacing.xl),
+                ],
               ),
-
-              const SizedBox(height: AppSpacing.xl),
-            ],
+            ),
           ),
         ),
       ),

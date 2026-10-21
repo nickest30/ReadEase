@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
+
+import '../services/sfx_service.dart';
 import '../utils/app_theme.dart';
 
+/// Contextual help button shown on games and complex screens.
+///
+/// Opens a dialog with a [title], a short [description], and an
+/// ordered list of [steps] rendered as bullet points. Intended to be
+/// placed in the AppBar or header row so young learners can always
+/// access instructions without leaving the current activity.
 class InfoButton extends StatelessWidget {
   final String title;
   final String description;
@@ -23,7 +31,10 @@ class InfoButton extends StatelessWidget {
         backgroundColor: AppColors.surface,
         title: Row(
           children: [
-            const Icon(Icons.info_outline_rounded, color: AppColors.accentTeal),
+            const Icon(
+              Icons.info_outline_rounded,
+              color: AppColors.accentTeal,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -47,31 +58,52 @@ class InfoButton extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             ...steps.map((step) => Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.accentTeal)),
-                  Expanded(
-                    child: Text(
-                      step,
-                      style: const TextStyle(fontFamily: 'Nunito', fontSize: 13, color: AppColors.textMuted),
-                    ),
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '• ',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.accentTeal,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          step,
+                          style: const TextStyle(
+                            fontFamily: 'Nunito',
+                            fontSize: 13,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            )),
+                )),
           ],
         ),
         actions: [
           ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop();
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentTeal,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: const Text('Got it!', style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w700)),
+            child: const Text(
+              'Got it!',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -81,8 +113,14 @@ class InfoButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      onPressed: () => _showInfo(context),
-      icon: const Icon(Icons.help_outline_rounded, color: AppColors.accentTeal),
+      onPressed: () {
+        SfxService.tap();
+        _showInfo(context);
+      },
+      icon: const Icon(
+        Icons.help_outline_rounded,
+        color: AppColors.accentTeal,
+      ),
       tooltip: 'How to play',
     );
   }

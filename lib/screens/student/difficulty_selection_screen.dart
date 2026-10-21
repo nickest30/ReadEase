@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 
 class DifficultySelectionScreen extends StatefulWidget {
@@ -31,7 +32,13 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
     if (_checking) return;
     _checking = true;
 
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map) {
+      _checking = false;
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+    
     final gradeLevel = args['gradeLevel'] as int;
     final student = context.read<StudentProvider>().currentStudent;
 
@@ -57,7 +64,22 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/student-home',
+            (route) => false,
+          );
+        }
+      });
+      return const Scaffold(
+        backgroundColor: AppColors.studentBg,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final gradeLevel = args['gradeLevel'] as int;
     final student = context.watch<StudentProvider>().currentStudent;
 
@@ -79,89 +101,91 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
     return Scaffold(
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppSpacing.md),
-
-              IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-                alignment: Alignment.centerLeft,
-                padding: EdgeInsets.zero,
-              ),
-
-              const SizedBox(height: AppSpacing.sm),
-
-              // Header
-              Row(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Choose Difficulty', style: AppText.h1),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          'Grade $gradeLevel lessons',
-                          style: AppText.caption,
+                  const SizedBox(height: AppSpacing.md),
+                  IconButton(
+                    onPressed: () {
+                      SfxService.tap();
+                      Navigator.of(context).pop();
+                    },
+                    icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                    alignment: Alignment.centerLeft,
+                    padding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Choose Difficulty', style: AppText.h1),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              'Grade $gradeLevel lessons',
+                              style: AppText.caption,
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
+                      const _YseImage(
+                        assetPath: 'assets/images/mascot/yse_proud.png',
+                        size: 90,
+                        fallbackIcon: Icons.emoji_events_rounded,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  if (_loading)
+                    const Expanded(
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else ...[
+                    _DifficultyCard(
+                      emoji: '😎',
+                      label: 'Easy',
+                      sublabel: 'Unlocked',
+                      unlocked: true,
+                      color: AppColors.accentGreen,
+                      onTap: () =>
+                          _goToLesson(context, student, gradeLevel, 'easy'),
                     ),
-                  ),
-                  const _YseImage(
-                    assetPath: 'assets/images/mascot/yse_proud.png',
-                    size: 90,
-                    fallbackIcon: Icons.emoji_events_rounded,
-                  ),
+                    const SizedBox(height: AppSpacing.md),
+                    _DifficultyCard(
+                      emoji: '😐',
+                      label: 'Medium',
+                      sublabel:
+                          _mediumUnlocked ? 'Unlocked' : 'Complete Easy first',
+                      unlocked: _mediumUnlocked,
+                      color: AppColors.accentOrange,
+                      onTap: _mediumUnlocked
+                          ? () => _goToLesson(context, student, gradeLevel, 'medium')
+                          : null,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    _DifficultyCard(
+                      emoji: '😤',
+                      label: 'Hard',
+                      sublabel:
+                          _hardUnlocked ? 'Unlocked' : 'Complete Medium first',
+                      unlocked: _hardUnlocked,
+                      color: AppColors.accentCoral,
+                      onTap: _hardUnlocked
+                          ? () => _goToLesson(context, student, gradeLevel, 'hard')
+                          : null,
+                    ),
+                    const Spacer(),
+                  ],
                 ],
               ),
-
-              const SizedBox(height: AppSpacing.xl),
-
-              if (_loading)
-                const Expanded(
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else ...[
-                _DifficultyCard(
-                  emoji: '😎',
-                  label: 'Easy',
-                  sublabel: 'Unlocked',
-                  unlocked: true,
-                  color: AppColors.accentGreen,
-                  onTap: () =>
-                      _goToLesson(context, student, gradeLevel, 'easy'),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                _DifficultyCard(
-                  emoji: '😐',
-                  label: 'Medium',
-                  sublabel:
-                      _mediumUnlocked ? 'Unlocked' : 'Complete Easy first',
-                  unlocked: _mediumUnlocked,
-                  color: AppColors.accentOrange,
-                  onTap: _mediumUnlocked
-                      ? () => _goToLesson(context, student, gradeLevel, 'medium')
-                      : null,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                _DifficultyCard(
-                  emoji: '😤',
-                  label: 'Hard',
-                  sublabel:
-                      _hardUnlocked ? 'Unlocked' : 'Complete Medium first',
-                  unlocked: _hardUnlocked,
-                  color: AppColors.accentCoral,
-                  onTap: _hardUnlocked
-                      ? () => _goToLesson(context, student, gradeLevel, 'hard')
-                      : null,
-                ),
-                const Spacer(),
-              ],
-            ],
+            ),
           ),
         ),
       ),
@@ -183,10 +207,6 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────
-// Private widgets
-// ─────────────────────────────────────────────────────────
 
 class _DifficultyCard extends StatelessWidget {
   final String emoji;
@@ -210,7 +230,12 @@ class _DifficultyCard extends StatelessWidget {
     return Opacity(
       opacity: unlocked ? 1.0 : 0.5,
       child: InkWell(
-        onTap: onTap,
+        onTap: onTap == null
+            ? null
+            : () {
+                SfxService.tap();
+                onTap!();
+              },
         borderRadius: BorderRadius.circular(AppRadius.large),
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -224,7 +249,6 @@ class _DifficultyCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Emoji in colored container
               Container(
                 width: 52,
                 height: 52,
@@ -237,7 +261,6 @@ class _DifficultyCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,7 +281,6 @@ class _DifficultyCard extends StatelessWidget {
                   ],
                 ),
               ),
-
               if (unlocked)
                 Icon(Icons.chevron_right_rounded, color: color, size: 28)
               else
@@ -292,6 +314,7 @@ class _YseImage extends StatelessWidget {
       assetPath,
       width: size,
       height: size,
+      cacheWidth: (size * 2).toInt(),
       fit: BoxFit.contain,
       errorBuilder: (context, error, stackTrace) {
         return Container(

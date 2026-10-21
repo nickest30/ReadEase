@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/student.dart';
 import '../../models/word.dart';
 import '../../services/database_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/analytics_widgets.dart';
 
@@ -36,7 +37,19 @@ class _TeacherStudentProgressScreenState
   }
 
   Future<void> _loadData() async {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map || args['student'] is! Student) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/teacher-dashboard',
+            (route) => false,
+          );
+        }
+      });
+      return;
+    }
+
     final student = args['student'] as Student;
 
     if (student.id == null) {
@@ -72,7 +85,7 @@ class _TeacherStudentProgressScreenState
         _loading = false;
       });
     } catch (e) {
-      debugPrint('📊 TeacherStudentProgress load ERROR: $e');
+      debugPrint('TeacherStudentProgress load ERROR: $e');
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -94,51 +107,66 @@ class _TeacherStudentProgressScreenState
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map || args['student'] is! Student) {
+      return const Scaffold(
+        backgroundColor: AppColors.teacherBg,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final student = args['student'] as Student;
 
     return Scaffold(
       backgroundColor: AppColors.teacherBg,
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.md,
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back,
-                        color: AppColors.textPrimary),
-                    padding: EdgeInsets.zero,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                    vertical: AppSpacing.md,
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(student.displayName,
-                            style: AppText.h2,
-                            overflow: TextOverflow.ellipsis),
-                        Text('Grade ${student.gradeLevel}',
-                            style: AppText.caption),
-                      ],
-                    ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          SfxService.tap();
+                          Navigator.of(context).pop();
+                        },
+                        icon: const Icon(Icons.arrow_back,
+                            color: AppColors.textPrimary),
+                        padding: EdgeInsets.zero,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(student.displayName,
+                                style: AppText.h2,
+                                overflow: TextOverflow.ellipsis),
+                            Text('Grade ${student.gradeLevel}',
+                                style: AppText.caption),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                Expanded(
+                  child: _loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _attempts.isEmpty
+                          ? _buildEmpty()
+                          : _buildContent(),
+                ),
+              ],
             ),
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _attempts.isEmpty
-                      ? _buildEmpty()
-                      : _buildContent(),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -155,6 +183,7 @@ class _TeacherStudentProgressScreenState
               'assets/images/mascot/groo_reading.png',
               width: 180,
               height: 180,
+              cacheWidth: 360,
               errorBuilder: (_, _, _) => const Icon(
                 Icons.menu_book_rounded,
                 size: 80,
@@ -227,13 +256,11 @@ class _TeacherStudentProgressScreenState
           ),
           const SizedBox(height: AppSpacing.lg),
 
-          // ── Question-type breakdown ──
           if (_questionTypeStats.isNotEmpty) ...[
             QuestionTypeBreakdown(stats: _questionTypeStats),
             const SizedBox(height: AppSpacing.lg),
           ],
 
-          // ── Word mastery donut ──
           if (masteryTotal > 0) ...[
             MasteryDonut(
               mastered: _masteryBreakdown['mastered'] ?? 0,

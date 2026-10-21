@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../services/sfx_service.dart';
 import '../utils/app_theme.dart';
 
 /// Banner shown on parent/teacher dashboards when email isn't verified.
@@ -61,6 +62,7 @@ class _EmailVerificationBannerState extends State<EmailVerificationBanner> {
 
   Future<void> _sendVerification() async {
     if (_sending || _cooldownRemaining > 0) return;
+    SfxService.tap();
     setState(() => _sending = true);
 
     final authProvider = context.read<AuthProvider>();
@@ -79,7 +81,7 @@ class _EmailVerificationBannerState extends State<EmailVerificationBanner> {
       );
       _startCooldown();
     } catch (e) {
-      debugPrint('📧 resend failed: $e');
+      debugPrint('Email verification resend failed: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -164,9 +166,7 @@ class _EmailVerificationBannerState extends State<EmailVerificationBanner> {
                     ),
                   )
                 : Text(
-                    onCooldown
-                        ? _formatCooldown()
-                        : 'Resend',
+                    onCooldown ? _formatCooldown() : 'Resend',
                     style: const TextStyle(
                       fontFamily: 'Nunito',
                       fontWeight: FontWeight.w700,

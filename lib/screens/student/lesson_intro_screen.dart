@@ -5,11 +5,9 @@ import 'package:provider/provider.dart';
 import '../../models/content_models.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 
-/// Lesson Intro, shown before the Introduce phase every session.
-/// Layout: header + body + button centered vertically. Yse large
-/// in the bottom-left corner.
 class LessonIntroScreen extends StatefulWidget {
   const LessonIntroScreen({super.key});
 
@@ -37,7 +35,19 @@ class _LessonIntroScreenState extends State<LessonIntroScreen> {
   }
 
   Future<void> _load() async {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/student-home',
+            (route) => false,
+          );
+        }
+      });
+      return;
+    }
+
     final gradeLevel = args['gradeLevel'] as int;
     final difficulty = args['difficulty'] as String;
 
@@ -79,13 +89,17 @@ class _LessonIntroScreenState extends State<LessonIntroScreen> {
       await _audioPlayer.stop();
       await _audioPlayer.play(AssetSource('audio/intros/$filename'));
     } catch (e) {
-      debugPrint('🔊 Lesson intro audio missing: $e');
+      debugPrint('Lesson intro audio missing: $e');
     }
   }
 
   void _onLetsGo() {
+    SfxService.tap();
     _audioPlayer.stop();
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
+    
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map) return;
+    
     Navigator.of(context).pushReplacementNamed(
       '/lesson-play',
       arguments: {
@@ -109,8 +123,10 @@ class _LessonIntroScreenState extends State<LessonIntroScreen> {
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Text(_error ?? 'Could not load intro.',
-                style: AppText.body),
+            child: Text(
+              _error ?? 'Could not load intro.',
+              style: AppText.body,
+            ),
           ),
         ),
       );
@@ -123,7 +139,6 @@ class _LessonIntroScreenState extends State<LessonIntroScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Yse bottom-left (big)
             Positioned(
               left: -20,
               bottom: -20,
@@ -131,6 +146,7 @@ class _LessonIntroScreenState extends State<LessonIntroScreen> {
                 'assets/images/mascot/${intro.poseAsset}',
                 width: 260,
                 height: 260,
+                cacheWidth: 520,
                 fit: BoxFit.contain,
                 errorBuilder: (_, _, _) => const SizedBox(
                   width: 260,
@@ -143,68 +159,69 @@ class _LessonIntroScreenState extends State<LessonIntroScreen> {
                 ),
               ),
             ),
-
-            // Center: header + body + button
             Positioned.fill(
               child: Center(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    left: AppSpacing.xl,
-                    right: AppSpacing.xl,
-                    // Reserve space so content doesn't sit under Yse
-                    bottom: 200,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        intro.header,
-                        textAlign: TextAlign.center,
-                        style: AppText.h1.copyWith(
-                          fontSize: 30,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Text(
-                        intro.body,
-                        textAlign: TextAlign.center,
-                        style: AppText.body.copyWith(
-                          fontSize: 18,
-                          height: 1.5,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xxl),
-                      SizedBox(
-                        height: 64,
-                        child: ElevatedButton(
-                          onPressed: _onLetsGo,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accentTeal,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.xxl,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.large),
-                            ),
-                            elevation: 3,
-                          ),
-                          child: Text(
-                            intro.buttonLabel,
-                            style: const TextStyle(
-                              fontFamily: 'Nunito',
-                              fontWeight: FontWeight.w800,
-                              fontSize: 20,
-                              letterSpacing: 0.5,
-                            ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      left: AppSpacing.xl,
+                      right: AppSpacing.xl,
+                      // Reserve space so content doesn't sit under Yse
+                      bottom: 200,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          intro.header,
+                          textAlign: TextAlign.center,
+                          style: AppText.h1.copyWith(
+                            fontSize: 30,
+                            height: 1.2,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: AppSpacing.lg),
+                        Text(
+                          intro.body,
+                          textAlign: TextAlign.center,
+                          style: AppText.body.copyWith(
+                            fontSize: 18,
+                            height: 1.5,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xxl),
+                        SizedBox(
+                          height: 64,
+                          child: ElevatedButton(
+                            onPressed: _onLetsGo,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.accentTeal,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.xxl,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.large),
+                              ),
+                              elevation: 3,
+                            ),
+                            child: Text(
+                              intro.buttonLabel,
+                              style: const TextStyle(
+                                fontFamily: 'Nunito',
+                                fontWeight: FontWeight.w800,
+                                fontSize: 20,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

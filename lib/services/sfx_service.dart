@@ -13,20 +13,20 @@ class SfxService {
   static Future<void> _play(String file) async {
     try {
       if (_settings != null && _settings!.sfxVolume <= 0) {
-        return; // Muted
+        return;
       }
-      
-      // DO NOT CALL _player.stop(); 
-      // audioplayers automatically interrupts the current sound when play() is called.
-      
+
+      // Do NOT call _player.stop() here. audioplayers automatically
+      // interrupts the current sound when play() is called, so calling
+      // stop() first just adds latency without changing the result.
+
       if (_settings != null) {
         await _player.setVolume(_settings!.sfxVolume);
       }
-      
+
       await _player.play(AssetSource('audio/sfx/$file'));
-      
     } catch (e) {
-      debugPrint('❌ SFX ERROR ($file): $e'); 
+      debugPrint('SFX failed ($file): $e');
     }
   }
 
@@ -37,4 +37,8 @@ class SfxService {
   static Future<void> celebration() => _play('sfx_celebration.mp3');
   static Future<void> transition() => _play('sfx_transition.mp3');
   static Future<void> unlock() => _play('sfx_unlock.mp3');
+
+  static Future<void> dispose() async {
+    await _player.dispose();
+  }
 }

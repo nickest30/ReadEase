@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/class_group.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/teacher_provider.dart';
 import '../../services/database_service.dart';
-import '../../utils/app_theme.dart';
-import '../../providers/auth_provider.dart';
 import '../../services/firestore_service.dart';
-
+import '../../services/sfx_service.dart';
+import '../../utils/app_theme.dart';
 
 class CreateClassScreen extends StatefulWidget {
   const CreateClassScreen({super.key});
@@ -34,7 +34,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
       return;
     }
 
-    // ── Capture providers BEFORE any await ──
+    SfxService.tap();
     final teacherProvider = context.read<TeacherProvider>();
     final authProvider = context.read<AuthProvider>();
     final teacher = teacherProvider.currentTeacher;
@@ -51,10 +51,8 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     });
 
     try {
-      // 1. Generate join code
       final joinCode = DatabaseService.instance.generateJoinCode();
 
-      // 2. Save class locally first (gets localId)
       final newGroup = ClassGroup(
         teacherId: teacher.id!,
         className: _classNameController.text.trim(),
@@ -67,7 +65,6 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
 
       if (!mounted) return;
 
-      // 3. Sync to Firestore (gets firestoreId)
       final teacherUid = authProvider.uid;
       if (teacherUid == null) {
         setState(() {
@@ -89,23 +86,21 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
       if (firestoreId.isEmpty) {
         setState(() {
           _errorMessage =
-              'Class saved on device, but cloud sync failed. Check the debug console for details.';
+              'Class saved on device, but cloud sync failed. Students cannot join until you are online.';
           _isSubmitting = false;
         });
         return;
       }
 
-      // 4. Save the Firestore ID back to local record
       await DatabaseService.instance.updateClassGroupFirestoreId(
         localId,
         firestoreId,
       );
 
-      debugPrint('✅ Class synced: $firestoreId with code $joinCode');
+      debugPrint('Class synced: $firestoreId with code $joinCode');
 
       if (!mounted) return;
 
-      // 5. Show the join code dialog
       await showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -161,7 +156,10 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
           ),
           actions: [
             ElevatedButton(
-              onPressed: () => Navigator.of(ctx).pop(),
+              onPressed: () {
+                SfxService.tap();
+                Navigator.of(ctx).pop();
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentYellow,
                 foregroundColor: AppColors.textPrimary,
@@ -197,188 +195,198 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     return Scaffold(
       backgroundColor: AppColors.teacherBg,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppSpacing.md),
-
-              IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.arrow_back,
-                    color: AppColors.textPrimary),
-                alignment: Alignment.centerLeft,
-                padding: EdgeInsets.zero,
-              ),
-
-              const SizedBox(height: AppSpacing.sm),
-
-              // Header row with Groo
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Create Class', style: AppText.h1),
-                        SizedBox(height: 2),
-                        Text(
-                          'Set up a class group',
-                          style: AppText.caption,
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: AppSpacing.md),
+
+                  IconButton(
+                    onPressed: () {
+                      SfxService.tap();
+                      Navigator.of(context).pop();
+                    },
+                    icon: const Icon(Icons.arrow_back,
+                        color: AppColors.textPrimary),
+                    alignment: Alignment.centerLeft,
+                    padding: EdgeInsets.zero,
                   ),
-                  Image.asset(
-                    'assets/images/mascot/groo_creating.png',
-                    width: 90,
-                    height: 90,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => Container(
-                      width: 90,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        color:
-                            AppColors.accentYellow.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.accentYellow,
-                          width: 2,
+
+                  const SizedBox(height: AppSpacing.sm),
+
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Create Class', style: AppText.h1),
+                            SizedBox(height: 2),
+                            Text(
+                              'Set up a class group',
+                              style: AppText.caption,
+                            ),
+                          ],
                         ),
                       ),
-                      child: const Icon(
-                        Icons.edit_note_rounded,
-                        color: AppColors.accentYellow,
-                        size: 42,
+                      Image.asset(
+                        'assets/images/mascot/groo_creating.png',
+                        width: 90,
+                        height: 90,
+                        fit: BoxFit.contain,
+                        cacheWidth: 180,
+                        errorBuilder: (_, _, _) => Container(
+                          width: 90,
+                          height: 90,
+                          decoration: BoxDecoration(
+                            color:
+                                AppColors.accentYellow.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.accentYellow,
+                              width: 2,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.edit_note_rounded,
+                            color: AppColors.accentYellow,
+                            size: 42,
+                          ),
+                        ),
                       ),
+                    ],
+                  ),
+
+                  const SizedBox(height: AppSpacing.xl),
+
+                  const Text(
+                    'Class Name',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textMuted,
                     ),
                   ),
+                  const SizedBox(height: 5),
+                  TextField(
+                    controller: _classNameController,
+                    decoration: _inputDecoration('e.g. Grade 3 - Section A'),
+                  ),
+
+                  const SizedBox(height: AppSpacing.lg),
+
+                  const Text(
+                    'Grade Level',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  GridView.count(
+                    crossAxisCount: 3,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    childAspectRatio: 2.4,
+                    children: List.generate(6, (index) {
+                      final grade = index + 1;
+                      final isSelected = _selectedGrade == grade;
+                      return GestureDetector(
+                        onTap: () {
+                          SfxService.tap();
+                          setState(() => _selectedGrade = grade);
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.accentYellow
+                                : AppColors.surface,
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.medium),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.accentYellow
+                                  : AppColors.border,
+                              width: isSelected ? 2 : 1,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Grade $grade',
+                              style: TextStyle(
+                                fontFamily: 'Nunito',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: isSelected
+                                    ? AppColors.textPrimary
+                                    : AppColors.textMuted,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      _errorMessage!,
+                      style: const TextStyle(
+                        color: AppColors.textCoral,
+                        fontFamily: 'Nunito',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: AppSpacing.xl),
+
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _isSubmitting ? null : _handleCreateClass,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accentYellow,
+                        foregroundColor: AppColors.textPrimary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.large),
+                        ),
+                      ),
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                color: AppColors.textPrimary,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : const Text(
+                              'CREATE CLASS',
+                              style: TextStyle(
+                                fontFamily: 'Nunito',
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                    ),
+                  ),
+
+                  const SizedBox(height: AppSpacing.xl),
                 ],
               ),
-
-              const SizedBox(height: AppSpacing.xl),
-
-              const Text(
-                'Class Name',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textMuted,
-                ),
-              ),
-              const SizedBox(height: 5),
-              TextField(
-                controller: _classNameController,
-                decoration: _inputDecoration('e.g. Grade 3 - Section A'),
-              ),
-
-              const SizedBox(height: AppSpacing.lg),
-
-              const Text(
-                'Grade Level',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textMuted,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-
-              GridView.count(
-                crossAxisCount: 3,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                childAspectRatio: 2.4,
-                children: List.generate(6, (index) {
-                  final grade = index + 1;
-                  final isSelected = _selectedGrade == grade;
-                  return GestureDetector(
-                    onTap: () =>
-                        setState(() => _selectedGrade = grade),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.accentYellow
-                            : AppColors.surface,
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.medium),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.accentYellow
-                              : AppColors.border,
-                          width: isSelected ? 2 : 1,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Grade $grade',
-                          style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
-                            color: isSelected
-                                ? AppColors.textPrimary
-                                : AppColors.textMuted,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-
-              if (_errorMessage != null) ...[
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  _errorMessage!,
-                  style: const TextStyle(
-                    color: AppColors.textCoral,
-                    fontFamily: 'Nunito',
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: AppSpacing.xl),
-
-              SizedBox(
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _handleCreateClass,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentYellow,
-                    foregroundColor: AppColors.textPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.large),
-                    ),
-                  ),
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: AppColors.textPrimary,
-                            strokeWidth: 2.5,
-                          ),
-                        )
-                      : const Text(
-                          'CREATE CLASS',
-                          style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.xl),
-            ],
+            ),
           ),
         ),
       ),

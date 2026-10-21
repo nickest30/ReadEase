@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/student.dart';
 import '../../models/word.dart';
 import '../../services/database_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/avatar_helper.dart';
 import '../../widgets/analytics_widgets.dart';
@@ -35,10 +36,18 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
   }
 
   Future<void> _loadData() async {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
-    final child = args['child'] as Student;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/parent-dashboard', (route) => false);
+        }
+      });
+      return;
+    }
 
-    if (child.id == null) {
+    final child = args['child'] as Student?;
+    if (child == null || child.id == null) {
       if (mounted) setState(() => _loading = false);
       return;
     }
@@ -71,7 +80,7 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
         _loading = false;
       });
     } catch (e) {
-      debugPrint('📊 ChildProgress load ERROR: $e');
+      debugPrint('ChildProgress load ERROR: $e');
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -93,75 +102,101 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
-    final child = args['child'] as Student;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map) {
+      return const Scaffold(
+        backgroundColor: AppColors.parentBg,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
+    final child = args['child'] as Student?;
+    if (child == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/parent-dashboard', (route) => false);
+        }
+      });
+      return const Scaffold(
+        backgroundColor: AppColors.parentBg,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.parentBg,
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.md,
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back,
-                        color: AppColors.textPrimary),
-                    padding: EdgeInsets.zero,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                    vertical: AppSpacing.md,
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  // Child avatar with purple ring (matches parent theme)
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: AppColors.accentPurple.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.accentPurple.withValues(alpha: 0.5),
-                        width: 2,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          SfxService.tap();
+                          Navigator.of(context).pop();
+                        },
+                        icon: const Icon(Icons.arrow_back,
+                            color: AppColors.textPrimary),
+                        padding: EdgeInsets.zero,
                       ),
-                    ),
-                    padding: const EdgeInsets.all(2),
-                    child: ClipOval(
-                      child: Image.asset(
-                        avatarAssetPath(child.avatarIndex),
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => _initialFallback(child),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${child.displayName}\'s Progress',
-                          style: AppText.h2,
-                          overflow: TextOverflow.ellipsis,
+                      const SizedBox(width: AppSpacing.sm),
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: AppColors.accentPurple.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.accentPurple.withValues(alpha: 0.5),
+                            width: 2,
+                          ),
                         ),
-                        Text('Grade ${child.gradeLevel}',
-                            style: AppText.caption),
-                      ],
-                    ),
+                        padding: const EdgeInsets.all(2),
+                        child: ClipOval(
+                          child: Image.asset(
+                            avatarAssetPath(child.avatarIndex),
+                            fit: BoxFit.cover,
+                            cacheWidth: 150,
+                            errorBuilder: (_, _, _) => _initialFallback(child),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${child.displayName}\'s Progress',
+                              style: AppText.h2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text('Grade ${child.gradeLevel}',
+                                style: AppText.caption),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                Expanded(
+                  child: _loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _attempts.isEmpty
+                          ? _buildEmpty()
+                          : _buildContent(),
+                ),
+              ],
             ),
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _attempts.isEmpty
-                      ? _buildEmpty()
-                      : _buildContent(),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -198,6 +233,7 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
               'assets/images/mascot/motter_gentle.png',
               width: 140,
               height: 140,
+              cacheWidth: 280,
               errorBuilder: (_, _, _) => const Icon(
                 Icons.family_restroom_rounded,
                 size: 80,
@@ -244,12 +280,12 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
         children: [
           const SizedBox(height: AppSpacing.sm),
 
-          // Motter presenting
           Image.asset(
             'assets/images/mascot/motter_presenting.png',
             width: 200,
             height: 200,
             fit: BoxFit.contain,
+            cacheWidth: 400,
             errorBuilder: (_, _, _) => Container(
               width: 200,
               height: 200,
@@ -297,13 +333,11 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
           ),
           const SizedBox(height: AppSpacing.lg),
 
-          // ── Question-type breakdown ──
           if (_questionTypeStats.isNotEmpty) ...[
             QuestionTypeBreakdown(stats: _questionTypeStats),
             const SizedBox(height: AppSpacing.lg),
           ],
 
-          // ── Word mastery donut ──
           if (masteryTotal > 0) ...[
             MasteryDonut(
               mastered: _masteryBreakdown['mastered'] ?? 0,

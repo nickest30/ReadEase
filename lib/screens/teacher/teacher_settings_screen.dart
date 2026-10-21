@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/teacher_provider.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/formatting.dart';
 import '../../widgets/about_modal.dart';
@@ -15,6 +16,14 @@ class TeacherSettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final teacher = context.watch<TeacherProvider>().currentTeacher;
     if (teacher == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/teacher-welcome',
+            (route) => false,
+          );
+        }
+      });
       return const Scaffold(
         backgroundColor: AppColors.teacherBg,
         body: Center(child: CircularProgressIndicator()),
@@ -24,172 +33,193 @@ class TeacherSettingsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.teacherBg,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppSpacing.md),
-
-              Row(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back,
-                        color: AppColors.textPrimary),
-                    padding: EdgeInsets.zero,
+                  const SizedBox(height: AppSpacing.md),
+
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          SfxService.tap();
+                          Navigator.of(context).pop();
+                        },
+                        icon: const Icon(Icons.arrow_back,
+                            color: AppColors.textPrimary),
+                        padding: EdgeInsets.zero,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Settings', style: AppText.h1),
+                            SizedBox(height: 2),
+                            Text('Manage your account', style: AppText.caption),
+                          ],
+                        ),
+                      ),
+                      Image.asset(
+                        'assets/images/mascot/groo_base.png',
+                        width: 70,
+                        height: 70,
+                        fit: BoxFit.contain,
+                        cacheWidth: 140,
+                        errorBuilder: (_, _, _) => const Icon(
+                          Icons.settings_rounded,
+                          size: 48,
+                          color: AppColors.accentYellow,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+
+                  const SizedBox(height: AppSpacing.lg),
+
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.large),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
                       children: [
-                        Text('Settings', style: AppText.h1),
-                        SizedBox(height: 2),
-                        Text('Manage your account', style: AppText.caption),
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: const BoxDecoration(
+                            color: AppColors.accentYellow,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              teacher.fullName.isNotEmpty
+                                  ? teacher.fullName[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(
+                                fontFamily: 'Nunito',
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                teacher.fullName,
+                                style: const TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              Text(teacher.username, style: AppText.caption),
+                              Text(
+                                maskEmail(teacher.email),
+                                style: AppText.caption,
+                              ),
+                              Text(
+                                teacher.schoolName,
+                                style: AppText.caption.copyWith(
+                                  color: AppColors.textYellow,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  Image.asset(
-                    'assets/images/mascot/groo_base.png',
-                    width: 70,
-                    height: 70,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => const Icon(
-                      Icons.settings_rounded,
-                      size: 48,
-                      color: AppColors.accentYellow,
-                    ),
+
+                  const SizedBox(height: AppSpacing.lg),
+
+                  _SettingCard(
+                    icon: Icons.shield_outlined,
+                    iconColor: AppColors.accentYellow,
+                    label: 'Account & Security',
+                    subtitle: 'Change password, phone, backup code',
+                    onTap: () {
+                      SfxService.tap();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const AccountSecurityScreen(role: 'teacher'),
+                        ),
+                      );
+                    },
                   ),
-                ],
-              ),
 
-              const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: AppSpacing.md),
 
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.large),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: const BoxDecoration(
-                        color: AppColors.accentYellow,
-                        shape: BoxShape.circle,
+                  _SettingCard(
+                    icon: Icons.key_rounded,
+                    iconColor: AppColors.accentOrange,
+                    label: 'Change Password',
+                    subtitle: 'Send a reset link to your email',
+                    onTap: () {
+                      SfxService.tap();
+                      _confirmChangePassword(context);
+                    },
+                  ),
+
+                  const SizedBox(height: AppSpacing.md),
+
+                  _SettingCard(
+                    icon: Icons.info_outline_rounded,
+                    iconColor: AppColors.accentTeal,
+                    label: 'About ReadEase',
+                    subtitle: 'Version, developers, privacy',
+                    onTap: () {
+                      SfxService.tap();
+                      AboutModal.show(context);
+                    },
+                  ),
+
+                  const SizedBox(height: AppSpacing.xl),
+
+                  SizedBox(
+                    height: 52,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        SfxService.tap();
+                        _confirmLogout(context);
+                      },
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text(
+                        'Log Out',
+                        style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                      child: Center(
-                        child: Text(
-                          teacher.fullName.isNotEmpty
-                              ? teacher.fullName[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            fontFamily: 'Nunito',
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textCoral,
+                        side: const BorderSide(color: AppColors.accentCoral),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.large),
                         ),
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            teacher.fullName,
-                            style: const TextStyle(
-                              fontFamily: 'Nunito',
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          Text(teacher.username, style: AppText.caption),
-                          Text(
-                            maskEmail(teacher.email),
-                            style: AppText.caption,
-                          ),
-                          Text(
-                            teacher.schoolName,
-                            style: AppText.caption.copyWith(
-                              color: AppColors.textYellow,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.lg),
-
-              _SettingCard(
-                icon: Icons.shield_outlined,
-                iconColor: AppColors.accentYellow,
-                label: 'Account & Security',
-                subtitle: 'Change password, phone, backup code',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        const AccountSecurityScreen(role: 'teacher'),
                   ),
-                ),
+
+                  const SizedBox(height: AppSpacing.xxl),
+                ],
               ),
-
-              const SizedBox(height: AppSpacing.md),
-
-              _SettingCard(
-                icon: Icons.key_rounded,
-                iconColor: AppColors.accentOrange,
-                label: 'Change Password',
-                subtitle: 'Send a reset link to your email',
-                onTap: () => _confirmChangePassword(context),
-              ),
-
-              const SizedBox(height: AppSpacing.md),
-
-              _SettingCard(
-                icon: Icons.info_outline_rounded,
-                iconColor: AppColors.accentTeal,
-                label: 'About ReadEase',
-                subtitle: 'Version, developers, privacy',
-                onTap: () => AboutModal.show(context),
-              ),
-
-              const SizedBox(height: AppSpacing.xl),
-
-              SizedBox(
-                height: 52,
-                child: OutlinedButton.icon(
-                  onPressed: () => _confirmLogout(context),
-                  icon: const Icon(Icons.logout_rounded),
-                  label: const Text(
-                    'Log Out',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textCoral,
-                    side: const BorderSide(color: AppColors.accentCoral),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.large),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.xxl),
-            ],
+            ),
           ),
         ),
       ),
@@ -218,7 +248,10 @@ class TeacherSettingsScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(false);
+            },
             child: const Text(
               'Cancel',
               style: TextStyle(
@@ -256,7 +289,7 @@ class TeacherSettingsScreen extends StatelessWidget {
     if (!context.mounted) return;
     navigator.pushNamedAndRemoveUntil(
       '/teacher-welcome',
-      ModalRoute.withName('/role-selection'),
+      (route) => false,
     );
   }
 
@@ -290,7 +323,10 @@ class TeacherSettingsScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(false);
+            },
             child: const Text(
               'Cancel',
               style: TextStyle(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../utils/app_theme.dart';
+import '../../services/sfx_service.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
@@ -27,7 +28,10 @@ class RoleSelectionScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(false);
+            },
             child: const Text(
               'Cancel',
               style: TextStyle(
@@ -38,7 +42,10 @@ class RoleSelectionScreen extends StatelessWidget {
             ),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(true);
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentCoral,
               foregroundColor: Colors.white,
@@ -74,75 +81,69 @@ class RoleSelectionScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: AppColors.introBg,
         body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xxl,
-              vertical: AppSpacing.xl,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: AppSpacing.xl),
-
-                const Center(
-                  child: _YseImage(
-                    assetPath: 'assets/images/mascot/yse_base.png',
-                    size: 160,
-                    fallbackIcon: Icons.auto_stories_rounded,
-                  ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xxl,
+                  vertical: AppSpacing.xl,
                 ),
-
-                const SizedBox(height: AppSpacing.xl),
-
-                const Text(
-                  'Welcome to\nReadEase!',
-                  textAlign: TextAlign.center,
-                  style: AppText.h1,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: AppSpacing.xl),
+                    const Center(
+                      child: _YseImage(
+                        assetPath: 'assets/images/mascot/yse_base.png',
+                        size: 160,
+                        fallbackIcon: Icons.auto_stories_rounded,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    const Text(
+                      'Welcome to\nReadEase!',
+                      textAlign: TextAlign.center,
+                      style: AppText.h1,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    const Text(
+                      'A reading companion that helps kids\nlearn words, earn badges, and\nbuild confidence.',
+                      textAlign: TextAlign.center,
+                      style: AppText.body,
+                    ),
+                    const SizedBox(height: AppSpacing.xxxl),
+                    _RoleButton(
+                      label: 'LEARNER',
+                      icon: Icons.school_rounded,
+                      color: AppColors.accentTeal,
+                      onTap: () {
+                        Navigator.of(context).pushNamed('/student-profile-list');
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    _RoleButton(
+                      label: 'PARENT',
+                      icon: Icons.family_restroom_rounded,
+                      color: AppColors.accentPurple,
+                      onTap: () {
+                        Navigator.of(context).pushNamed('/parent-welcome');
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    _RoleButton(
+                      label: 'TEACHER',
+                      icon: Icons.co_present_rounded,
+                      color: AppColors.accentYellow,
+                      textColor: AppColors.textPrimary,
+                      onTap: () {
+                        Navigator.of(context).pushNamed('/teacher-welcome');
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                  ],
                 ),
-                const SizedBox(height: AppSpacing.md),
-
-                const Text(
-                  'A reading companion that helps kids\nlearn words, earn badges, and\nbuild confidence.',
-                  textAlign: TextAlign.center,
-                  style: AppText.body,
-                ),
-
-                const SizedBox(height: AppSpacing.xxxl),
-
-                _RoleButton(
-                  label: 'LEARNER',
-                  icon: Icons.school_rounded,
-                  color: AppColors.accentTeal,
-                  onTap: () {
-                    Navigator.of(context).pushNamed('/student-profile-list');
-                  },
-                ),
-
-                const SizedBox(height: AppSpacing.md),
-
-                _RoleButton(
-                  label: 'PARENT',
-                  icon: Icons.family_restroom_rounded,
-                  color: AppColors.accentPurple,
-                  onTap: () {
-                    Navigator.of(context).pushNamed('/parent-welcome');
-                  },
-                ),
-
-                const SizedBox(height: AppSpacing.md),
-
-                _RoleButton(
-                  label: 'TEACHER',
-                  icon: Icons.co_present_rounded,
-                  color: AppColors.accentYellow,
-                  textColor: AppColors.textPrimary,
-                  onTap: () {
-                    Navigator.of(context).pushNamed('/teacher-welcome');
-                  },
-                ),
-
-                const SizedBox(height: AppSpacing.xl),
-              ],
+              ),
             ),
           ),
         ),
@@ -172,7 +173,10 @@ class _RoleButton extends StatelessWidget {
     return SizedBox(
       height: 64,
       child: ElevatedButton(
-        onPressed: onTap,
+        onPressed: () {
+          SfxService.tap();
+          onTap();
+        },
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: fgColor,
@@ -221,6 +225,7 @@ class _YseImage extends StatelessWidget {
       assetPath,
       width: size,
       height: size,
+      cacheWidth: (size * 2).toInt(),
       fit: BoxFit.contain,
       errorBuilder: (context, error, stackTrace) {
         return Container(

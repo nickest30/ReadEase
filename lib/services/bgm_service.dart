@@ -60,7 +60,7 @@ class BgmService {
       await _player.play(AssetSource('audio/bgm/$fileName'));
       _updateVolume();
     } catch (e) {
-      debugPrint('❌ BGM ERROR ($fileName): $e');
+      debugPrint('BGM ERROR ($fileName): $e');
     }
   }
 

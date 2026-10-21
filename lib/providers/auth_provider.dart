@@ -96,7 +96,7 @@ class AuthProvider extends ChangeNotifier {
     // 3. Look for saved credentials
     final creds = await CredentialStorage.instance.read(uid);
     if (creds == null) {
-      debugPrint('tryRestoreSessionFor: NO credentials for $uid '
+      debugPrint('tryRestoreSessionFor: no credentials for $uid '
           '(caller should prompt for password)');
       return false;
     }
@@ -114,7 +114,7 @@ class AuthProvider extends ChangeNotifier {
       }
       return ok;
     } catch (e) {
-      debugPrint('tryRestoreSessionFor: ERROR = $e');
+      debugPrint('tryRestoreSessionFor: error = $e');
       return false;
     }
   }
@@ -172,10 +172,6 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     return true;
   }
-
-  // ────────────────────────────────────────────────────────────────
-  // PHONE VERIFICATION (Tier 2 OTP)
-  // ────────────────────────────────────────────────────────────────
 
   /// Send verification email to current user (Firebase handles rate-limit).
   Future<void> sendVerificationEmail() async {

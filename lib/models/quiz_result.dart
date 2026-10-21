@@ -8,7 +8,7 @@ class QuizResult {
   final int pointsEarned;
   final String completedAt;
   final String? wrongWordIds;
-  final bool syncedToCloud;    // NEW
+  final bool syncedToCloud;
 
   QuizResult({
     this.id,
@@ -20,10 +20,11 @@ class QuizResult {
     required this.pointsEarned,
     required this.completedAt,
     this.wrongWordIds,
-    this.syncedToCloud = false,   // default: not yet synced
+    this.syncedToCloud = false,
   });
 
-  double get accuracyRate => totalQuestions == 0 ? 0 : score / totalQuestions;
+  double get accuracyRate =>
+      totalQuestions == 0 ? 0 : score / totalQuestions;
   bool get isPassing => accuracyRate >= 0.70;
 
   Map<String, dynamic> toMap() {
@@ -56,7 +57,6 @@ class QuizResult {
     );
   }
 
-  /// Copy with new id, used after DB insert
   QuizResult copyWith({int? id, bool? syncedToCloud}) {
     return QuizResult(
       id: id ?? this.id,

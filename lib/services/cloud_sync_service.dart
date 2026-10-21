@@ -19,7 +19,7 @@ class CloudSyncService {
     required int localStudentId,
     required String firebaseUid,
   }) async {
-    debugPrint('☁️ Downloading cloud data for $firebaseUid');
+    debugPrint('Downloading cloud data for $firebaseUid');
 
     await _downloadProfile(
       localStudentId: localStudentId,
@@ -46,12 +46,10 @@ class CloudSyncService {
       firebaseUid: firebaseUid,
     );
 
-    debugPrint('☁️ Download complete');
+    debugPrint('Download complete');
   }
 
-  // ──────────────────────────────────────────────────────────────
   // Profile
-  // ──────────────────────────────────────────────────────────────
 
   Future<void> _downloadProfile({
     required int localStudentId,
@@ -73,16 +71,13 @@ class CloudSyncService {
         className: doc['className'] as String?,
         classFirestoreId: doc['classId'] as String?,
       );
-      debugPrint('☁️ Profile: OK');
+      debugPrint('Profile: OK');
     } catch (e) {
-      debugPrint('☁️ _downloadProfile ERROR: $e');
+      debugPrint('_downloadProfile failed: $e');
     }
   }
 
-
-  // ──────────────────────────────────────────────────────────────
   // Results
-  // ──────────────────────────────────────────────────────────────
 
   Future<void> _downloadResults({
     required int localStudentId,
@@ -135,9 +130,9 @@ class CloudSyncService {
           ),
         );
       }
-      debugPrint('☁️ Results: ${snap.docs.length}');
+      debugPrint('Results: ${snap.docs.length}');
     } catch (e) {
-      debugPrint('☁️ _downloadResults ERROR: $e');
+      debugPrint('_downloadResults failed: $e');
     }
   }
 
@@ -191,9 +186,7 @@ class CloudSyncService {
     return rows.isNotEmpty;
   }
 
-  // ──────────────────────────────────────────────────────────────
   // Badges
-  // ──────────────────────────────────────────────────────────────
 
   Future<void> _downloadBadges({
     required int localStudentId,
@@ -221,15 +214,13 @@ class CloudSyncService {
           ),
         );
       }
-      debugPrint('☁️ Badges: ${snap.docs.length}');
+      debugPrint('Badges: ${snap.docs.length}');
     } catch (e) {
-      debugPrint('☁️ _downloadBadges ERROR: $e');
+      debugPrint('_downloadBadges failed: $e');
     }
   }
 
-  // ──────────────────────────────────────────────────────────────
   // Word mastery / encounters / starred
-  // ──────────────────────────────────────────────────────────────
 
   Future<void> _downloadMastery({
     required int localStudentId,
@@ -249,9 +240,9 @@ class CloudSyncService {
           masteredAt: r['masteredAt'] as String?,
         );
       }
-      debugPrint('☁️ Mastery: ${rows.length}');
+      debugPrint('Mastery: ${rows.length}');
     } catch (e) {
-      debugPrint('☁️ _downloadMastery ERROR: $e');
+      debugPrint('_downloadMastery failed: $e');
     }
   }
 
@@ -272,9 +263,9 @@ class CloudSyncService {
           timesSeen: (r['timesSeen'] ?? 1) as int,
         );
       }
-      debugPrint('☁️ Encounters: ${rows.length}');
+      debugPrint('Encounters: ${rows.length}');
     } catch (e) {
-      debugPrint('☁️ _downloadEncounters ERROR: $e');
+      debugPrint('_downloadEncounters failed: $e');
     }
   }
 
@@ -294,15 +285,13 @@ class CloudSyncService {
           starredAt: (r['starredAt'] ?? '') as String,
         );
       }
-      debugPrint('☁️ Starred: ${rows.length}');
+      debugPrint('Starred: ${rows.length}');
     } catch (e) {
-      debugPrint('☁️ _downloadStarred ERROR: $e');
+      debugPrint('_downloadStarred failed: $e');
     }
   }
 
-  // ──────────────────────────────────────────────────────────────
   // Teacher classes
-  // ──────────────────────────────────────────────────────────────
 
   Future<void> downloadTeacherClasses({
     required int localTeacherId,
@@ -326,15 +315,13 @@ class CloudSyncService {
           joinCode: (data['joinCode'] ?? '') as String,
         );
       }
-      debugPrint('☁️ Teacher classes: ${snap.docs.length}');
+      debugPrint('Teacher classes: ${snap.docs.length}');
     } catch (e) {
-      debugPrint('☁️ downloadTeacherClasses ERROR: $e');
+      debugPrint('downloadTeacherClasses failed: $e');
     }
   }
 
-  // ──────────────────────────────────────────────────────────────
   // Parent children
-  // ──────────────────────────────────────────────────────────────
 
   Future<void> downloadParentChildren({
     required int localParentId,
@@ -359,9 +346,9 @@ class CloudSyncService {
           totalPoints: (data['totalPoints'] ?? 0) as int,
         );
       }
-      debugPrint('☁️ Parent children: ${snap.docs.length}');
+      debugPrint('Parent children: ${snap.docs.length}');
     } catch (e) {
-      debugPrint('☁️ downloadParentChildren ERROR: $e');
+      debugPrint('downloadParentChildren failed: $e');
     }
   }
 }

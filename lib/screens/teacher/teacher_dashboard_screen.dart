@@ -3,9 +3,11 @@ import 'package:provider/provider.dart';
 
 import '../../models/class_group.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../providers/teacher_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/email_verification_banner.dart';
 
@@ -63,6 +65,9 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
     if (teacher == null || teacher.firebaseUid == null) return;
     if (teacher.emailVerified) return;
 
+    final connectivity = context.read<ConnectivityProvider>();
+    if (!connectivity.isOnline) return;
+
     final authProvider = context.read<AuthProvider>();
     final verified = await authProvider.checkEmailVerified();
     if (!verified || !mounted) return;
@@ -79,6 +84,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
   }
 
   Future<void> _handleLogout() async {
+    SfxService.tap();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -100,7 +106,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(false);
+            },
             child: const Text(
               'Cancel',
               style: TextStyle(
@@ -150,7 +159,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
         if (context.mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil(
             '/teacher-welcome',
-            ModalRoute.withName('/role-selection'),
+            (route) => false,
           );
         }
       });
@@ -163,189 +172,206 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
     return Scaffold(
       backgroundColor: AppColors.teacherBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppSpacing.md),
-
-              // Header with Groo
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const SizedBox(height: AppSpacing.md),
+
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Hello, ${teacher.fullName.split(' ').first}!',
+                              style: AppText.h2,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(teacher.schoolName, style: AppText.caption),
+                          ],
+                        ),
+                      ),
+                      Image.asset(
+                        'assets/images/mascot/groo_checking.png',
+                        width: 70,
+                        height: 70,
+                        fit: BoxFit.contain,
+                        cacheWidth: 140,
+                        errorBuilder: (_, _, _) => Container(
+                          width: 70,
+                          height: 70,
+                          decoration: BoxDecoration(
+                            color:
+                                AppColors.accentYellow.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.accentYellow,
+                              width: 2,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.school_rounded,
+                            color: AppColors.accentYellow,
+                            size: 32,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: AppSpacing.md),
+
+                  if (teacher.firebaseUid != null && !teacher.emailVerified)
+                    EmailVerificationBanner(
+                      accentColor: AppColors.accentYellow,
+                      role: 'teacher',
+                    ),
+
+                  const SizedBox(height: AppSpacing.sm),
+
+                  const Text(
+                    'My Classes',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Hello, ${teacher.fullName.split(' ').first}!',
-                          style: AppText.h2,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(teacher.schoolName, style: AppText.caption),
-                      ],
-                    ),
+                    child: _loading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _classes.isEmpty
+                            ? _buildEmptyState()
+                            : LayoutBuilder(
+                                builder: (context, constraints) {
+                                  int crossAxisCount = 2;
+                                  if (constraints.maxWidth > 600) {
+                                    crossAxisCount = 3;
+                                  }
+                                  if (constraints.maxWidth > 800) {
+                                    crossAxisCount = 4;
+                                  }
+
+                                  return GridView.builder(
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: crossAxisCount,
+                                      mainAxisSpacing: AppSpacing.md,
+                                      crossAxisSpacing: AppSpacing.md,
+                                      childAspectRatio: 1.05,
+                                    ),
+                                    itemCount: _classes.length,
+                                    itemBuilder: (context, index) {
+                                      final group = _classes[index];
+                                      return _ClassCard(
+                                        group: group,
+                                        onTap: () async {
+                                          SfxService.tap();
+                                          await Navigator.of(context).pushNamed(
+                                            '/class-overview',
+                                            arguments: {'classGroup': group},
+                                          );
+                                          _loadClasses();
+                                        },
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
                   ),
-                  Image.asset(
-                    'assets/images/mascot/groo_checking.png',
-                    width: 70,
-                    height: 70,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => Container(
-                      width: 70,
-                      height: 70,
-                      decoration: BoxDecoration(
-                        color:
-                            AppColors.accentYellow.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.accentYellow,
-                          width: 2,
+
+                  const SizedBox(height: AppSpacing.sm),
+
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        SfxService.tap();
+                        await Navigator.of(context).pushNamed('/create-class');
+                        _loadClasses();
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text(
+                        'Create Class',
+                        style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      child: const Icon(
-                        Icons.school_rounded,
-                        color: AppColors.accentYellow,
-                        size: 32,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accentYellow,
+                        foregroundColor: AppColors.textPrimary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.large),
+                        ),
                       ),
                     ),
                   ),
+
+                  const SizedBox(height: AppSpacing.sm),
+
+                  SizedBox(
+                    height: 46,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        SfxService.tap();
+                        Navigator.of(context).pushNamed('/teacher-settings');
+                      },
+                      icon: const Icon(Icons.settings_outlined, size: 18),
+                      label: const Text(
+                        'Settings',
+                        style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textYellow,
+                        side: const BorderSide(color: AppColors.accentYellow),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.large),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: AppSpacing.sm),
+
+                  SizedBox(
+                    height: 50,
+                    child: OutlinedButton(
+                      onPressed: _handleLogout,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textCoral,
+                        side: const BorderSide(color: AppColors.accentCoral),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.large),
+                        ),
+                      ),
+                      child: const Text(
+                        'Log Out',
+                        style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
                 ],
               ),
-
-              const SizedBox(height: AppSpacing.md),
-
-              // ── Email verification banner (only when unverified) ──
-              if (teacher.firebaseUid != null && !teacher.emailVerified)
-                EmailVerificationBanner(
-                  accentColor: AppColors.accentYellow,
-                  role: 'teacher',
-                ),
-
-              const SizedBox(height: AppSpacing.sm),
-
-              const Text(
-                'My Classes',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-
-              Expanded(
-                child: _loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _classes.isEmpty
-                        ? _buildEmptyState()
-                        : GridView.builder(
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: AppSpacing.md,
-                              crossAxisSpacing: AppSpacing.md,
-                              childAspectRatio: 1.05,
-                            ),
-                            itemCount: _classes.length,
-                            itemBuilder: (context, index) {
-                              final group = _classes[index];
-                              return _ClassCard(
-                                group: group,
-                                onTap: () async {
-                                  await Navigator.of(context).pushNamed(
-                                    '/class-overview',
-                                    arguments: {'classGroup': group},
-                                  );
-                                  _loadClasses();
-                                },
-                              );
-                            },
-                          ),
-              ),
-
-              const SizedBox(height: AppSpacing.sm),
-
-              // ── Create Class (RESTORED) ──
-              SizedBox(
-                height: 56,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    await Navigator.of(context).pushNamed('/create-class');
-                    _loadClasses();
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text(
-                    'Create Class',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentYellow,
-                    foregroundColor: AppColors.textPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.large),
-                    ),
-                  ),
-                ),
-              ),
-
-                            const SizedBox(height: AppSpacing.sm),
-
-              // ── Settings ──
-              SizedBox(
-                height: 46,
-                child: OutlinedButton.icon(
-                  onPressed: () =>
-                      Navigator.of(context).pushNamed('/teacher-settings'),
-                  icon: const Icon(Icons.settings_outlined, size: 18),
-                  label: const Text(
-                    'Settings',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textYellow,
-                    side: const BorderSide(color: AppColors.accentYellow),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.large),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.sm),
-
-              // ── Log Out ──
-              SizedBox(
-                height: 50,
-                child: OutlinedButton(
-                  onPressed: _handleLogout,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textCoral,
-                    side: const BorderSide(color: AppColors.accentCoral),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.large),
-                    ),
-                  ),
-                  child: const Text(
-                    'Log Out',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-            ],
+            ),
           ),
         ),
       ),
@@ -363,6 +389,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
             width: 140,
             height: 140,
             fit: BoxFit.contain,
+            cacheWidth: 280,
             errorBuilder: (_, _, _) => Container(
               width: 140,
               height: 140,
@@ -395,10 +422,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────
-// Private widgets
-// ─────────────────────────────────────────────────────────
 
 class _ClassCard extends StatelessWidget {
   final ClassGroup group;

@@ -7,6 +7,7 @@ import '../../models/teacher.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/cloud_sync_service.dart';
+import '../../services/sfx_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/teacher_provider.dart';
 import '../../utils/app_theme.dart';
@@ -49,14 +50,13 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
+    SfxService.tap();
 
-    // Capture providers BEFORE any await
     final authProvider = context.read<AuthProvider>();
     final teacherProvider = context.read<TeacherProvider>();
 
     final identifier = _identifierController.text.trim().toLowerCase();
 
-    // ── Rate limit gate ──
     final remaining = await DatabaseService.instance
         .loginRateLimitRemaining(identifier);
     if (remaining != null) {
@@ -79,7 +79,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
       final password = _passwordController.text;
       final isEmail = input.contains('@');
 
-      // ── Path 1: Email → cloud ──
       if (isEmail) {
         await _loginWithEmail(
           email: input.toLowerCase(),
@@ -91,7 +90,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
         return;
       }
 
-      // ── Path 2: Username → local first ──
       final localTeacher = await DatabaseService.instance
           .getTeacherByUsername(input.toLowerCase());
 
@@ -114,9 +112,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
 
         try {
           await authProvider.signIn(localTeacher.email, password);
-        } catch (_) {
-          // Offline, proceed
-        }
+        } catch (_) {}
 
         // Refresh classes from cloud (so classes created on other
         // devices show up here).
@@ -127,7 +123,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
               firebaseUid: localTeacher.firebaseUid!,
             );
           } catch (e) {
-            debugPrint('🔥 Class refresh failed (continuing): $e');
+            debugPrint('Class refresh failed (continuing): $e');
           }
         }
 
@@ -139,7 +135,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
         return;
       }
 
-      // Local miss, username not found
       await DatabaseService.instance.recordLoginAttempt(
         identifier: identifier,
         success: false,
@@ -152,7 +147,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
         _isSubmitting = false;
       });
     } catch (e) {
-      debugPrint('🔑 Teacher login ERROR: $e');
+      debugPrint('Teacher login ERROR: $e');
       if (!mounted) return;
       setState(() {
         _errorMessage = 'Something went wrong. Please try again.';
@@ -198,7 +193,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
       return;
     }
 
-    // ── Phone 2FA gate ──
     final cloudDoc = await FirestoreService.instance.getTeacherByUidFull(uid);
 
     final phoneVerified = cloudDoc?['phoneVerified'] == true;
@@ -228,7 +222,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
 
     if (!mounted) return;
 
-    // Fast path, already local
     Teacher? localTeacher;
     final allTeachers = await DatabaseService.instance.getAllTeachers();
     for (final t in allTeachers) {
@@ -239,12 +232,10 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
     }
 
     if (localTeacher != null) {
-      // Password may have changed in Firebase since last local save.
       final freshHash = BCrypt.hashpw(password, BCrypt.gensalt());
       await DatabaseService.instance
           .updateTeacherPasswordHash(localTeacher.id!, freshHash);
 
-      // Refresh classes from cloud.
       if (localTeacher.firebaseUid != null) {
         try {
           await CloudSyncService.instance.downloadTeacherClasses(
@@ -252,7 +243,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
             firebaseUid: localTeacher.firebaseUid!,
           );
         } catch (e) {
-          debugPrint('🔥 Class refresh failed (continuing): $e');
+          debugPrint('Class refresh failed (continuing): $e');
         }
       }
 
@@ -264,7 +255,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
       return;
     }
 
-    // Not local, fetch from Firestore
     if (cloudDoc == null) {
       await DatabaseService.instance.recordLoginAttempt(
         identifier: identifier,
@@ -308,7 +298,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
       return;
     }
 
-    debugPrint('🔑 Teacher cloud login OK, local profile created');
+    debugPrint('Teacher cloud login OK, local profile created');
 
     await CloudSyncService.instance.downloadTeacherClasses(
       localTeacherId: created.id!,
@@ -328,7 +318,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
     required String? backupHash,
     required String uid,
   }) async {
-    // ── Try OTP first, if a phone is available ──
     if (phoneNumber != null && phoneNumber.isNotEmpty) {
       final otpOk = await _tryOtpFlow(
         authProvider: authProvider,
@@ -340,7 +329,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
         return true;
       }
 
-      // OTP failed. Fall through to backup code if we have one.
       if (!mounted) return false;
 
       if (backupHash != null && backupHash.isNotEmpty) {
@@ -356,7 +344,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
         );
         await Future.delayed(const Duration(milliseconds: 1200));
         if (!mounted) return false;
-        // fall through to backup code
       } else {
         if (!mounted) return false;
         setState(() {
@@ -368,7 +355,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
       }
     }
 
-    // ── Backup code path ──
     if (backupHash == null || backupHash.isEmpty) {
       if (!mounted) return false;
       setState(() {
@@ -385,8 +371,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
     );
   }
 
-  /// Try to run the OTP flow. Returns true on successful verification.
-  /// Returns false on any failure (billing, network, user cancel).
   Future<bool> _tryOtpFlow({
     required AuthProvider authProvider,
     required String phoneNumber,
@@ -405,7 +389,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
         if (!completer.isCompleted) completer.complete(true);
       },
       onError: (msg) {
-        debugPrint('📱 OTP send failed: $msg');
+        debugPrint('OTP send failed: $msg');
         if (!completer.isCompleted) completer.complete(false);
       },
     );
@@ -429,8 +413,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
     return verified == true;
   }
 
-  /// Prompt for backup code entry. On success, rotates the code, shows
-  /// the new code to the user, and trusts the device.
   Future<bool> _runBackupCodeFlow({
     required AuthProvider authProvider,
     required String uid,
@@ -452,13 +434,11 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
 
     if (newCode == null || !mounted) return false;
 
-    // Rotate, hash + push to cloud
     final newHash = BCrypt.hashpw(newCode, BCrypt.gensalt());
     await FirestoreService.instance.rotateBackupCode(uid, 'teacher', newHash);
 
     if (!mounted) return false;
 
-    // Show the new code (single-use pattern)
     await BackupCodeDialog.show(
       context,
       code: newCode,
@@ -474,126 +454,135 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
     return Scaffold(
       backgroundColor: AppColors.teacherBg,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: AppSpacing.md),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: AppSpacing.md),
 
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.arrow_back,
-                      color: AppColors.textPrimary),
-                  alignment: Alignment.centerLeft,
-                  padding: EdgeInsets.zero,
-                ),
+                    IconButton(
+                      onPressed: () {
+                        SfxService.tap();
+                        Navigator.of(context).pop();
+                      },
+                      icon: const Icon(Icons.arrow_back,
+                          color: AppColors.textPrimary),
+                      alignment: Alignment.centerLeft,
+                      padding: EdgeInsets.zero,
+                    ),
 
-                const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: AppSpacing.sm),
 
-                const Text('Teacher Login', style: AppText.h1),
-                const SizedBox(height: 2),
-                const Text('Sign in to continue', style: AppText.caption),
+                    const Text('Teacher Login', style: AppText.h1),
+                    const SizedBox(height: 2),
+                    const Text('Sign in to continue', style: AppText.caption),
 
-                const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.xl),
 
-                const FieldLabel('Username or Email'),
-                TextFormField(
-                  controller: _identifierController,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  validator: Validators.usernameOrEmail,
-                  decoration: buildInputDecoration(
-                    hint: 'Enter username or email',
-                    focusColor: AppColors.accentYellow,
-                  ),
-                ),
+                    const FieldLabel('Username or Email'),
+                    TextFormField(
+                      controller: _identifierController,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      validator: Validators.usernameOrEmail,
+                      decoration: buildInputDecoration(
+                        hint: 'Enter username or email',
+                        focusColor: AppColors.accentYellow,
+                      ),
+                    ),
 
-                const SizedBox(height: AppSpacing.lg),
+                    const SizedBox(height: AppSpacing.lg),
 
-                const FieldLabel('Password'),
-                PasswordField(
-                  controller: _passwordController,
-                  hintText: 'Enter your password',
-                  textInputAction: TextInputAction.done,
-                  focusColor: AppColors.accentYellow,
-                  validator: (v) => (v == null || v.isEmpty)
-                      ? 'Please enter your password'
-                      : null,
-                ),
+                    const FieldLabel('Password'),
+                    PasswordField(
+                      controller: _passwordController,
+                      hintText: 'Enter your password',
+                      textInputAction: TextInputAction.done,
+                      focusColor: AppColors.accentYellow,
+                      validator: (v) => (v == null || v.isEmpty)
+                          ? 'Please enter your password'
+                          : null,
+                    ),
 
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const ForgotPasswordScreen(
-                            role: ForgotPasswordRole.teacher,
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          SfxService.tap();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ForgotPasswordScreen(
+                                role: ForgotPasswordRole.teacher,
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Forgot password?',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: AppColors.textYellow,
                           ),
                         ),
-                      );
-                    },
-                    child: const Text(
-                      'Forgot password?',
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        color: AppColors.textYellow,
                       ),
                     ),
-                  ),
-                ),
 
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    _errorMessage!,
-                    style: const TextStyle(
-                      color: AppColors.textCoral,
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: AppSpacing.xl),
-
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isSubmitting ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentYellow,
-                      foregroundColor: AppColors.textPrimary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.large),
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                          color: AppColors.textCoral,
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              color: AppColors.textPrimary,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : const Text(
-                            'LOGIN',
-                            style: TextStyle(
-                              fontFamily: 'Nunito',
-                              fontWeight: FontWeight.w700,
-                            ),
+                    ],
+
+                    const SizedBox(height: AppSpacing.xl),
+
+                    SizedBox(
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _isSubmitting ? null : _handleLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accentYellow,
+                          foregroundColor: AppColors.textPrimary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.large),
                           ),
-                  ),
-                ),
+                        ),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  color: AppColors.textPrimary,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : const Text(
+                                'LOGIN',
+                                style: TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                      ),
+                    ),
 
-                const SizedBox(height: AppSpacing.xl),
-              ],
+                    const SizedBox(height: AppSpacing.xl),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

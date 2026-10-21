@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../services/sfx_service.dart';
 import '../utils/app_theme.dart';
 
 /// Shared text-field decoration used across all ReadEase forms.
@@ -11,7 +13,10 @@ InputDecoration buildInputDecoration({
     hintText: hint,
     filled: true,
     fillColor: AppColors.surface,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    contentPadding: const EdgeInsets.symmetric(
+      horizontal: 14,
+      vertical: 14,
+    ),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(AppRadius.medium),
       borderSide: const BorderSide(color: AppColors.border),
@@ -38,6 +43,7 @@ InputDecoration buildInputDecoration({
 /// Field label used above form inputs.
 class FieldLabel extends StatelessWidget {
   final String text;
+
   const FieldLabel(this.text, {super.key});
 
   @override
@@ -84,7 +90,10 @@ class PasswordField extends StatefulWidget {
 class _PasswordFieldState extends State<PasswordField> {
   bool _obscured = true;
 
-  void _toggle() => setState(() => _obscured = !_obscured);
+  void _toggle() {
+    SfxService.tap();
+    setState(() => _obscured = !_obscured);
+  }
 
   @override
   Widget build(BuildContext context) {

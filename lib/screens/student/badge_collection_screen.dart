@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/badge.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/error_state.dart';
 
@@ -54,7 +55,7 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
         _loading = false;
       });
     } catch (e) {
-      debugPrint('🏅 Load badges failed: $e');
+      debugPrint('Load badges failed: $e');
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -70,10 +71,8 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
     required String difficulty,
     required AchievementBadge? earned,
   }) {
-    // ... unchanged, keep as-is ...
     final badgeName = AchievementBadge.nameFor(gradeLevel, difficulty);
-    final imagePath =
-        AchievementBadge.imagePathFor(gradeLevel, difficulty);
+    final imagePath = AchievementBadge.imagePathFor(gradeLevel, difficulty);
     final diffLabel = difficulty[0].toUpperCase() + difficulty.substring(1);
 
     showDialog(
@@ -95,8 +94,7 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
             boxShadow: earned != null
                 ? [
                     BoxShadow(
-                      color:
-                          AppColors.accentYellow.withValues(alpha: 0.3),
+                      color: AppColors.accentYellow.withValues(alpha: 0.3),
                       blurRadius: 30,
                       spreadRadius: 5,
                     ),
@@ -109,7 +107,10 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
               Align(
                 alignment: Alignment.topRight,
                 child: InkWell(
-                  onTap: () => Navigator.of(ctx).pop(),
+                  onTap: () {
+                    SfxService.tap();
+                    Navigator.of(ctx).pop();
+                  },
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
                     width: 36,
@@ -132,6 +133,7 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
                 child: Image.asset(
                   imagePath,
                   fit: BoxFit.contain,
+                  cacheWidth: 360,
                   color: earned == null
                       ? Colors.grey.withValues(alpha: 0.4)
                       : null,
@@ -255,17 +257,20 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
     return Scaffold(
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(child: _buildBody()),
-          ],
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
+              children: [
+                _buildHeader(),
+                Expanded(child: _buildBody()),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
-
-  // ── Header ───────────────────────────────────────────────────────
 
   Widget _buildHeader() {
     return Padding(
@@ -276,7 +281,10 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(context).pop();
+            },
             icon: const Icon(Icons.arrow_back,
                 color: AppColors.textPrimary),
             padding: EdgeInsets.zero,
@@ -298,8 +306,6 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
       ),
     );
   }
-
-  // ── Body ─────────────────────────────────────────────────────────
 
   Widget _buildBody() {
     if (_loading) {
@@ -337,10 +343,7 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
     );
   }
 
-  // ── Hero, Yse + encouraging line ────────────────────────────────
-
   Widget _buildHero() {
-    // Swap the message based on badge count. Same image either way.
     final hasBadges = _totalEarned > 0;
     final message = hasBadges
         ? 'Look at your collection!'
@@ -352,6 +355,7 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
           'assets/images/mascot/yse_gold_book.png',
           width: 200,
           height: 200,
+          cacheWidth: 400,
           fit: BoxFit.contain,
           errorBuilder: (_, _, _) => Container(
             width: 200,
@@ -386,8 +390,6 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
       ],
     );
   }
-
-  // ── Grid of 18 badges ────────────────────────────────────────────
 
   Widget _buildGrid() {
     return Padding(
@@ -424,7 +426,6 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
   }
 }
 
-// _BadgeTile unchanged, keep as-is from your original.
 class _BadgeTile extends StatelessWidget {
   final int gradeLevel;
   final String difficulty;
@@ -454,77 +455,84 @@ class _BadgeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isEarned = earned != null;
-    final imagePath =
-        AchievementBadge.imagePathFor(gradeLevel, difficulty);
+    final imagePath = AchievementBadge.imagePathFor(gradeLevel, difficulty);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Opacity(
-        opacity: isEarned ? 1.0 : 0.4,
-        child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppRadius.large),
-            border: Border.all(
-              color: isEarned ? _ringColor : AppColors.border,
-              width: isEarned ? 2 : 1,
-            ),
-          ),
-          child: Stack(
-            children: [
-              Center(
-                child: Image.asset(
-                  imagePath,
-                  fit: BoxFit.contain,
-                  color: isEarned
-                      ? null
-                      : Colors.grey.withValues(alpha: 0.3),
-                  colorBlendMode:
-                      isEarned ? null : BlendMode.saturation,
-                  errorBuilder: (_, _, _) => Icon(
-                    Icons.emoji_events_rounded,
-                    size: 40,
-                    color: isEarned
-                        ? _ringColor
-                        : AppColors.textMuted,
-                  ),
-                ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          SfxService.tap();
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(AppRadius.large),
+        child: Opacity(
+          opacity: isEarned ? 1.0 : 0.4,
+          child: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.large),
+              border: Border.all(
+                color: isEarned ? _ringColor : AppColors.border,
+                width: isEarned ? 2 : 1,
               ),
-              Positioned(
-                left: 2,
-                bottom: 2,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 4, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    'G$gradeLevel',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 8,
-                      fontWeight: FontWeight.w800,
+            ),
+            child: Stack(
+              children: [
+                Center(
+                  child: Image.asset(
+                    imagePath,
+                    fit: BoxFit.contain,
+                    cacheWidth: 150,
+                    color: isEarned
+                        ? null
+                        : Colors.grey.withValues(alpha: 0.3),
+                    colorBlendMode:
+                        isEarned ? null : BlendMode.saturation,
+                    errorBuilder: (_, _, _) => Icon(
+                      Icons.emoji_events_rounded,
+                      size: 40,
                       color: isEarned
                           ? _ringColor
                           : AppColors.textMuted,
                     ),
                   ),
                 ),
-              ),
-              if (!isEarned)
-                const Positioned(
-                  right: 2,
-                  top: 2,
-                  child: Icon(
-                    Icons.lock_rounded,
-                    size: 14,
-                    color: AppColors.textMuted,
+                Positioned(
+                  left: 2,
+                  bottom: 2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'G$gradeLevel',
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 8,
+                        fontWeight: FontWeight.w800,
+                        color: isEarned
+                            ? _ringColor
+                            : AppColors.textMuted,
+                      ),
+                    ),
                   ),
                 ),
-            ],
+                if (!isEarned)
+                  const Positioned(
+                    right: 2,
+                    top: 2,
+                    child: Icon(
+                      Icons.lock_rounded,
+                      size: 14,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

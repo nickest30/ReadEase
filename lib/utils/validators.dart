@@ -1,10 +1,8 @@
-// Centralized form validation rules for ReadEase.
-// Each method returns null when valid, or an error string when invalid.
-
+/// Centralized form validation rules for ReadEase.
+/// Each method returns null when valid, or an error string when invalid.
 class Validators {
   Validators._();
 
-  // ── Username ─────────────────────────────────────────────────────
   static String? username(String? value) {
     final v = value?.trim() ?? '';
     if (v.isEmpty) return 'Please enter a username';
@@ -16,7 +14,6 @@ class Validators {
     return null;
   }
 
-  // ── Email ────────────────────────────────────────────────────────
   static String? email(String? value) {
     final v = value?.trim() ?? '';
     if (v.isEmpty) return 'Please enter your email';
@@ -26,8 +23,9 @@ class Validators {
     return null;
   }
 
-  // ── Password ─────────────────────────────────────────────────────
-  // Change `minLength` if your team decides on a different threshold.
+  /// Password length is configurable via [minLength]. The default of 6 is
+  /// intentional — Firebase Auth enforces its own minimum separately, and
+  /// forcing stricter rules here would lock out existing users.
   static String? password(String? value, {int minLength = 6}) {
     final v = value ?? '';
     if (v.isEmpty) return 'Please enter a password';
@@ -36,14 +34,12 @@ class Validators {
     return null;
   }
 
-  // ── Confirm password ─────────────────────────────────────────────
   static String? confirmPassword(String? value, String original) {
     if (value == null || value.isEmpty) return 'Please confirm your password';
     if (value != original) return 'Passwords do not match';
     return null;
   }
 
-  // ── Display name ─────────────────────────────────────────────────
   static String? displayName(String? value) {
     final v = value?.trim() ?? '';
     if (v.isEmpty) return 'Please enter a name';
@@ -55,7 +51,6 @@ class Validators {
     return null;
   }
 
-  // ── School name ──────────────────────────────────────────────────
   static String? schoolName(String? value) {
     final v = value?.trim() ?? '';
     if (v.isEmpty) return 'Please enter your school name';
@@ -64,7 +59,6 @@ class Validators {
     return null;
   }
 
-  // ── Class name ───────────────────────────────────────────────────
   static String? className(String? value) {
     final v = value?.trim() ?? '';
     if (v.isEmpty) return 'Please enter a class name';
@@ -73,7 +67,6 @@ class Validators {
     return null;
   }
 
-  // ── Join code ────────────────────────────────────────────────────
   static String? joinCode(String? value) {
     final v = value?.trim() ?? '';
     if (v.isEmpty) return 'Please enter the class code';
@@ -84,7 +77,6 @@ class Validators {
     return null;
   }
 
-  // ── Username or email (parent login) ─────────────────────────────
   static String? usernameOrEmail(String? value) {
     final v = value?.trim() ?? '';
     if (v.isEmpty) return 'Please enter your username or email';

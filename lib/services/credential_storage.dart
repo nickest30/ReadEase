@@ -69,10 +69,7 @@ class CredentialStorage {
     }
   }
 
-
-  // ────────────────────────────────────────────────────────────────
-  // DEVICE TRUST (Tier 2 OTP)
-  // ────────────────────────────────────────────────────────────────
+  // Device trust
 
   static const _trustDuration = Duration(days: 30);
 
@@ -87,9 +84,9 @@ class CredentialStorage {
         key: 'trusted_device_$uid',
         value: expiresAt,
       );
-      debugPrint('🔐 Device trusted for $uid until $expiresAt');
+      debugPrint('Device trusted for $uid until $expiresAt');
     } catch (e) {
-      debugPrint('🔐 trustDevice ERROR: $e');
+      debugPrint('trustDevice failed: $e');
     }
   }
 
@@ -102,7 +99,7 @@ class CredentialStorage {
       if (expiresAt == null) return false;
       return expiresAt.isAfter(DateTime.now());
     } catch (e) {
-      debugPrint('🔐 isDeviceTrusted ERROR: $e');
+      debugPrint('isDeviceTrusted failed: $e');
       return false;
     }
   }
@@ -112,13 +109,11 @@ class CredentialStorage {
     try {
       await _storage.delete(key: 'trusted_device_$uid');
     } catch (e) {
-      debugPrint('🔐 revokeDeviceTrust ERROR: $e');
+      debugPrint('revokeDeviceTrust failed: $e');
     }
   }
 
-  // ────────────────────────────────────────────────────────────────
-  // SESSION EXPIRY
-  // ────────────────────────────────────────────────────────────────
+  // Session expiry
 
   /// How long a session stays valid without re-authentication.
   static const _sessionTtl = Duration(days: 30);
@@ -133,7 +128,7 @@ class CredentialStorage {
         value: DateTime.now().toIso8601String(),
       );
     } catch (e) {
-      debugPrint('🔐 touchSession ERROR: $e');
+      debugPrint('touchSession failed: $e');
     }
   }
 
@@ -147,7 +142,7 @@ class CredentialStorage {
       if (last == null) return false;
       return DateTime.now().difference(last) > _sessionTtl;
     } catch (e) {
-      debugPrint('🔐 isSessionExpired ERROR: $e');
+      debugPrint('isSessionExpired failed: $e');
       return false;
     }
   }
@@ -157,8 +152,7 @@ class CredentialStorage {
     try {
       await _storage.delete(key: _keyLastActiveAt);
     } catch (e) {
-      debugPrint('🔐 clearSessionMarker ERROR: $e');
+      debugPrint('clearSessionMarker failed: $e');
     }
   }
-
 }

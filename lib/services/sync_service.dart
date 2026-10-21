@@ -6,6 +6,23 @@ import '../providers/connectivity_provider.dart';
 import 'database_service.dart';
 import 'firestore_service.dart';
 
+/// Push-side cloud sync orchestrator.
+///
+/// This is the counterpart to [CloudSyncService] (which handles pull-side
+/// downloads on cross-device login). `SyncService` takes a locally-modified
+/// [Student] and pushes everything that's been flagged for sync:
+///
+///   - Profile snapshot (name, avatar, grade)
+///   - Pending quiz attempts (from the `quiz_attempts` table where
+///     `synced_to_cloud = 0`)
+///   - Pending badges
+///   - Word mastery / encounters / starred words
+///   - Global leaderboard entry + class enrollment snapshot
+///
+/// All writes are best-effort. If a Firestore call fails, it's logged
+/// and the next one proceeds — the app never blocks on cloud availability.
+/// Callers typically wrap this in `unawaited(() async { ... }())` so the
+/// UI navigates immediately even if the device is offline.
 class SyncService {
   static final SyncService instance = SyncService._internal();
   SyncService._internal();
@@ -25,6 +42,8 @@ class SyncService {
 
     if (!connectivity.isOnline) return;
 
+    // Firestore writes will fail with PERMISSION_DENIED if the
+    // Firebase Auth session is not active. Restore it first.
     if (authProvider.uid != uid) {
       final restored = await authProvider.tryRestoreSessionFor(uid: uid);
       if (!restored) return;
@@ -43,7 +62,7 @@ class SyncService {
       debugPrint('Sync: complete');
     } catch (e, stack) {
       debugPrint('Sync failed: $e');
-      debugPrint('STACK: $stack');
+      debugPrint('Stack: $stack');
     } finally {
       _running = false;
     }

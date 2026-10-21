@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../models/teacher.dart';
 
 class TeacherProvider extends ChangeNotifier {

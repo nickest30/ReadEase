@@ -3,10 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../utils/app_theme.dart';
 
-// ═══════════════════════════════════════════════════════════════
-// Question type breakdown, horizontal bars
-// ═══════════════════════════════════════════════════════════════
-
+/// Horizontal bar chart showing accuracy per question type
+/// (Literal / Inferential / Critical). Hides rows with zero data.
 class QuestionTypeBreakdown extends StatelessWidget {
   /// Map from question type to { total, correct }.
   final Map<String, Map<String, int>> stats;
@@ -162,10 +160,8 @@ class _TypeRow extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// Mastery donut, 3-way split
-// ═══════════════════════════════════════════════════════════════
-
+/// 3-way donut chart showing word mastery split
+/// (Mastered / Learning / Struggling), rendered with a CustomPainter.
 class MasteryDonut extends StatelessWidget {
   final int mastered;
   final int struggling;
@@ -337,6 +333,8 @@ class _Legend extends StatelessWidget {
   }
 }
 
+/// Draws the three donut arcs in the order: Mastered → Learning → Struggling.
+/// Uses butt stroke caps so adjacent segments align cleanly with no gaps.
 class _DonutPainter extends CustomPainter {
   final int mastered;
   final int struggling;
@@ -363,10 +361,9 @@ class _DonutPainter extends CustomPainter {
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.butt;
 
-    // Start from top (-π/2)
+    // Start from top (-π/2) and sweep clockwise.
     var startAngle = -pi / 2;
 
-    // Mastered (green)
     if (mastered > 0) {
       final sweep = (mastered / total) * 2 * pi;
       paint.color = AppColors.accentGreen;
@@ -374,7 +371,6 @@ class _DonutPainter extends CustomPainter {
       startAngle += sweep;
     }
 
-    // Learning (orange)
     if (learning > 0) {
       final sweep = (learning / total) * 2 * pi;
       paint.color = AppColors.accentOrange;
@@ -382,7 +378,6 @@ class _DonutPainter extends CustomPainter {
       startAngle += sweep;
     }
 
-    // Struggling (coral)
     if (struggling > 0) {
       final sweep = (struggling / total) * 2 * pi;
       paint.color = AppColors.accentCoral;

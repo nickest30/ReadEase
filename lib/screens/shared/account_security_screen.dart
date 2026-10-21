@@ -8,6 +8,7 @@ import '../../providers/parent_provider.dart';
 import '../../providers/teacher_provider.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/backup_code.dart';
 import '../shared/backup_code_screen.dart';
@@ -36,7 +37,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
   Color get _bg =>
       _isParent ? AppColors.parentBg : AppColors.teacherBg;
 
-  // ── Normalize PH phone to E.164 ──
+  // Normalize PH phone to E.164 format
   String? _normalizePhone(String raw) {
     final digits = raw.replaceAll(RegExp(r'\D'), '');
     if (digits.isEmpty) return null;
@@ -48,7 +49,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     return null;
   }
 
-  // ── Masked display: "+63 *** 6789" ──
+  // Masked display: "+63 *** 6789"
   String _maskPhone(String phone) {
     if (phone.length <= 4) return phone;
     final ccEnd = phone.startsWith('+63')
@@ -58,10 +59,6 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     final last4 = phone.substring(phone.length - 4);
     return '$cc *** $last4';
   }
-
-  // ────────────────────────────────────────────────────────────
-  // CHANGE PHONE
-  // ────────────────────────────────────────────────────────────
 
   Future<void> _changePhone() async {
     // Capture providers BEFORE any await
@@ -123,7 +120,10 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop();
+            },
             child: const Text(
               'Cancel',
               style: TextStyle(
@@ -133,7 +133,10 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
             ),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(controller.text.trim());
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: _accent,
               foregroundColor:
@@ -195,7 +198,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
         if (!completer.isCompleted) completer.complete(true);
       },
       onError: (msg) {
-        debugPrint('📱 send failed: $msg');
+        debugPrint('OTP send failed: $msg');
         if (!completer.isCompleted) completer.complete(false);
       },
     );
@@ -230,7 +233,6 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
       return;
     }
 
-    // ── Persist change ──
     if (uid == null) {
       if (mounted) {
         setState(() {
@@ -241,15 +243,26 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
       return;
     }
 
-    // Cloud
-    await FirestoreService.instance.updatePhoneNumber(
-      uid: uid,
-      role: widget.role,
-      phoneNumber: normalizedPhone,
-      verified: true,
-    );
+    // Persist change to cloud
+    try {
+      await FirestoreService.instance.updatePhoneNumber(
+        uid: uid,
+        role: widget.role,
+        phoneNumber: normalizedPhone,
+        verified: true,
+      );
+    } catch (e) {
+      debugPrint('Cloud phone update failed: $e');
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _errorMessage = 'Could not save to cloud. Check your connection.';
+        });
+      }
+      return;
+    }
 
-    // Local, capture providers again after the await
+    // Persist locally, capture providers again after the await
     if (!mounted) return;
     if (_isParent) {
       final parent = context.read<ParentProvider>().currentParent;
@@ -295,10 +308,6 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     );
   }
 
-  // ────────────────────────────────────────────────────────────
-  // REGENERATE BACKUP CODE
-  // ────────────────────────────────────────────────────────────
-
   Future<void> _regenerateBackupCode() async {
     // Capture everything BEFORE any await
     final authProvider = context.read<AuthProvider>();
@@ -327,7 +336,10 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(false);
+            },
             child: const Text(
               'Cancel',
               style: TextStyle(
@@ -337,7 +349,10 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
             ),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(true);
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: _accent,
               foregroundColor:
@@ -388,7 +403,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
         if (!completer.isCompleted) completer.complete(true);
       },
       onError: (msg) {
-        debugPrint('📱 send failed: $msg');
+        debugPrint('OTP send failed: $msg');
         if (!completer.isCompleted) completer.complete(false);
       },
     );
@@ -416,8 +431,24 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
 
     if (uid == null) return;
 
-    await FirestoreService.instance
-        .rotateBackupCode(uid, widget.role, newHash);
+    try {
+      await FirestoreService.instance
+          .rotateBackupCode(uid, widget.role, newHash);
+    } catch (e) {
+      debugPrint('Cloud backup code rotation failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Could not update backup code. Check your internet.',
+              style: TextStyle(fontFamily: 'Nunito'),
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
 
     // Update local DB, capture provider again after await
     if (!mounted) return;
@@ -444,10 +475,6 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     );
   }
 
-  // ────────────────────────────────────────────────────────────
-  // BUILD
-  // ────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     final email = _isParent
@@ -473,149 +500,151 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppSpacing.md),
-
-              Row(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back,
-                        color: AppColors.textPrimary),
-                    padding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  const Expanded(
-                    child: Text('Account & Security', style: AppText.h2),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: AppSpacing.lg),
-
-              if (_errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentCoral.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(AppRadius.medium),
-                    border: Border.all(
-                      color: AppColors.accentCoral.withValues(alpha: 0.4),
-                    ),
-                  ),
-                  child: Row(
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
                     children: [
-                      const Icon(Icons.error_outline_rounded,
-                          color: AppColors.accentCoral, size: 20),
+                      IconButton(
+                        onPressed: () {
+                          SfxService.tap();
+                          Navigator.of(context).pop();
+                        },
+                        icon: const Icon(Icons.arrow_back,
+                            color: AppColors.textPrimary),
+                        padding: EdgeInsets.zero,
+                      ),
                       const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: AppText.caption.copyWith(
-                            color: AppColors.textCoral,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+                      const Expanded(
+                        child: Text('Account & Security', style: AppText.h2),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-              ],
-
-              // ── EMAIL ──
-              _SectionCard(
-                icon: Icons.alternate_email_rounded,
-                iconColor: _accent,
-                title: 'Email',
-                subtitle: email,
-                trailing: emailVerified
-                    ? const _VerifiedBadge()
-                    : const _UnverifiedBadge(),
-              ),
-
-              const SizedBox(height: AppSpacing.md),
-
-              // ── PHONE ──
-              _SectionCard(
-                icon: Icons.phone_rounded,
-                iconColor: _accent,
-                title: 'Phone Number',
-                subtitle: phone == null || phone.isEmpty
-                    ? 'Not set'
-                    : _maskPhone(phone),
-                trailing: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (phone != null && phone.isNotEmpty)
-                      phoneVerified
-                          ? const _VerifiedBadge()
-                          : const _UnverifiedBadge(),
-                    const SizedBox(height: 4),
-                    TextButton(
-                      onPressed: _busy ? null : _changePhone,
+                  const SizedBox(height: AppSpacing.lg),
+                  if (_errorMessage != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentCoral.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppRadius.medium),
+                        border: Border.all(
+                          color: AppColors.accentCoral.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded,
+                              color: AppColors.accentCoral, size: 20),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: AppText.caption.copyWith(
+                                color: AppColors.textCoral,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                  _SectionCard(
+                    icon: Icons.alternate_email_rounded,
+                    iconColor: _accent,
+                    title: 'Email',
+                    subtitle: email,
+                    trailing: emailVerified
+                        ? const _VerifiedBadge()
+                        : const _UnverifiedBadge(),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _SectionCard(
+                    icon: Icons.phone_rounded,
+                    iconColor: _accent,
+                    title: 'Phone Number',
+                    subtitle: phone == null || phone.isEmpty
+                        ? 'Not set'
+                        : _maskPhone(phone),
+                    trailing: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (phone != null && phone.isNotEmpty)
+                          phoneVerified
+                              ? const _VerifiedBadge()
+                              : const _UnverifiedBadge(),
+                        const SizedBox(height: 4),
+                        TextButton(
+                          onPressed: _busy
+                              ? null
+                              : () {
+                                  SfxService.tap();
+                                  _changePhone();
+                                },
+                          style: TextButton.styleFrom(
+                            foregroundColor: _accent,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            minimumSize: const Size(0, 32),
+                          ),
+                          child: Text(
+                            phone == null || phone.isEmpty ? 'Add' : 'Change',
+                            style: const TextStyle(
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _SectionCard(
+                    icon: Icons.key_rounded,
+                    iconColor: _accent,
+                    title: 'Backup Code',
+                    subtitle:
+                        'Used to log in if you lose access to your phone.',
+                    trailing: TextButton(
+                      onPressed: _busy
+                          ? null
+                          : () {
+                              SfxService.tap();
+                              _regenerateBackupCode();
+                            },
                       style: TextButton.styleFrom(
                         foregroundColor: _accent,
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         minimumSize: const Size(0, 32),
                       ),
-                      child: Text(
-                        phone == null || phone.isEmpty ? 'Add' : 'Change',
-                        style: const TextStyle(
+                      child: const Text(
+                        'Regenerate',
+                        style: TextStyle(
                           fontFamily: 'Nunito',
                           fontWeight: FontWeight.w700,
                           fontSize: 12,
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.md),
-
-              // ── BACKUP CODE ──
-              _SectionCard(
-                icon: Icons.key_rounded,
-                iconColor: _accent,
-                title: 'Backup Code',
-                subtitle:
-                    'Used to log in if you lose access to your phone.',
-                trailing: TextButton(
-                  onPressed: _busy ? null : _regenerateBackupCode,
-                  style: TextButton.styleFrom(
-                    foregroundColor: _accent,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    minimumSize: const Size(0, 32),
                   ),
-                  child: const Text(
-                    'Regenerate',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
+                  const SizedBox(height: AppSpacing.xl),
+                ],
               ),
-
-              const SizedBox(height: AppSpacing.xl),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 }
-
-// ────────────────────────────────────────────────────────────
-// Section card
-// ────────────────────────────────────────────────────────────
 
 class _SectionCard extends StatelessWidget {
   final IconData icon;

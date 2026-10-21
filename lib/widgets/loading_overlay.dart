@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+
 import '../utils/app_theme.dart';
 
 /// Full-screen semi-transparent overlay with a centered spinner.
 /// Use when a screen-level action is in flight (submit, save, sync).
+///
+/// The overlay sits on top of [child] and dims it, so the user can't
+/// tap through while a request is pending. The optional [message] is
+/// shown under the spinner (e.g. "Saving progress…").
 class LoadingOverlay extends StatelessWidget {
   final bool isLoading;
   final Widget child;

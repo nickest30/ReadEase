@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/number_pad.dart';
 import '../../widgets/pin_dots.dart';
@@ -63,6 +64,8 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
   void _onDigitPressed(String digit) {
     if (_isSaving || _currentPin.length >= 4) return;
 
+    SfxService.tap();
+
     if (_dotState != PinDotState.idle) {
       setState(() => _dotState = PinDotState.idle);
     }
@@ -79,7 +82,9 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
   void _onBackspace() {
     if (_isSaving || _currentPin.isEmpty) return;
 
+    SfxService.tap();
     HapticFeedback.lightImpact();
+    
     setState(() {
       _errorMessage = null;
       _dotState = PinDotState.idle;
@@ -99,8 +104,6 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
       await _confirmNewPin(student.id!);
     }
   }
-
-  // ── Stage 0: verify current PIN ──────────────────────────────────
 
   Future<void> _verifyCurrentPin(String? storedHash) async {
     final isCorrect = BCrypt.checkpw(_oldPin, storedHash ?? '');
@@ -123,8 +126,6 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
       _errorMessage = null;
     });
   }
-
-  // ── Stage 1: validate new PIN ────────────────────────────────────
 
   Future<void> _validateNewPin() async {
     // Trivial PINs
@@ -156,8 +157,6 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
       _errorMessage = null;
     });
   }
-
-  // ── Stage 2: confirm + save ──────────────────────────────────────
 
   Future<void> _confirmNewPin(int studentId) async {
     if (_newPin != _confirmPin) {
@@ -224,8 +223,6 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
     }
   }
 
-  // ── Build ────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     final student = context.watch<StudentProvider>().currentStudent;
@@ -248,85 +245,85 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
     return Scaffold(
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
-          child: Column(
-            children: [
-              // Back button
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.arrow_back,
-                      color: AppColors.textPrimary),
-                  padding: EdgeInsets.zero,
-                ),
-              ),
-
-              const Spacer(),
-
-              _StageIndicator(current: _stage),
-              const SizedBox(height: AppSpacing.lg),
-
-              const Icon(
-                Icons.lock_reset_rounded,
-                size: 56,
-                color: AppColors.accentPurple,
-              ),
-              const SizedBox(height: AppSpacing.md),
-
-              Text(
-                _stageTitle,
-                style: AppText.h1,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                _stageSubtitle,
-                style: AppText.caption,
-                textAlign: TextAlign.center,
-              ),
-
-              const SizedBox(height: AppSpacing.xl),
-
-              PinDots(
-                filledCount: _currentPin.length,
-                state: _dotState,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-
-              // Reserved height so layout doesn't jump.
-              SizedBox(
-                height: 22,
-                child: _errorMessage != null
-                    ? Text(
-                        _errorMessage!,
-                        style: AppText.caption.copyWith(
-                          color: AppColors.textCoral,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        textAlign: TextAlign.center,
-                      )
-                    : _dotState == PinDotState.success
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
+              child: Column(
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      onPressed: _isSaving
+                          ? null
+                          : () {
+                              SfxService.tap();
+                              Navigator.of(context).pop();
+                            },
+                      icon: const Icon(Icons.arrow_back,
+                          color: AppColors.textPrimary),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const Spacer(),
+                  _StageIndicator(current: _stage),
+                  const SizedBox(height: AppSpacing.lg),
+                  const Icon(
+                    Icons.lock_reset_rounded,
+                    size: 56,
+                    color: AppColors.accentPurple,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    _stageTitle,
+                    style: AppText.h1,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    _stageSubtitle,
+                    style: AppText.caption,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  PinDots(
+                    filledCount: _currentPin.length,
+                    state: _dotState,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  // Reserved height so layout doesn't jump.
+                  SizedBox(
+                    height: 22,
+                    child: _errorMessage != null
                         ? Text(
-                            'Saving...',
+                            _errorMessage!,
                             style: AppText.caption.copyWith(
-                              color: kPinSuccessColor,
+                              color: AppColors.textCoral,
                               fontWeight: FontWeight.w700,
                             ),
+                            textAlign: TextAlign.center,
                           )
-                        : const SizedBox.shrink(),
+                        : _dotState == PinDotState.success
+                            ? Text(
+                                'Saving...',
+                                style: AppText.caption.copyWith(
+                                  color: kPinSuccessColor,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  NumberPad(
+                    enabled: !_isSaving,
+                    onDigit: _onDigitPressed,
+                    onBackspace: _onBackspace,
+                  ),
+                  const Spacer(),
+                ],
               ),
-              const SizedBox(height: AppSpacing.lg),
-
-              NumberPad(
-                enabled: !_isSaving,
-                onDigit: _onDigitPressed,
-                onBackspace: _onBackspace,
-              ),
-
-              const Spacer(),
-            ],
+            ),
           ),
         ),
       ),

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/word.dart';
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/analytics_widgets.dart';
@@ -78,7 +79,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
         _loading = false;
       });
     } catch (e) {
-      debugPrint('📊 Progress load ERROR: $e');
+      debugPrint('Progress load error: $e');
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -125,17 +126,20 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
     return Scaffold(
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(child: _buildBody()),
-          ],
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
+              children: [
+                _buildHeader(),
+                Expanded(child: _buildBody()),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
-
-  // ── Header ───────────────────────────────────────────────────────
 
   Widget _buildHeader() {
     return Padding(
@@ -146,7 +150,10 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(context).pop();
+            },
             icon: const Icon(Icons.arrow_back,
                 color: AppColors.textPrimary),
             padding: EdgeInsets.zero,
@@ -159,8 +166,6 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
       ),
     );
   }
-
-  // ── Body ─────────────────────────────────────────────────────────
 
   Widget _buildBody() {
     if (_loading) {
@@ -187,8 +192,6 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
     return _buildContent();
   }
 
-  // ── Empty state ──────────────────────────────────────────────────
-
   Widget _buildEmpty() {
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -201,6 +204,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
             'assets/images/mascot/yse_thinking.png',
             width: 160,
             height: 160,
+            cacheWidth: 320,
             errorBuilder: (_, _, _) => Container(
               width: 160,
               height: 160,
@@ -235,6 +239,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
             height: 52,
             child: ElevatedButton.icon(
               onPressed: () {
+                SfxService.tap();
                 Navigator.of(context).pushNamed('/grade-selection');
               },
               icon: const Icon(Icons.school_rounded, size: 20),
@@ -263,8 +268,6 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
     );
   }
 
-  // ── Content ──────────────────────────────────────────────────────
-
   Widget _buildContent() {
     final best = _bestPerBatch;
     final entries = best.entries.toList()
@@ -286,8 +289,6 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: AppSpacing.sm),
-
-            // Stats
             Row(
               children: [
                 _StatCard(
@@ -312,15 +313,11 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                 ),
               ],
             ),
-              const SizedBox(height: AppSpacing.lg),
-
-            // ── Question-type breakdown ──
+            const SizedBox(height: AppSpacing.lg),
             if (_questionTypeStats.isNotEmpty) ...[
               QuestionTypeBreakdown(stats: _questionTypeStats),
               const SizedBox(height: AppSpacing.lg),
             ],
-
-            // ── Word mastery donut ──
             if ((_masteryBreakdown['mastered'] ?? 0) +
                     (_masteryBreakdown['learning'] ?? 0) +
                     (_masteryBreakdown['struggling'] ?? 0) >
@@ -332,7 +329,6 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
               ),
               const SizedBox(height: AppSpacing.lg),
             ],
-
             const Text('OVERALL COMPLETION', style: AppText.caption),
             const SizedBox(height: AppSpacing.xs),
             ClipRRect(
@@ -349,9 +345,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
             const SizedBox(height: AppSpacing.xs),
             Text('$_completedLevels / 18 levels passed',
                 style: AppText.caption),
-
             const SizedBox(height: AppSpacing.xl),
-
             const Text('BEST SCORES', style: AppText.caption),
             const SizedBox(height: AppSpacing.sm),
             ...entries.map((entry) {
@@ -424,10 +418,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                 ),
               );
             }),
-
             const SizedBox(height: AppSpacing.xl),
-
-            // Weak words
             if (_weakWords.isNotEmpty) ...[
               Row(
                 children: [
@@ -488,7 +479,6 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
               ),
               const SizedBox(height: AppSpacing.xl),
             ] else ...[
-              // Subtle "all clear" note when there are no weak words.
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(

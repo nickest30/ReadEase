@@ -11,9 +11,7 @@ class FirestoreService {
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // ============================================================
-  // TEACHERS
-  // ============================================================
+  // Teachers
 
   Future<void> saveTeacher(Teacher teacher, String firebaseUid) async {
     try {
@@ -32,7 +30,7 @@ class FirestoreService {
       }, SetOptions(merge: true));
       debugPrint('Firestore: saveTeacher($firebaseUid) OK');
     } catch (e) {
-      debugPrint('Firestore saveTeacher ERROR: $e');
+      debugPrint('Firestore saveTeacher failed: $e');
     }
   }
 
@@ -42,14 +40,12 @@ class FirestoreService {
       if (!doc.exists) return null;
       return doc.data();
     } catch (e) {
-      debugPrint('Firestore getTeacherByUid ERROR: $e');
+      debugPrint('Firestore getTeacherByUid failed: $e');
       return null;
     }
   }
 
-  // ============================================================
-  // PARENTS
-  // ============================================================
+  // Parents
 
   Future<void> saveParent({
     required String parentUid,
@@ -76,7 +72,7 @@ class FirestoreService {
       }, SetOptions(merge: true));
       debugPrint('Firestore: saveParent($parentUid) OK');
     } catch (e) {
-      debugPrint('Firestore saveParent ERROR: $e');
+      debugPrint('Firestore saveParent failed: $e');
     }
   }
 
@@ -89,14 +85,12 @@ class FirestoreService {
       if (!doc.exists) return null;
       return {'uid': doc.id, ...doc.data()!};
     } catch (e) {
-      debugPrint('Firestore getParentByUid ERROR: $e');
+      debugPrint('Firestore getParentByUid failed: $e');
       return null;
     }
   }
 
-  // ============================================================
-  // STUDENTS
-  // ============================================================
+  // Students
 
   Future<bool> saveStudent(
     String studentUid,
@@ -143,7 +137,7 @@ class FirestoreService {
       debugPrint('Firestore: saveStudent($studentUid) OK');
       return true;
     } catch (e) {
-      debugPrint('Firestore saveStudent ERROR: $e');
+      debugPrint('Firestore saveStudent failed: $e');
       return false;
     }
   }
@@ -162,7 +156,7 @@ class FirestoreService {
       final doc = snapshot.docs.first;
       return {'uid': doc.id, ...doc.data()};
     } catch (e) {
-      debugPrint('Firestore getStudentByUsername ERROR: $e');
+      debugPrint('Firestore getStudentByUsername failed: $e');
       return null;
     }
   }
@@ -201,7 +195,7 @@ class FirestoreService {
       debugPrint('Firestore: saveLinkedChild($childUid) OK');
       return true;
     } catch (e) {
-      debugPrint('Firestore saveLinkedChild ERROR: $e');
+      debugPrint('Firestore saveLinkedChild failed: $e');
       return false;
     }
   }
@@ -219,14 +213,12 @@ class FirestoreService {
           .map((doc) => {'uid': doc.id, ...doc.data()})
           .toList();
     } catch (e) {
-      debugPrint('Firestore getChildrenOfParent ERROR: $e');
+      debugPrint('Firestore getChildrenOfParent failed: $e');
       return [];
     }
   }
 
-  // ============================================================
-  // LINK CODES
-  // ============================================================
+  // Link codes
 
   Future<String?> generateLinkCode({
     required String parentUid,
@@ -246,7 +238,7 @@ class FirestoreService {
 
       return code;
     } catch (e) {
-      debugPrint('Firestore generateLinkCode ERROR: $e');
+      debugPrint('Firestore generateLinkCode failed: $e');
       return null;
     }
   }
@@ -271,7 +263,7 @@ class FirestoreService {
         'expiresAt': expiresAt.toDate().toIso8601String(),
       };
     } catch (e) {
-      debugPrint('Firestore validateLinkCode ERROR: $e');
+      debugPrint('Firestore validateLinkCode failed: $e');
       return null;
     }
   }
@@ -288,7 +280,7 @@ class FirestoreService {
       }, SetOptions(merge: true));
       return true;
     } catch (e) {
-      debugPrint('Firestore linkStudentToParent ERROR: $e');
+      debugPrint('Firestore linkStudentToParent failed: $e');
       return false;
     }
   }
@@ -302,7 +294,7 @@ class FirestoreService {
       }, SetOptions(merge: true));
       return true;
     } catch (e) {
-      debugPrint('Firestore unlinkStudentFromParent ERROR: $e');
+      debugPrint('Firestore unlinkStudentFromParent failed: $e');
       return false;
     }
   }
@@ -333,7 +325,7 @@ class FirestoreService {
       await docRef.delete();
       return true;
     } catch (e) {
-      debugPrint('Firestore deleteStudentCascade ERROR: $e');
+      debugPrint('Firestore deleteStudentCascade failed: $e');
       return false;
     }
   }
@@ -363,7 +355,7 @@ class FirestoreService {
 
       return snapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
-      debugPrint('Firestore getStudentResultsFromCloud ERROR: $e');
+      debugPrint('Firestore getStudentResultsFromCloud failed: $e');
       try {
         final snapshot = await _db
             .collection('students')
@@ -387,7 +379,7 @@ class FirestoreService {
       if (!doc.exists) return null;
       return {'uid': doc.id, ...doc.data()!};
     } catch (e) {
-      debugPrint('Firestore getStudentByUid ERROR: $e');
+      debugPrint('Firestore getStudentByUid failed: $e');
       try {
         final doc = await _db.collection('students').doc(studentUid).get();
         if (!doc.exists) return null;
@@ -398,9 +390,7 @@ class FirestoreService {
     }
   }
 
-  // ============================================================
-  // CLASSES
-  // ============================================================
+  // Classes
 
   Future<String> saveClassGroup(
     ClassGroup group,
@@ -431,7 +421,7 @@ class FirestoreService {
 
       return classId;
     } catch (e) {
-      debugPrint('Firestore saveClassGroup ERROR: $e');
+      debugPrint('Firestore saveClassGroup failed: $e');
       return '';
     }
   }
@@ -445,7 +435,7 @@ class FirestoreService {
       if (!doc.exists) return null;
       return {'uid': doc.id, ...doc.data()!};
     } catch (e) {
-      debugPrint('Firestore getTeacherByUidFull ERROR: $e');
+      debugPrint('Firestore getTeacherByUidFull failed: $e');
       return null;
     }
   }
@@ -463,7 +453,7 @@ class FirestoreService {
           .map((doc) => {'firestoreId': doc.id, ...doc.data()})
           .toList();
     } catch (e) {
-      debugPrint('Firestore getClassesForTeacher ERROR: $e');
+      debugPrint('Firestore getClassesForTeacher failed: $e');
       return [];
     }
   }
@@ -491,14 +481,12 @@ class FirestoreService {
         ...data,
       };
     } catch (e) {
-      debugPrint('Firestore getClassByJoinCode ERROR: $e');
+      debugPrint('Firestore getClassByJoinCode failed: $e');
       return null;
     }
   }
 
-  // ============================================================
-  // ENROLLMENTS
-  // ============================================================
+  // Enrollments
 
   Future<bool> enrollStudent({
     required String classId,
@@ -529,7 +517,7 @@ class FirestoreService {
 
       return true;
     } catch (e) {
-      debugPrint('Firestore enrollStudent ERROR: $e');
+      debugPrint('Firestore enrollStudent failed: $e');
       return false;
     }
   }
@@ -549,11 +537,14 @@ class FirestoreService {
 
         detailed.add({
           'uid': uid,
-          'studentName': e['studentName'] ?? profile?['displayName'] ?? 'Unknown',
+          'studentName':
+              e['studentName'] ?? profile?['displayName'] ?? 'Unknown',
           'gradeLevel': e['gradeLevel'] ?? profile?['gradeLevel'] ?? 0,
           'totalPoints': profile?['totalPoints'] ?? e['totalPoints'] ?? 0,
           'badgeCount': profile?['badgeCount'] ?? 0,
-          'avatarIndex': (profile?['avatarIndex'] as int?) ?? (e['avatarIndex'] as int?) ?? 1,
+          'avatarIndex': (profile?['avatarIndex'] as int?) ??
+              (e['avatarIndex'] as int?) ??
+              1,
           'enrolledAt': e['enrolledAt'],
         });
       }
@@ -563,7 +554,7 @@ class FirestoreService {
 
       return detailed;
     } catch (e) {
-      debugPrint('Firestore getEnrolledStudentsDetailed ERROR: $e');
+      debugPrint('Firestore getEnrolledStudentsDetailed failed: $e');
       return [];
     }
   }
@@ -572,17 +563,17 @@ class FirestoreService {
       String classId) async {
     try {
       final snapshot = await _db
-        .collection('classes')
-        .doc(classId)
-        .collection('enrollments')
-        .orderBy('totalPoints', descending: true)
-        .get(const GetOptions(source: Source.server));
+          .collection('classes')
+          .doc(classId)
+          .collection('enrollments')
+          .orderBy('totalPoints', descending: true)
+          .get(const GetOptions(source: Source.server));
 
       return snapshot.docs
           .map((doc) => {'uid': doc.id, ...doc.data()})
           .toList();
     } catch (e) {
-      debugPrint('Firestore getEnrollmentsForClass ERROR: $e');
+      debugPrint('Firestore getEnrollmentsForClass failed: $e');
       return [];
     }
   }
@@ -669,7 +660,7 @@ class FirestoreService {
 
       return true;
     } catch (e) {
-      debugPrint('Firestore transferStudent ERROR: $e');
+      debugPrint('Firestore transferStudent failed: $e');
       return false;
     }
   }
@@ -696,13 +687,11 @@ class FirestoreService {
           .doc(studentUid)
           .set(data, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Firestore updateEnrollmentSnapshot ERROR: $e');
+      debugPrint('Firestore updateEnrollmentSnapshot failed: $e');
     }
   }
 
-  // ============================================================
-  // LEADERBOARD
-  // ============================================================
+  // Leaderboard
 
   Future<void> updateLeaderboardEntry({
     required String studentUid,
@@ -729,7 +718,7 @@ class FirestoreService {
             SetOptions(merge: true),
           );
     } catch (e) {
-      debugPrint('Firestore updateLeaderboardEntry ERROR: $e');
+      debugPrint('Firestore updateLeaderboardEntry failed: $e');
     }
   }
 
@@ -748,7 +737,7 @@ class FirestoreService {
           .map((doc) => {'uid': doc.id, ...doc.data()})
           .toList();
     } catch (e) {
-      debugPrint('Firestore getGlobalLeaderboard ERROR: $e');
+      debugPrint('Firestore getGlobalLeaderboard failed: $e');
       return [];
     }
   }
@@ -772,14 +761,12 @@ class FirestoreService {
               .compareTo((a['totalPoints'] ?? 0) as int));
       return entries;
     } catch (e) {
-      debugPrint('Firestore getClassLeaderboard ERROR: $e');
+      debugPrint('Firestore getClassLeaderboard failed: $e');
       return [];
     }
   }
 
-  // ============================================================
-  // PROGRESS SYNC
-  // ============================================================
+  // Progress sync
 
   Future<bool> pushQuizAttempt({
     required String studentUid,
@@ -813,7 +800,7 @@ class FirestoreService {
       }, SetOptions(merge: true));
       return true;
     } catch (e) {
-      debugPrint('Firestore pushQuizAttempt ERROR: $e');
+      debugPrint('Firestore pushQuizAttempt failed: $e');
       return false;
     }
   }
@@ -849,7 +836,7 @@ class FirestoreService {
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Firestore syncStudentProgress ERROR: $e');
+      debugPrint('Firestore syncStudentProgress failed: $e');
     }
   }
 
@@ -876,13 +863,11 @@ class FirestoreService {
         'earnedAt': earnedAt,
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Firestore syncBadge ERROR: $e');
+      debugPrint('Firestore syncBadge failed: $e');
     }
   }
 
-  // ============================================================
-  // ATOMIC UPDATES
-  // ============================================================
+  // Atomic updates
 
   Future<void> incrementStudentPoints(String studentUid, int delta) async {
     if (delta == 0) return;
@@ -892,13 +877,11 @@ class FirestoreService {
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Firestore incrementStudentPoints ERROR: $e');
+      debugPrint('Firestore incrementStudentPoints failed: $e');
     }
   }
 
-  // ============================================================
-  // VERIFICATION MARKERS
-  // ============================================================
+  // Verification markers
 
   Future<void> markEmailVerified(String uid, String role) async {
     final collection = role == 'parent' ? 'parents' : 'teachers';
@@ -908,7 +891,7 @@ class FirestoreService {
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Firestore markEmailVerified ERROR: $e');
+      debugPrint('Firestore markEmailVerified failed: $e');
     }
   }
 
@@ -921,7 +904,7 @@ class FirestoreService {
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Firestore markPhoneVerified ERROR: $e');
+      debugPrint('Firestore markPhoneVerified failed: $e');
     }
   }
 
@@ -934,7 +917,7 @@ class FirestoreService {
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Firestore saveBackupCodeHash ERROR: $e');
+      debugPrint('Firestore saveBackupCodeHash failed: $e');
     }
   }
 
@@ -948,13 +931,11 @@ class FirestoreService {
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Firestore rotateBackupCode ERROR: $e');
+      debugPrint('Firestore rotateBackupCode failed: $e');
     }
   }
 
-  // ============================================================
-  // WORD ANALYTICS SYNC
-  // ============================================================
+  // Word analytics sync
 
   Future<void> syncWordMastery({
     required String studentUid,
@@ -976,7 +957,7 @@ class FirestoreService {
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Firestore syncWordMastery ERROR: $e');
+      debugPrint('Firestore syncWordMastery failed: $e');
     }
   }
 
@@ -998,7 +979,7 @@ class FirestoreService {
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Firestore syncWordEncounter ERROR: $e');
+      debugPrint('Firestore syncWordEncounter failed: $e');
     }
   }
 
@@ -1018,7 +999,7 @@ class FirestoreService {
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Firestore syncStarredWord ERROR: $e');
+      debugPrint('Firestore syncStarredWord failed: $e');
     }
   }
 
@@ -1034,15 +1015,14 @@ class FirestoreService {
           .doc(wordId.toString())
           .delete();
     } catch (e) {
-      debugPrint('Firestore unsyncStarredWord ERROR: $e');
+      debugPrint('Firestore unsyncStarredWord failed: $e');
     }
   }
 
-  // ============================================================
-  // WORD ANALYTICS PULL
-  // ============================================================
+  // Word analytics pull
 
-  Future<List<Map<String, dynamic>>> pullStudentMastery(String studentUid) async {
+  Future<List<Map<String, dynamic>>> pullStudentMastery(
+      String studentUid) async {
     try {
       final snap = await _db
           .collection('students')
@@ -1054,12 +1034,13 @@ class FirestoreService {
           .map((d) => {'wordId': int.tryParse(d.id), ...d.data()})
           .toList();
     } catch (e) {
-      debugPrint('Firestore pullStudentMastery ERROR: $e');
+      debugPrint('Firestore pullStudentMastery failed: $e');
       return [];
     }
   }
 
-  Future<List<Map<String, dynamic>>> pullStudentEncounters(String studentUid) async {
+  Future<List<Map<String, dynamic>>> pullStudentEncounters(
+      String studentUid) async {
     try {
       final snap = await _db
           .collection('students')
@@ -1071,12 +1052,13 @@ class FirestoreService {
           .map((d) => {'wordId': int.tryParse(d.id), ...d.data()})
           .toList();
     } catch (e) {
-      debugPrint('Firestore pullStudentEncounters ERROR: $e');
+      debugPrint('Firestore pullStudentEncounters failed: $e');
       return [];
     }
   }
 
-  Future<List<Map<String, dynamic>>> pullStudentStarred(String studentUid) async {
+  Future<List<Map<String, dynamic>>> pullStudentStarred(
+      String studentUid) async {
     try {
       final snap = await _db
           .collection('students')
@@ -1088,12 +1070,13 @@ class FirestoreService {
           .map((d) => {'wordId': int.tryParse(d.id), ...d.data()})
           .toList();
     } catch (e) {
-      debugPrint('Firestore pullStudentStarred ERROR: $e');
+      debugPrint('Firestore pullStudentStarred failed: $e');
       return [];
     }
   }
 
-  Future<List<Map<String, dynamic>>> pullStudentBadges(String studentUid) async {
+  Future<List<Map<String, dynamic>>> pullStudentBadges(
+      String studentUid) async {
     try {
       final snap = await _db
           .collection('students')
@@ -1103,7 +1086,7 @@ class FirestoreService {
           .timeout(const Duration(seconds: 10));
       return snap.docs.map((d) => {'badgeKey': d.id, ...d.data()}).toList();
     } catch (e) {
-      debugPrint('Firestore pullStudentBadges ERROR: $e');
+      debugPrint('Firestore pullStudentBadges failed: $e');
       return [];
     }
   }
@@ -1118,7 +1101,7 @@ class FirestoreService {
       if (!doc.exists) return null;
       return {'uid': doc.id, ...doc.data()!};
     } catch (e) {
-      debugPrint('Firestore getParentByUidFull ERROR: $e');
+      debugPrint('Firestore getParentByUidFull failed: $e');
       try {
         final doc = await _db.collection('parents').doc(parentUid).get();
         if (!doc.exists) return null;
@@ -1129,7 +1112,8 @@ class FirestoreService {
     }
   }
 
-  Future<void> markPhoneNumber(String uid, String role, String phoneNumber) async {
+  Future<void> markPhoneNumber(
+      String uid, String role, String phoneNumber) async {
     final collection = role == 'parent' ? 'parents' : 'teachers';
     try {
       await _db.collection(collection).doc(uid).set({
@@ -1138,7 +1122,7 @@ class FirestoreService {
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Firestore markPhoneNumber ERROR: $e');
+      debugPrint('Firestore markPhoneNumber failed: $e');
     }
   }
 
@@ -1157,7 +1141,7 @@ class FirestoreService {
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Firestore updatePhoneNumber ERROR: $e');
+      debugPrint('Firestore updatePhoneNumber failed: $e');
     }
   }
 }

@@ -4,16 +4,16 @@ class Parent {
   final String passwordHash;
   final String fullName;
   final String email;
-  final bool emailVerified;              // NEW
-  final String? phoneNumber;             // NEW
-  final bool phoneVerified;              // NEW
-  final String? phoneVerifiedAt;         // NEW
-  final String? backupCodeHash;          // NEW
-  final bool backupCodeUsed;             // NEW
+  final bool emailVerified;
+  final String? phoneNumber;
+  final bool phoneVerified;
+  final String? phoneVerifiedAt;
+  final String? backupCodeHash;
+  final bool backupCodeUsed;
   final String createdAt;
   final String? firebaseUid;
-  final String? lastSyncedAt;            // NEW
-  final bool pendingSync;                // NEW
+  final String? lastSyncedAt;
+  final bool pendingSync;
 
   Parent({
     this.id,

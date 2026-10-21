@@ -19,7 +19,7 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _progressAnimation;
 
-    @override
+  @override
   void initState() {
     super.initState();
 
@@ -33,10 +33,8 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _controller.forward();
-
     _bootstrap();
   }
-
 
   Future<void> _bootstrap() async {
     final studentProvider = context.read<StudentProvider>();
@@ -49,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
 
-        // Session expiry, force re-auth if the last activity was too long ago.
+    // Session expiry, force re-auth if the last activity was too long ago.
     final expired = await authProvider.checkSessionExpiry();
     if (!mounted) return;
 
@@ -84,50 +82,45 @@ class _SplashScreenState extends State<SplashScreen>
       backgroundColor: AppColors.introBg,
       body: SafeArea(
         child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Yse mascot, waving pose
-              const _YseImage(
-                assetPath: 'assets/images/mascot/yse_wave.png',
-                size: 180,
-                fallbackIcon: Icons.menu_book_rounded,
-              ),
-              const SizedBox(height: AppSpacing.xl),
-
-              // App name
-              const Text('ReadEase', style: AppText.display),
-              const SizedBox(height: AppSpacing.sm),
-
-              // Tagline
-              const Text(
-                'Read at your own ease.',
-                style: AppText.body,
-              ),
-
-              const SizedBox(height: AppSpacing.xxxl),
-
-              // Animated loading bar
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 60),
-                child: AnimatedBuilder(
-                  animation: _progressAnimation,
-                  builder: (context, child) {
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(AppRadius.small),
-                      child: LinearProgressIndicator(
-                        value: _progressAnimation.value,
-                        minHeight: 8,
-                        backgroundColor: AppColors.border,
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          AppColors.accentTeal,
-                        ),
-                      ),
-                    );
-                  },
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const _YseImage(
+                  assetPath: 'assets/images/mascot/yse_wave.png',
+                  size: 180,
+                  fallbackIcon: Icons.menu_book_rounded,
                 ),
-              ),
-            ],
+                const SizedBox(height: AppSpacing.xl),
+                const Text('ReadEase', style: AppText.display),
+                const SizedBox(height: AppSpacing.sm),
+                const Text(
+                  'Read at your own ease.',
+                  style: AppText.body,
+                ),
+                const SizedBox(height: AppSpacing.xxxl),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 60),
+                  child: AnimatedBuilder(
+                    animation: _progressAnimation,
+                    builder: (context, child) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(AppRadius.small),
+                        child: LinearProgressIndicator(
+                          value: _progressAnimation.value,
+                          minHeight: 8,
+                          backgroundColor: AppColors.border,
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.accentTeal,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -154,9 +147,9 @@ class _YseImage extends StatelessWidget {
       assetPath,
       width: size,
       height: size,
+      cacheWidth: (size * 2).toInt(),
       fit: BoxFit.contain,
       errorBuilder: (context, error, stackTrace) {
-        // Fallback: rounded container with icon
         return Container(
           width: size,
           height: size,

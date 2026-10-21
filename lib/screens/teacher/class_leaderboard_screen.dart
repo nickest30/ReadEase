@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/class_group.dart';
 import '../../models/student.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/avatar_helper.dart';
 
@@ -10,7 +11,24 @@ class ClassLeaderboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map ||
+        args['classGroup'] is! ClassGroup ||
+        args['students'] is! List) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/teacher-dashboard',
+            (route) => false,
+          );
+        }
+      });
+      return const Scaffold(
+        backgroundColor: AppColors.teacherBg,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final classGroup = args['classGroup'] as ClassGroup;
     final students = List<Student>.from(args['students'] as List)
       ..sort((a, b) => b.totalPoints.compareTo(a.totalPoints));
@@ -18,110 +36,118 @@ class ClassLeaderboardScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.teacherBg,
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.md,
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back,
-                        color: AppColors.textPrimary),
-                    padding: EdgeInsets.zero,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                    vertical: AppSpacing.md,
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Leaderboard', style: AppText.h2),
-                        const SizedBox(height: 2),
-                        Text(
-                          classGroup.className,
-                          style: AppText.caption,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          SfxService.tap();
+                          Navigator.of(context).pop();
+                        },
+                        icon: const Icon(Icons.arrow_back,
+                            color: AppColors.textPrimary),
+                        padding: EdgeInsets.zero,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Leaderboard', style: AppText.h2),
+                            const SizedBox(height: 2),
+                            Text(
+                              classGroup.className,
+                              style: AppText.caption,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ],
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: AppSpacing.sm),
+
+                        Image.asset(
+                          'assets/images/mascot/groo_victory.png',
+                          width: 180,
+                          height: 180,
+                          fit: BoxFit.contain,
+                          cacheWidth: 360,
+                          errorBuilder: (_, _, _) => Container(
+                            width: 180,
+                            height: 180,
+                            decoration: BoxDecoration(
+                              color: AppColors.accentYellow
+                                  .withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.accentYellow,
+                                width: 2,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.emoji_events_rounded,
+                              size: 72,
+                              color: AppColors.accentYellow,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: AppSpacing.md),
+
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.xl),
+                          child: students.isEmpty
+                              ? Container(
+                                  padding: const EdgeInsets.all(AppSpacing.xl),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface,
+                                    borderRadius: BorderRadius.circular(
+                                        AppRadius.large),
+                                    border: Border.all(color: AppColors.border),
+                                  ),
+                                  child: const Text(
+                                    'No students enrolled yet.',
+                                    textAlign: TextAlign.center,
+                                    style: AppText.caption,
+                                  ),
+                                )
+                              : Column(
+                                  children:
+                                      students.asMap().entries.map((e) {
+                                    return _RankRow(
+                                      rank: e.key + 1,
+                                      student: e.value,
+                                    );
+                                  }).toList(),
+                                ),
+                        ),
+
+                        const SizedBox(height: AppSpacing.xl),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const SizedBox(height: AppSpacing.sm),
-
-                    Image.asset(
-                      'assets/images/mascot/groo_victory.png',
-                      width: 180,
-                      height: 180,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => Container(
-                        width: 180,
-                        height: 180,
-                        decoration: BoxDecoration(
-                          color: AppColors.accentYellow
-                              .withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.accentYellow,
-                            width: 2,
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.emoji_events_rounded,
-                          size: 72,
-                          color: AppColors.accentYellow,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.xl),
-                      child: students.isEmpty
-                          ? Container(
-                              padding:
-                                  const EdgeInsets.all(AppSpacing.xl),
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(
-                                    AppRadius.large),
-                                border:
-                                    Border.all(color: AppColors.border),
-                              ),
-                              child: const Text(
-                                'No students enrolled yet.',
-                                textAlign: TextAlign.center,
-                                style: AppText.caption,
-                              ),
-                            )
-                          : Column(
-                              children: students.asMap().entries.map((e) {
-                                return _RankRow(
-                                  rank: e.key + 1,
-                                  student: e.value,
-                                );
-                              }).toList(),
-                            ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -170,7 +196,6 @@ class _RankRow extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
 
-          // Avatar, falls back to a placeholder if the image is missing
           Container(
             width: 38,
             height: 38,
@@ -186,6 +211,7 @@ class _RankRow extends StatelessWidget {
             child: Image.asset(
               avatarAssetPath(student.avatarIndex),
               fit: BoxFit.cover,
+              cacheWidth: 100,
               errorBuilder: (_, _, _) => const Icon(
                 Icons.person_rounded,
                 size: 22,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/student.dart';
 import '../../services/database_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/avatar_helper.dart';
 
@@ -36,121 +37,118 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
     return Scaffold(
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppSpacing.md),
-
-              // Back button with safe fallback
-              IconButton(
-                onPressed: () {
-                  if (Navigator.of(context).canPop()) {
-                    Navigator.of(context).pop();
-                  } else {
-                    Navigator.of(context).pushNamedAndRemoveUntil(
-                      '/role-selection',
-                      (route) => false,
-                    );
-                  }
-                },
-                icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-                alignment: Alignment.centerLeft,
-                padding: EdgeInsets.zero,
-              ),
-
-              const SizedBox(height: AppSpacing.sm),
-
-              // Header with Yse peeking
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text("Who's reading\ntoday?", style: AppText.h1),
-                        SizedBox(height: AppSpacing.xs),
-                        Text(
-                          'Pick your profile to start',
-                          style: AppText.caption,
+                  const SizedBox(height: AppSpacing.md),
+                  IconButton(
+                    onPressed: () {
+                      SfxService.tap();
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      } else {
+                        Navigator.of(context).pushNamedAndRemoveUntil(
+                          '/role-selection',
+                          (route) => false,
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                    alignment: Alignment.centerLeft,
+                    padding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text("Who's reading\ntoday?", style: AppText.h1),
+                            SizedBox(height: AppSpacing.xs),
+                            Text(
+                              'Pick your profile to start',
+                              style: AppText.caption,
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
+                      const _YseImage(
+                        assetPath: 'assets/images/mascot/yse_thinking.png',
+                        size: 90,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  Expanded(
+                    child: _loading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _profiles.isEmpty
+                            ? _buildEmptyState()
+                            : _buildProfileGrid(),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        SfxService.tap();
+                        Navigator.of(context).pushNamed('/solo-signup');
+                      },
+                      icon: const Icon(Icons.person_add_alt_1_rounded),
+                      label: const Text(
+                        'Register on Your Own',
+                        style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accentTeal,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.large),
+                        ),
+                      ),
                     ),
                   ),
-                  const _YseImage(
-                    assetPath: 'assets/images/mascot/yse_thinking.png',
-                    size: 90,
+                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(
+                    height: 52,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        SfxService.tap();
+                        Navigator.of(context).pushNamed('/student-signin');
+                      },
+                      icon: const Icon(Icons.login_rounded),
+                      label: const Text(
+                        'Log In with Credentials',
+                        style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.accentTeal,
+                        side: const BorderSide(color: AppColors.accentTeal, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.large),
+                        ),
+                      ),
+                    ),
                   ),
+                  const SizedBox(height: AppSpacing.lg),
                 ],
               ),
-
-              const SizedBox(height: AppSpacing.xl),
-
-              // Profile grid / empty state
-              Expanded(
-                child: _loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _profiles.isEmpty
-                        ? _buildEmptyState()
-                        : _buildProfileGrid(),
-              ),
-
-              const SizedBox(height: AppSpacing.md),
-
-              // Primary CTA, Register
-              SizedBox(
-                height: 56,
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.of(context).pushNamed('/solo-signup'),
-                  icon: const Icon(Icons.person_add_alt_1_rounded),
-                  label: const Text(
-                    'Register on Your Own',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentTeal,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.large),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.md),
-
-              // Secondary CTA, Login
-              SizedBox(
-                height: 52,
-                child: OutlinedButton.icon(
-                  onPressed: () => Navigator.of(context).pushNamed('/student-signin'),
-                  icon: const Icon(Icons.login_rounded),
-                  label: const Text(
-                    'Log In with Credentials',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.accentTeal,
-                    side: const BorderSide(color: AppColors.accentTeal, width: 1.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.large),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.lg),
-            ],
+            ),
           ),
         ),
       ),
@@ -208,10 +206,6 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
   }
 }
 
-// ─────────────────────────────────────────────────────────
-// Private widgets
-// ─────────────────────────────────────────────────────────
-
 class _ProfileCard extends StatelessWidget {
   final Student student;
   final VoidCallback onTap;
@@ -221,7 +215,10 @@ class _ProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        SfxService.tap();
+        onTap();
+      },
       borderRadius: BorderRadius.circular(AppRadius.large),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -233,7 +230,6 @@ class _ProfileCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Avatar, replaces the initial-letter circle.
             Container(
               width: 68,
               height: 68,
@@ -250,8 +246,8 @@ class _ProfileCard extends StatelessWidget {
                 child: Image.asset(
                   avatarAssetPath(student.avatarIndex),
                   fit: BoxFit.cover,
+                  cacheWidth: 136,
                   errorBuilder: (_, _, _) {
-                    // Fallback, initial letter if the PNG is missing.
                     final initial = student.displayName.isNotEmpty
                         ? student.displayName[0].toUpperCase()
                         : '?';
@@ -321,6 +317,7 @@ class _YseImage extends StatelessWidget {
       assetPath,
       width: size,
       height: size,
+      cacheWidth: (size * 2).toInt(),
       fit: BoxFit.contain,
       errorBuilder: (context, error, stackTrace) {
         return Container(

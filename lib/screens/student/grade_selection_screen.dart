@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 
 class GradeSelectionScreen extends StatefulWidget {
@@ -14,10 +15,6 @@ class GradeSelectionScreen extends StatefulWidget {
 
 class _GradeSelectionScreenState extends State<GradeSelectionScreen> {
   bool _loading = true;
-
-  /// Highest grade the student is allowed to enter.
-  /// Starts at their registered grade; increments by 1 for every grade
-  /// where they've passed Hard (all 3 difficulties done).
   int _highestUnlocked = 1;
 
   @override
@@ -35,8 +32,6 @@ class _GradeSelectionScreenState extends State<GradeSelectionScreen> {
 
     int highest = student.gradeLevel;
 
-    // Walk forward: unlock next grade if Hard passed at current grade.
-    // Cap at 6.
     for (int g = student.gradeLevel; g <= 6; g++) {
       if (g > 6) break;
       final passedHard = await DatabaseService.instance
@@ -77,82 +72,84 @@ class _GradeSelectionScreenState extends State<GradeSelectionScreen> {
     return Scaffold(
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppSpacing.md),
-
-              IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.arrow_back,
-                    color: AppColors.textPrimary),
-                alignment: Alignment.centerLeft,
-                padding: EdgeInsets.zero,
-              ),
-
-              const SizedBox(height: AppSpacing.sm),
-
-              Row(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text('Grade Selection', style: AppText.h1),
-                        SizedBox(height: AppSpacing.xs),
-                        Text(
-                          'Choose the grade to study',
-                          style: AppText.caption,
+                  const SizedBox(height: AppSpacing.md),
+                  IconButton(
+                    onPressed: () {
+                      SfxService.tap();
+                      Navigator.of(context).pop();
+                    },
+                    icon: const Icon(Icons.arrow_back,
+                        color: AppColors.textPrimary),
+                    alignment: Alignment.centerLeft,
+                    padding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text('Grade Selection', style: AppText.h1),
+                            SizedBox(height: AppSpacing.xs),
+                            Text(
+                              'Choose the grade to study',
+                              style: AppText.caption,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      const _YseImage(
+                        assetPath: 'assets/images/mascot/yse_point.png',
+                        size: 90,
+                        fallbackIcon: Icons.touch_app_rounded,
+                      ),
+                    ],
                   ),
-                  const _YseImage(
-                    assetPath: 'assets/images/mascot/yse_point.png',
-                    size: 90,
-                    fallbackIcon: Icons.touch_app_rounded,
+                  const SizedBox(height: AppSpacing.xl),
+                  Expanded(
+                    child: _loading
+                        ? const Center(child: CircularProgressIndicator())
+                        : GridView.count(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: AppSpacing.md,
+                            crossAxisSpacing: AppSpacing.md,
+                            childAspectRatio: 1.3,
+                            children: List.generate(6, (index) {
+                              final grade = index + 1;
+                              final isPrimary = grade == student.gradeLevel;
+                              final isLocked = grade > _highestUnlocked;
+
+                              return _GradeCard(
+                                grade: grade,
+                                isPrimary: isPrimary,
+                                isLocked: isLocked,
+                                onTap: () {
+                                  if (isLocked) {
+                                    _showLockedMessage(grade);
+                                    return;
+                                  }
+                                  Navigator.of(context).pushNamed(
+                                    '/difficulty-selection',
+                                    arguments: {'gradeLevel': grade},
+                                  );
+                                },
+                              );
+                            }),
+                          ),
                   ),
+                  const SizedBox(height: AppSpacing.lg),
                 ],
               ),
-
-              const SizedBox(height: AppSpacing.xl),
-
-              Expanded(
-                child: _loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : GridView.count(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: AppSpacing.md,
-                        crossAxisSpacing: AppSpacing.md,
-                        childAspectRatio: 1.3,
-                        children: List.generate(6, (index) {
-                          final grade = index + 1;
-                          final isPrimary = grade == student.gradeLevel;
-                          final isLocked = grade > _highestUnlocked;
-
-                          return _GradeCard(
-                            grade: grade,
-                            isPrimary: isPrimary,
-                            isLocked: isLocked,
-                            onTap: () {
-                              if (isLocked) {
-                                _showLockedMessage(grade);
-                                return;
-                              }
-                              Navigator.of(context).pushNamed(
-                                '/difficulty-selection',
-                                arguments: {'gradeLevel': grade},
-                              );
-                            },
-                          );
-                        }),
-                      ),
-              ),
-
-              const SizedBox(height: AppSpacing.lg),
-            ],
+            ),
           ),
         ),
       ),
@@ -180,10 +177,6 @@ class _GradeSelectionScreenState extends State<GradeSelectionScreen> {
       );
   }
 }
-
-// ─────────────────────────────────────────────────────────
-// Private widgets
-// ─────────────────────────────────────────────────────────
 
 class _GradeCard extends StatelessWidget {
   final int grade;
@@ -223,7 +216,10 @@ class _GradeCard extends StatelessWidget {
     }
 
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        SfxService.tap();
+        onTap();
+      },
       borderRadius: BorderRadius.circular(AppRadius.large),
       child: Container(
         decoration: BoxDecoration(
@@ -316,6 +312,7 @@ class _YseImage extends StatelessWidget {
       assetPath,
       width: size,
       height: size,
+      cacheWidth: (size * 2).toInt(),
       fit: BoxFit.contain,
       errorBuilder: (context, error, stackTrace) {
         return Container(

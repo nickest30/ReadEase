@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../../providers/student_provider.dart';
 import '../../services/database_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/avatar_helper.dart'; // Added for avatarAssetPath
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -44,7 +46,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final student = studentProvider.currentStudent;
     if (student == null) return;
 
-    // ── PIN verification BEFORE saving ──
+    // PIN verification must pass before saving changes.
     final pinOk = await _showPinVerifyDialog(student.pinHash ?? '');
     if (!pinOk || !mounted) return;
 
@@ -141,225 +143,239 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: AppSpacing.md),
-
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.arrow_back,
-                      color: AppColors.textPrimary),
-                  alignment: Alignment.centerLeft,
-                  padding: EdgeInsets.zero,
-                ),
-
-                const SizedBox(height: AppSpacing.sm),
-
-                const Text('Edit Profile', style: AppText.h1),
-                const Text(
-                  'Update your name and username',
-                  style: AppText.caption,
-                ),
-
-                // Conditional parent warning banner
-                if (student.isLinked) ...[
-                  const SizedBox(height: AppSpacing.lg),
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentPurple.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppRadius.medium),
-                      border: Border.all(
-                        color: AppColors.accentPurple.withValues(alpha: 0.4),
-                      ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: AppSpacing.md),
+                    IconButton(
+                      onPressed: () {
+                        SfxService.tap();
+                        Navigator.of(context).pop();
+                      },
+                      icon: const Icon(Icons.arrow_back,
+                          color: AppColors.textPrimary),
+                      alignment: Alignment.centerLeft,
+                      padding: EdgeInsets.zero,
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.family_restroom_rounded,
-                          size: 20,
-                          color: AppColors.accentPurple,
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Text(
-                            'Your parent can see these changes.',
-                            style: AppText.caption.copyWith(
-                              color: AppColors.textPurple,
-                              fontWeight: FontWeight.w600,
-                            ),
+                    const SizedBox(height: AppSpacing.sm),
+                    const Text('Edit Profile', style: AppText.h1),
+                    const Text(
+                      'Update your name and username',
+                      style: AppText.caption,
+                    ),
+                    if (student.isLinked) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.accentPurple.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppRadius.medium),
+                          border: Border.all(
+                            color: AppColors.accentPurple.withValues(alpha: 0.4),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: AppSpacing.xl),
-
-                Center(
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: const BoxDecoration(
-                      color: AppColors.accentTeal,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        _displayNameController.text.isNotEmpty
-                            ? _displayNameController.text[0].toUpperCase()
-                            : '?',
-                        style: const TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: AppSpacing.xl),
-
-                _FieldLabel('Display Name'),
-                TextFormField(
-                  controller: _displayNameController,
-                  textCapitalization: TextCapitalization.words,
-                  onChanged: (_) => setState(() {}),
-                  decoration: _inputDecoration('Your name'),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Required';
-                    if (v.trim().length < 2) return 'Too short';
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: AppSpacing.lg),
-
-                _FieldLabel('Username'),
-                TextFormField(
-                  controller: _usernameController,
-                  decoration: _inputDecoration('Your username'),
-                  validator: (v) {
-                    if (v == null || v.trim().length < 3) {
-                      return 'At least 3 characters';
-                    }
-                    if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(v.trim())) {
-                      return 'Only letters, numbers, and underscores';
-                    }
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: AppSpacing.md),
-
-                // Grade read-only note
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.medium),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.info_outline_rounded,
-                        size: 20,
-                        color: AppColors.textMuted,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Text(
-                          'Grade ${student.gradeLevel} can\'t be changed here.',
-                          style: AppText.caption,
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.family_restroom_rounded,
+                              size: 20,
+                              color: AppColors.accentPurple,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                'Your parent can see these changes.',
+                                style: AppText.caption.copyWith(
+                                  color: AppColors.textPurple,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
-                ),
-
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    _errorMessage!,
-                    style: const TextStyle(
-                      color: AppColors.textCoral,
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: AppSpacing.xl),
-
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isSubmitting ? null : _save,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentTeal,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.large),
+                    const SizedBox(height: AppSpacing.xl),
+                    
+                    // ── UPDATED: Avatar Image instead of Letter ──
+                    Center(
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: AppColors.accentTeal.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.accentTeal.withValues(alpha: 0.4),
+                            width: 2,
+                          ),
+                        ),
+                        padding: const EdgeInsets.all(3),
+                        child: ClipOval(
+                          child: Image.asset(
+                            avatarAssetPath(student.avatarIndex),
+                            fit: BoxFit.cover,
+                            cacheWidth: 160,
+                            errorBuilder: (_, _, _) {
+                              final initial = student.displayName.isNotEmpty
+                                  ? student.displayName[0].toUpperCase()
+                                  : '?';
+                              return Container(
+                                color: AppColors.accentTeal,
+                                child: Center(
+                                  child: Text(
+                                    initial,
+                                    style: const TextStyle(
+                                      fontFamily: 'Nunito',
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       ),
                     ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : const Text(
-                            'SAVE CHANGES',
-                            style: TextStyle(
-                              fontFamily: 'Nunito',
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                  ),
-                ),
-
-                const SizedBox(height: AppSpacing.lg),
-
-                // Yse editing mascot
-                Center(
-                  child: Image.asset(
-                    'assets/images/mascot/yse_editing.png',
-                    width: 130,
-                    height: 130,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => Container(
-                      width: 130,
-                      height: 130,
+                    const SizedBox(height: AppSpacing.xl),
+                    
+                    _FieldLabel('Display Name'),
+                    TextFormField(
+                      controller: _displayNameController,
+                      textCapitalization: TextCapitalization.words,
+                      onChanged: (_) => setState(() {}),
+                      decoration: _inputDecoration('Your name'),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Required';
+                        if (v.trim().length < 2) return 'Too short';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    _FieldLabel('Username'),
+                    TextFormField(
+                      controller: _usernameController,
+                      decoration: _inputDecoration('Your username'),
+                      validator: (v) {
+                        if (v == null || v.trim().length < 3) {
+                          return 'At least 3 characters';
+                        }
+                        if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(v.trim())) {
+                          return 'Only letters, numbers, and underscores';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.md),
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.xl),
-                        border: Border.all(
-                            color: AppColors.border, width: 2),
+                        borderRadius: BorderRadius.circular(AppRadius.medium),
+                        border: Border.all(color: AppColors.border),
                       ),
-                      child: const Icon(
-                        Icons.edit_note_rounded,
-                        size: 60,
-                        color: AppColors.accentTeal,
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            size: 20,
+                            color: AppColors.textMuted,
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              'Grade ${student.gradeLevel} can\'t be changed here.',
+                              style: AppText.caption,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                          color: AppColors.textCoral,
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.xl),
+                    SizedBox(
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _isSubmitting
+                            ? null
+                            : () {
+                                SfxService.tap();
+                                _save();
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accentTeal,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.large),
+                          ),
+                        ),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : const Text(
+                                'SAVE CHANGES',
+                                style: TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Center(
+                      child: Image.asset(
+                        'assets/images/mascot/yse_editing.png',
+                        width: 130,
+                        height: 130,
+                        cacheWidth: 260,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => Container(
+                          width: 130,
+                          height: 130,
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.xl),
+                            border: Border.all(
+                                color: AppColors.border, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.edit_note_rounded,
+                            size: 60,
+                            color: AppColors.accentTeal,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                  ],
                 ),
-
-                const SizedBox(height: AppSpacing.xl),
-              ],
+              ),
             ),
           ),
         ),
@@ -389,10 +405,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────
-// PIN Verify Dialog
-// ─────────────────────────────────────────────────────────
 
 class _PinVerifyDialog extends StatefulWidget {
   final String expectedHash;
@@ -450,12 +462,12 @@ class _PinVerifyDialogState extends State<_PinVerifyDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: AppColors.studentBg, // BUG-002 Fix: Match student theme
+      backgroundColor: AppColors.studentBg,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.xl),
       ),
       insetPadding: const EdgeInsets.all(AppSpacing.xl),
-      child: SingleChildScrollView( // BUG-002 Fix: Prevent black/yellow overflow
+      child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
@@ -484,8 +496,6 @@ class _PinVerifyDialogState extends State<_PinVerifyDialog> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.lg),
-
-              // BUG-002 Fix: Slightly larger dots, better spacing
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(4, (index) {
@@ -505,7 +515,6 @@ class _PinVerifyDialogState extends State<_PinVerifyDialog> {
                   );
                 }),
               ),
-
               if (_error != null) ...[
                 const SizedBox(height: AppSpacing.md),
                 Text(
@@ -518,18 +527,17 @@ class _PinVerifyDialogState extends State<_PinVerifyDialog> {
                   ),
                 ),
               ],
-
               const SizedBox(height: AppSpacing.lg),
-
               _MiniPinPad(
                 onDigit: _onDigit,
                 onBackspace: _onBackspace,
               ),
-
               const SizedBox(height: AppSpacing.md),
-
               TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
+                onPressed: () {
+                  SfxService.tap();
+                  Navigator.of(context).pop(false);
+                },
                 child: const Text(
                   'Cancel',
                   style: TextStyle(
@@ -575,6 +583,7 @@ class _MiniPinPad extends StatelessWidget {
                 height: 52,
                 child: ElevatedButton(
                   onPressed: () {
+                    SfxService.tap();
                     if (key == '⌫') {
                       onBackspace();
                     } else {
@@ -582,7 +591,7 @@ class _MiniPinPad extends StatelessWidget {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.surface, // Contrast against studentBg
+                    backgroundColor: AppColors.surface,
                     foregroundColor: AppColors.textPrimary,
                     elevation: 0,
                     shape: const CircleBorder(),

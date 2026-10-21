@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:bcrypt/bcrypt.dart';
@@ -6,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../models/student.dart';
 import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/sfx_service.dart';
 import '../../providers/student_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/number_pad.dart';
@@ -31,6 +34,8 @@ class _SetPinScreenState extends State<SetPinScreen> {
   void _onDigitPressed(String digit) {
     if (_isSaving || _currentPin.length >= 4) return;
 
+    SfxService.tap();
+
     if (_dotState != PinDotState.idle) {
       setState(() => _dotState = PinDotState.idle);
     }
@@ -51,7 +56,9 @@ class _SetPinScreenState extends State<SetPinScreen> {
   void _onBackspace() {
     if (_isSaving || _currentPin.isEmpty) return;
 
+    SfxService.tap();
     HapticFeedback.lightImpact();
+    
     setState(() {
       _errorMessage = null;
       _dotState = PinDotState.idle;
@@ -92,28 +99,43 @@ class _SetPinScreenState extends State<SetPinScreen> {
     await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
-    final student = ModalRoute.of(context)!.settings.arguments as Student;
+    // Safe Null Fallback for Route Arguments
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Student) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/student-profile-list',
+            (route) => false,
+          );
+        }
+      });
+      return;
+    }
+    
+    final student = args;
     final studentProvider = context.read<StudentProvider>();
     final hashedPin = BCrypt.hashpw(_pin, BCrypt.gensalt());
 
     await DatabaseService.instance.updatePin(student.id!, hashedPin);
 
     // Push PIN hash to Firestore for new-device verification.
-    // Non-blocking: if this fails, PIN still works locally.
+    // Wrapped in unawaited to ensure the UI navigates instantly, even if offline.
     if (student.firebaseUid != null) {
-      try {
-        await FirestoreService.instance.saveStudent(
-          student.firebaseUid!,
-          student.displayName,
-          student.gradeLevel,
-          username: student.username,
-          pinHash: hashedPin,
-          includePoints: false, // don't touch cloud points from here
-        );
-        debugPrint('🔥 PIN hash synced to Firestore');
-      } catch (e) {
-        debugPrint('🔥 PIN hash sync failed (non-blocking): $e');
-      }
+      unawaited(() async {
+        try {
+          await FirestoreService.instance.saveStudent(
+            student.firebaseUid!,
+            student.displayName,
+            student.gradeLevel,
+            username: student.username,
+            pinHash: hashedPin,
+            includePoints: false, 
+          );
+        } catch (e) {
+          debugPrint('PIN hash background sync failed: $e');
+        }
+      }());
     }
 
     if (!mounted) return;
@@ -129,91 +151,91 @@ class _SetPinScreenState extends State<SetPinScreen> {
     );
   }
 
-    @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.studentBg,
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xxl,
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
-                ),
-                child: IntrinsicHeight(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.lock_outline_rounded,
-                        size: 56,
-                        color: AppColors.accentTeal,
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-
-                      Text(
-                        _isConfirming ? 'Confirm Your PIN' : 'Set Your PIN',
-                        style: AppText.h1,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      const Text(
-                        'Choose a 4-digit PIN for quick access',
-                        style: AppText.caption,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-
-                      PinDots(
-                        filledCount: _currentPin.length,
-                        state: _dotState,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-
-                      SizedBox(
-                        height: 22,
-                        child: _errorMessage != null
-                            ? Text(
-                                _errorMessage!,
-                                style: const TextStyle(
-                                  color: AppColors.textCoral,
-                                  fontFamily: 'Nunito',
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                ),
-                                textAlign: TextAlign.center,
-                              )
-                            : _dotState == PinDotState.success
-                                ? const Text(
-                                    'PIN set!',
-                                    style: TextStyle(
-                                      color: kPinSuccessColor,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xxl,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.lock_outline_rounded,
+                            size: 56,
+                            color: AppColors.accentTeal,
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          Text(
+                            _isConfirming ? 'Confirm Your PIN' : 'Set Your PIN',
+                            style: AppText.h1,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          const Text(
+                            'Choose a 4-digit PIN for quick access',
+                            style: AppText.caption,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                          PinDots(
+                            filledCount: _currentPin.length,
+                            state: _dotState,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          SizedBox(
+                            height: 22,
+                            child: _errorMessage != null
+                                ? Text(
+                                    _errorMessage!,
+                                    style: const TextStyle(
+                                      color: AppColors.textCoral,
                                       fontFamily: 'Nunito',
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight: FontWeight.w600,
                                       fontSize: 13,
                                     ),
+                                    textAlign: TextAlign.center,
                                   )
-                                : const SizedBox.shrink(),
+                                : _dotState == PinDotState.success
+                                    ? const Text(
+                                        'PIN set!',
+                                        style: TextStyle(
+                                          color: kPinSuccessColor,
+                                          fontFamily: 'Nunito',
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      )
+                                    : const SizedBox.shrink(),
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          NumberPad(
+                            enabled: !_isSaving,
+                            onDigit: _onDigitPressed,
+                            onBackspace: _onBackspace,
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                        ],
                       ),
-                      const SizedBox(height: AppSpacing.lg),
-
-                      NumberPad(
-                        enabled: !_isSaving,
-                        onDigit: _onDigitPressed,
-                        onBackspace: _onBackspace,
-                      ),
-
-                      const SizedBox(height: AppSpacing.xl),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            );
-          },
+                );
+              },
+            ),
+          ),
         ),
       ),
     );

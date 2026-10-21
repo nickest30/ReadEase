@@ -5,6 +5,7 @@ import '../../models/class_group.dart';
 import '../../models/student.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../services/firestore_service.dart';
+import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/avatar_helper.dart';
 
@@ -27,7 +28,19 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
   }
 
   Future<void> _loadStudents() async {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map || args['classGroup'] is! ClassGroup) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/teacher-dashboard',
+            (route) => false,
+          );
+        }
+      });
+      return;
+    }
+
     final classGroup = args['classGroup'] as ClassGroup;
 
     if (!context.read<ConnectivityProvider>().isOnline) {
@@ -52,14 +65,12 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
     final raw = await FirestoreService.instance
         .getEnrolledStudentsDetailed(classGroup.firestoreId!);
 
-    // Convert Firestore Maps → Student objects for navigation
     final students = raw.map((m) {
       return Student(
-        id: null, // cloud-only, no local ID
+        id: null,
         username: '',
         passwordHash: '',
-        displayName: (m['studentName'] ?? m['displayName'] ?? 'Unknown')
-            as String,
+        displayName: (m['studentName'] ?? m['displayName'] ?? 'Unknown') as String,
         gradeLevel: (m['gradeLevel'] ?? 0) as int,
         totalPoints: (m['totalPoints'] ?? 0) as int,
         firebaseUid: m['uid'] as String?,
@@ -78,181 +89,200 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map || args['classGroup'] is! ClassGroup) {
+      return const Scaffold(
+        backgroundColor: AppColors.teacherBg,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final classGroup = args['classGroup'] as ClassGroup;
 
     return Scaffold(
       backgroundColor: AppColors.teacherBg,
       body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.md,
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back,
-                        color: AppColors.textPrimary),
-                    padding: EdgeInsets.zero,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                    vertical: AppSpacing.md,
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  const Expanded(
-                    child: Text('Class Overview', style: AppText.h2),
-                  ),
-                  IconButton(
-                    onPressed: _loading ? null : _loadStudents,
-                    icon: const Icon(Icons.refresh_rounded,
-                        color: AppColors.textPrimary),
-                    padding: EdgeInsets.zero,
-                    tooltip: 'Refresh',
-                  ),
-                ],
-              ),
-            ),
-
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : RefreshIndicator(
-                      onRefresh: _loadStudents,
-                      color: AppColors.accentYellow,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: AppSpacing.sm),
-
-                            // Groo teaching
-                            Image.asset(
-                              'assets/images/mascot/groo_teaching.png',
-                              width: 180,
-                              height: 180,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, _, _) => Container(
-                                width: 180,
-                                height: 180,
-                                decoration: BoxDecoration(
-                                  color: AppColors.accentYellow
-                                      .withValues(alpha: 0.15),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: AppColors.accentYellow,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.class_rounded,
-                                  size: 72,
-                                  color: AppColors.accentYellow,
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: AppSpacing.md),
-
-                            // Class info card
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.xl),
-                              child: _buildClassInfoCard(classGroup),
-                            ),
-
-                            const SizedBox(height: AppSpacing.md),
-
-                            // Action buttons
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.xl),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: _ActionButton(
-                                      label: 'Analytics',
-                                      icon: Icons.bar_chart_rounded,
-                                      onTap: () {
-                                        Navigator.of(context).pushNamed(
-                                          '/class-analytics',
-                                          arguments: {
-                                            'classGroup': classGroup,
-                                            'students': _students,
-                                          },
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: AppSpacing.md),
-                                  Expanded(
-                                    child: _ActionButton(
-                                      label: 'Leaderboard',
-                                      icon: Icons.leaderboard_rounded,
-                                      onTap: () {
-                                        Navigator.of(context).pushNamed(
-                                          '/class-leaderboard',
-                                          arguments: {
-                                            'classGroup': classGroup,
-                                            'students': _students,
-                                          },
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(height: AppSpacing.lg),
-
-                            // Enrolled students
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.xl),
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.stretch,
-                                children: [
-                                  Text(
-                                    'ENROLLED STUDENTS (${_students.length})',
-                                    style: const TextStyle(
-                                      fontFamily: 'Nunito',
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.5,
-                                      color: AppColors.textMuted,
-                                    ),
-                                  ),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  if (_errorMessage != null)
-                                    _buildError()
-                                  else if (_students.isEmpty)
-                                    _buildEmpty()
-                                  else
-                                    ..._students.map((student) {
-                                      return _StudentRow(
-                                        student: student,
-                                        onTap: () {
-                                          Navigator.of(context).pushNamed(
-                                            '/teacher-student-progress',
-                                            arguments: {'student': student},
-                                          );
-                                        },
-                                      );
-                                    }),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(height: AppSpacing.xl),
-                          ],
-                        ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          SfxService.tap();
+                          Navigator.of(context).pop();
+                        },
+                        icon: const Icon(Icons.arrow_back,
+                            color: AppColors.textPrimary),
+                        padding: EdgeInsets.zero,
                       ),
-                    ),
+                      const SizedBox(width: AppSpacing.sm),
+                      const Expanded(
+                        child: Text('Class Overview', style: AppText.h2),
+                      ),
+                      IconButton(
+                        onPressed: _loading
+                            ? null
+                            : () {
+                                SfxService.tap();
+                                _loadStudents();
+                              },
+                        icon: const Icon(Icons.refresh_rounded,
+                            color: AppColors.textPrimary),
+                        padding: EdgeInsets.zero,
+                        tooltip: 'Refresh',
+                      ),
+                    ],
+                  ),
+                ),
+
+                Expanded(
+                  child: _loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : RefreshIndicator(
+                          onRefresh: _loadStudents,
+                          color: AppColors.accentYellow,
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: Column(
+                              children: [
+                                const SizedBox(height: AppSpacing.sm),
+
+                                Image.asset(
+                                  'assets/images/mascot/groo_teaching.png',
+                                  width: 180,
+                                  height: 180,
+                                  fit: BoxFit.contain,
+                                  cacheWidth: 360,
+                                  errorBuilder: (_, _, _) => Container(
+                                    width: 180,
+                                    height: 180,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.accentYellow
+                                          .withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: AppColors.accentYellow,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.class_rounded,
+                                      size: 72,
+                                      color: AppColors.accentYellow,
+                                    ),
+                                  ),
+                                ),
+
+                                const SizedBox(height: AppSpacing.md),
+
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.xl),
+                                  child: _buildClassInfoCard(classGroup),
+                                ),
+
+                                const SizedBox(height: AppSpacing.md),
+
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.xl),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: _ActionButton(
+                                          label: 'Analytics',
+                                          icon: Icons.bar_chart_rounded,
+                                          onTap: () {
+                                            SfxService.tap();
+                                            Navigator.of(context).pushNamed(
+                                              '/class-analytics',
+                                              arguments: {
+                                                'classGroup': classGroup,
+                                                'students': _students,
+                                              },
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(width: AppSpacing.md),
+                                      Expanded(
+                                        child: _ActionButton(
+                                          label: 'Leaderboard',
+                                          icon: Icons.leaderboard_rounded,
+                                          onTap: () {
+                                            SfxService.tap();
+                                            Navigator.of(context).pushNamed(
+                                              '/class-leaderboard',
+                                              arguments: {
+                                                'classGroup': classGroup,
+                                                'students': _students,
+                                              },
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                const SizedBox(height: AppSpacing.lg),
+
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.xl),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Text(
+                                        'ENROLLED STUDENTS (${_students.length})',
+                                        style: const TextStyle(
+                                          fontFamily: 'Nunito',
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.5,
+                                          color: AppColors.textMuted,
+                                        ),
+                                      ),
+                                      const SizedBox(height: AppSpacing.sm),
+                                      if (_errorMessage != null)
+                                        _buildError()
+                                      else if (_students.isEmpty)
+                                        _buildEmpty()
+                                      else
+                                        ..._students.map((student) {
+                                          return _StudentRow(
+                                            student: student,
+                                            onTap: () {
+                                              SfxService.tap();
+                                              Navigator.of(context).pushNamed(
+                                                '/teacher-student-progress',
+                                                arguments: {'student': student},
+                                              );
+                                            },
+                                          );
+                                        }),
+                                    ],
+                                  ),
+                                ),
+
+                                const SizedBox(height: AppSpacing.xl),
+                              ],
+                            ),
+                          ),
+                        ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -374,6 +404,7 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
             width: 100,
             height: 100,
             fit: BoxFit.contain,
+            cacheWidth: 200,
             errorBuilder: (_, _, _) => const Icon(
               Icons.people_outline_rounded,
               size: 48,
@@ -402,10 +433,6 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────
-// Private widgets
-// ─────────────────────────────────────────────────────────
 
 class _ActionButton extends StatelessWidget {
   final String label;
@@ -479,7 +506,6 @@ class _StudentRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Avatar with yellow ring (matches teacher theme)
             Container(
               width: 42,
               height: 42,
@@ -496,6 +522,7 @@ class _StudentRow extends StatelessWidget {
                 child: Image.asset(
                   avatarAssetPath(student.avatarIndex),
                   fit: BoxFit.cover,
+                  cacheWidth: 100,
                   errorBuilder: (_, _, _) => _initialFallback(name),
                 ),
               ),

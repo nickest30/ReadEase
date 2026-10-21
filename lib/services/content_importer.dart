@@ -25,7 +25,6 @@ class ContentImporter {
   /// Import content for a single grade if not already up to date.
   Future<bool> importGradeIfNeeded(int gradeLevel) async {
     try {
-      // Read JSON from bundled assets
       final jsonString = await rootBundle.loadString(
         'assets/data/grade$gradeLevel.json',
       );
@@ -36,20 +35,19 @@ class ContentImporter {
       final existing =
           await DatabaseService.instance.getContentVersion(gradeLevel);
       if (existing != null && existing.version == version) {
-        debugPrint('📚 grade $gradeLevel v$version already imported');
+        debugPrint('Grade $gradeLevel v$version already imported');
         return true;
       }
 
-      debugPrint('📚 Importing grade $gradeLevel v$version...');
+      debugPrint('Importing grade $gradeLevel v$version...');
 
       // Clear any existing content for clean re-import
       if (existing != null) {
         await DatabaseService.instance.clearContentForGrade(gradeLevel);
       }
 
-      // ── 1. Lesson Intros ──
-      final lessonIntros =
-          (data['lesson_intros'] as List<dynamic>?) ?? [];
+      // 1. Lesson Intros
+      final lessonIntros = (data['lesson_intros'] as List<dynamic>?) ?? [];
       for (final introData in lessonIntros) {
         final intro = LessonIntro(
           grade: introData['grade'] as int,
@@ -62,10 +60,9 @@ class ContentImporter {
         );
         await DatabaseService.instance.upsertLessonIntro(intro);
       }
-      debugPrint('📚 Lesson intros: ${lessonIntros.length}');
+      debugPrint('Lesson intros: ${lessonIntros.length}');
 
-      // ── 2. Game Intros ──
-      // Shared across grades, INSERT OR REPLACE, no clear.
+      // 2. Game Intros (shared across grades, INSERT OR REPLACE, no clear)
       final gameIntros = (data['game_intros'] as List<dynamic>?) ?? [];
       for (final introData in gameIntros) {
         final intro = GameIntro(
@@ -78,9 +75,9 @@ class ContentImporter {
         );
         await DatabaseService.instance.upsertGameIntro(intro);
       }
-      debugPrint('📚 Game intros: ${gameIntros.length}');
+      debugPrint('Game intros: ${gameIntros.length}');
 
-      // ── 3. Passages (Grade 4+) ──
+      // 3. Passages (Grade 4+)
       // Clear old passages for this grade first, then insert fresh.
       try {
         await DatabaseService.instance.clearPassagesForGrade(gradeLevel);
@@ -99,9 +96,7 @@ class ContentImporter {
           tappableWordsJson: tappable.isEmpty
               ? null
               : jsonEncode(
-                  tappable
-                      .map((e) => e.toString().toLowerCase())
-                      .toList(),
+                  tappable.map((e) => e.toString().toLowerCase()).toList(),
                 ),
         );
         final passageId =
@@ -141,26 +136,24 @@ class ContentImporter {
         }
       }
       if (passagesList.isNotEmpty) {
-        debugPrint('📚 Passages: ${passagesList.length}');
+        debugPrint('Passages: ${passagesList.length}');
       }
 
-      // ── 4. Lessons ──
+      // 4. Lessons
       final lessons = (data['lessons'] as List<dynamic>?) ?? [];
       for (final lessonData in lessons) {
         final difficulty = lessonData['difficulty'] as String;
         final theme = (lessonData['theme'] as String?) ?? '';
 
         // 4a. Quiz config
-        final configData =
-            lessonData['quiz_config'] as Map<String, dynamic>;
+        final configData = lessonData['quiz_config'] as Map<String, dynamic>;
         final config = QuizConfig(
           gradeLevel: gradeLevel,
           difficulty: difficulty,
           quizSize: configData['quiz_size'] as int,
           bufferSize: (configData['buffer_size'] as int?) ?? 0,
           randomized: ((configData['randomized'] as int?) ?? 0) == 1,
-          passingThreshold:
-              (configData['passing_threshold'] as int?) ?? 70,
+          passingThreshold: (configData['passing_threshold'] as int?) ?? 70,
         );
         await DatabaseService.instance.insertQuizConfig(config);
 
@@ -185,16 +178,15 @@ class ContentImporter {
             gameType: gameType,
             passageId: passageId,
           );
-          final batchId = await DatabaseService.instance
-              .upsertBatchByNaturalKey(batch);
+          final batchId =
+              await DatabaseService.instance.upsertBatchByNaturalKey(batch);
 
           // 4e. Words for this batch
           final words = (batchData['words'] as List<dynamic>?) ?? [];
           int questionOrder = 0;
 
           for (final wordData in words) {
-            final cueAudioField =
-                wordData['lesson_cue_audio'] as String?;
+            final cueAudioField = wordData['lesson_cue_audio'] as String?;
             final sentenceAudioField =
                 wordData['sample_sentence_audio'] as String?;
 
@@ -204,10 +196,8 @@ class ContentImporter {
               difficulty: difficulty,
               batchId: batchId,
               category: (wordData['category'] as String?) ?? 'general',
-              imageAsset:
-                  'assets/images/words/${wordData['image']}',
-              audioAsset:
-                  'assets/audio/words/${wordData['audio']}',
+              imageAsset: 'assets/images/words/${wordData['image']}',
+              audioAsset: 'assets/audio/words/${wordData['audio']}',
               lessonCueAudio: cueAudioField != null
                   ? 'assets/audio/cues/$cueAudioField'
                   : null,
@@ -220,17 +210,14 @@ class ContentImporter {
                   (wordData['sample_sentence'] as String?) ?? '',
               source: (wordData['source'] as String?) ?? '',
               sensitivityReviewed:
-                  ((wordData['sensitivity_reviewed'] as int?) ?? 0) ==
-                      1,
-              sensitivityNotes:
-                  wordData['sensitivity_notes'] as String?,
+                  ((wordData['sensitivity_reviewed'] as int?) ?? 0) == 1,
+              sensitivityNotes: wordData['sensitivity_notes'] as String?,
             );
-            final wordId = await DatabaseService.instance
-                .upsertWordByNaturalKey(word);
+            final wordId =
+                await DatabaseService.instance.upsertWordByNaturalKey(word);
 
             // Clear old questions for this word before re-inserting.
-            await DatabaseService.instance
-                .deleteQuizQuestionsForWord(wordId);
+            await DatabaseService.instance.deleteQuizQuestionsForWord(wordId);
 
             // 4f. Quiz questions for this word
             final questions =
@@ -252,7 +239,7 @@ class ContentImporter {
         }
       }
 
-      // ── 5. Save version record ──
+      // 5. Save version record
       await DatabaseService.instance.saveContentVersion(
         ContentVersion(
           gradeLevel: gradeLevel,
@@ -261,11 +248,11 @@ class ContentImporter {
         ),
       );
 
-      debugPrint('📚 Grade $gradeLevel imported successfully');
+      debugPrint('Grade $gradeLevel imported successfully');
       return true;
     } catch (e, stack) {
-      debugPrint('📚 ContentImporter ERROR: $e');
-      debugPrint('📚 STACK: $stack');
+      debugPrint('ContentImporter ERROR: $e');
+      debugPrint('STACK: $stack');
       return false;
     }
   }

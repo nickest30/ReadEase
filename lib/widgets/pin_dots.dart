@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../utils/app_theme.dart';
 
-/// Distinct color per dot position, teal, green, yellow, coral.
-/// Matches ReadEase accent palette.
+/// Per-position colors for the 4 PIN dots.
+/// Matches the ReadEase accent palette.
 const kPinDotColors = [
   AppColors.accentTeal,
   AppColors.accentGreen,
@@ -66,6 +67,8 @@ class _PinDotsState extends State<PinDots>
     return AnimatedBuilder(
       animation: _shake,
       builder: (context, child) {
+        // Decaying horizontal oscillation: amplitude shrinks as t → 1,
+        // and direction alternates every half cycle.
         final t = _shake.value;
         final dx = t == 0 ? 0.0 : (1 - t) * 10 * (t * 20 % 2 < 1 ? 1 : -1);
         return Transform.translate(offset: Offset(dx, 0), child: child);
