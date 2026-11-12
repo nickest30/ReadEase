@@ -45,6 +45,21 @@ class FirestoreService {
     }
   }
 
+  Future<bool> teacherEmailExists(String email) async {
+    try {
+      final snap = await _db
+          .collection('teachers')
+          .where('email', isEqualTo: email.trim().toLowerCase())
+          .limit(1)
+          .get()
+          .timeout(const Duration(seconds: 8));
+      return snap.docs.isNotEmpty;
+    } catch (e) {
+      debugPrint('teacherEmailExists failed: $e');
+      rethrow;
+    }
+  }
+
   // Parents
 
   Future<void> saveParent({
@@ -87,6 +102,21 @@ class FirestoreService {
     } catch (e) {
       debugPrint('Firestore getParentByUid failed: $e');
       return null;
+    }
+  }
+
+  Future<bool> parentEmailExists(String email) async {
+    try {
+      final snap = await _db
+          .collection('parents')
+          .where('email', isEqualTo: email.trim().toLowerCase())
+          .limit(1)
+          .get()
+          .timeout(const Duration(seconds: 8));
+      return snap.docs.isNotEmpty;
+    } catch (e) {
+      debugPrint('parentEmailExists failed: $e');
+      rethrow;
     }
   }
 

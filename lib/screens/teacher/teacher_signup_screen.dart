@@ -49,8 +49,6 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
     super.dispose();
   }
 
-  /// Normalize PH phone to E.164. Returns null if invalid.
-  /// Accepts: "9123456789" (10 digits), "+639123456789", "09123456789".
   String? _normalizePhone(String raw) {
     final digits = raw.replaceAll(RegExp(r'\D'), '');
     if (digits.isEmpty) return null;
@@ -63,20 +61,24 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
   }
 
   Future<void> _handleSignup() async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
-    SfxService.tap();
-
-    final agreed = await TermsModal.show(context);
-    if (!agreed) return;
-    if (!mounted) return;
-
-    final authProvider = context.read<AuthProvider>();
-    final teacherProvider = context.read<TeacherProvider>();
 
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
     });
+
+    final agreed = await TermsModal.show(context);
+    if (!agreed) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      return;
+    }
+    if (!mounted) return;
+
+    final authProvider = context.read<AuthProvider>();
+    final teacherProvider = context.read<TeacherProvider>();
 
     try {
       final email = _emailController.text.trim().toLowerCase();
@@ -144,34 +146,65 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
 
       try {
         await FirestoreService.instance
-            .saveTeacher(createdTeacher, firebaseUid);
+            .saveTeacher(createdTeacher, firebaseUid)
+            .timeout(const Duration(seconds: 8));
       } catch (e) {
-        debugPrint('saveTeacher failed: $e');
+        debugPrint('saveTeacher failed (continuing): $e');
       }
 
       if (normalizedPhone != null) {
-        await FirestoreService.instance.markPhoneNumber(
-          firebaseUid,
-          'teacher',
-          normalizedPhone,
-        );
+        try {
+          await FirestoreService.instance
+              .markPhoneNumber(firebaseUid, 'teacher', normalizedPhone)
+              .timeout(const Duration(seconds: 5));
+        } catch (e) {
+          debugPrint('markPhoneNumber failed (continuing): $e');
+        }
       }
 
       if (!mounted) return;
 
       unawaited(_sendEmailVerification(authProvider));
 
+      final verified = await _showEmailVerificationGate(authProvider);
+      if (!mounted) return;
+
+      if (!verified) {
+        await authProvider.signOut();
+        if (!mounted) return;
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/teacher-login',
+          (route) => false,
+        );
+        return;
+      }
+
+      try {
+        await DatabaseService.instance
+            .markTeacherEmailVerified(createdTeacher.id!);
+      } catch (e) {
+        debugPrint('markTeacherEmailVerified (local) failed: $e');
+      }
+
+      try {
+        await FirestoreService.instance
+            .markEmailVerified(firebaseUid, 'teacher')
+            .timeout(const Duration(seconds: 5));
+      } catch (e) {
+        debugPrint('markEmailVerified (cloud) failed: $e');
+      }
+
+      await _generateAndShowBackupCode(
+        teacher: createdTeacher,
+        authProvider: authProvider,
+      );
+
       if (normalizedPhone != null) {
-        await _runPhoneVerificationFlow(
+        unawaited(_runPhoneVerificationFlow(
           normalizedPhone: normalizedPhone,
           teacher: createdTeacher,
           authProvider: authProvider,
-        );
-      } else {
-        await _generateAndShowBackupCode(
-          teacher: createdTeacher,
-          authProvider: authProvider,
-        );
+        ));
       }
     } catch (e) {
       debugPrint('Teacher signup ERROR: $e');
@@ -192,7 +225,18 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
     }
   }
 
-  /// Start phone verification → push OTP screen → on success show backup code.
+  Future<bool> _showEmailVerificationGate(AuthProvider authProvider) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _HardEmailVerificationDialog(
+        authProvider: authProvider,
+        email: _emailController.text.trim(),
+      ),
+    );
+    return result ?? false;
+  }
+
   Future<void> _runPhoneVerificationFlow({
     required String normalizedPhone,
     required Teacher teacher,
@@ -201,42 +245,29 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
     final completer = Completer<void>();
     bool codeSent = false;
 
-    await authProvider.startPhoneVerification(
-      phoneNumber: normalizedPhone,
-      onCodeSent: () {
-        codeSent = true;
-        if (!completer.isCompleted) completer.complete();
-      },
-      onAutoVerified: () {
-        if (!completer.isCompleted) completer.complete();
-      },
-      onError: (msg) {
-        if (!completer.isCompleted) {
-          completer.completeError(msg);
-        }
-      },
-    );
+    try {
+      await authProvider.startPhoneVerification(
+        phoneNumber: normalizedPhone,
+        onCodeSent: () {
+          codeSent = true;
+          if (!completer.isCompleted) completer.complete();
+        },
+        onAutoVerified: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (msg) {
+          if (!completer.isCompleted) completer.completeError(msg);
+        },
+      );
+    } catch (e) {
+      debugPrint('Phone verification unavailable (continuing): $e');
+      return;
+    }
 
     try {
-      await completer.future;
+      await completer.future.timeout(const Duration(seconds: 15));
     } catch (e) {
-      if (!mounted) return;
-      final raw = e.toString().toLowerCase();
-      final isBilling =
-          raw.contains('billing_not_enabled') || raw.contains('billing');
-
-      if (isBilling) {
-        await _showPhoneUnavailableAndContinue(
-          teacher: teacher,
-          authProvider: authProvider,
-        );
-        return;
-      }
-
-      setState(() {
-        _errorMessage = 'Could not send code: $e';
-        _isSubmitting = false;
-      });
+      debugPrint('Phone verification error (continuing): $e');
       return;
     }
 
@@ -246,7 +277,7 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
       MaterialPageRoute(
         builder: (_) => OtpVerificationScreen(
           phoneNumber: normalizedPhone,
-          accentColor: AppColors.accentYellow,
+          accentColor: AppColors.accentTeal,
           backgroundColor: AppColors.teacherBg,
           isSignup: true,
           onVerified: () => Navigator.of(context).pop(),
@@ -257,22 +288,15 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
     if (!mounted) return;
 
     if (teacher.firebaseUid != null) {
-      await FirestoreService.instance
-          .markPhoneVerified(teacher.firebaseUid!, 'teacher');
+      try {
+        await FirestoreService.instance
+            .markPhoneVerified(teacher.firebaseUid!, 'teacher');
+      } catch (e) {
+        debugPrint('markPhoneVerified failed: $e');
+      }
     }
-
-    if (!mounted) return;
-
-    await _generateAndShowBackupCode(
-      teacher: teacher,
-      authProvider: authProvider,
-    );
   }
 
-  /// Generate, save, and display a one-time backup code.
-  /// Called at the end of signup regardless of whether a phone was
-  /// provided, ensures every teacher account has a second-factor
-  /// recovery path even without SMS verification.
   Future<void> _generateAndShowBackupCode({
     required Teacher teacher,
     required AuthProvider authProvider,
@@ -280,15 +304,25 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
     final backupCode = BackupCode.generate();
     final hashedBackup = BCrypt.hashpw(backupCode, BCrypt.gensalt());
 
-    await DatabaseService.instance
-        .updateTeacherBackupCodeHash(teacher.id!, hashedBackup);
+    try {
+      await DatabaseService.instance
+          .updateTeacherBackupCodeHash(teacher.id!, hashedBackup);
+    } catch (e) {
+      debugPrint('Local backup code save failed: $e');
+    }
 
     if (teacher.firebaseUid != null) {
-      await FirestoreService.instance.saveBackupCodeHash(
-        teacher.firebaseUid!,
-        'teacher',
-        hashedBackup,
-      );
+      try {
+        await FirestoreService.instance
+            .saveBackupCodeHash(
+              teacher.firebaseUid!,
+              'teacher',
+              hashedBackup,
+            )
+            .timeout(const Duration(seconds: 5));
+      } catch (e) {
+        debugPrint('Cloud backup code sync failed (continuing): $e');
+      }
     }
 
     if (!mounted) return;
@@ -296,331 +330,495 @@ class _TeacherSignupScreenState extends State<TeacherSignupScreen> {
     final saved = await BackupCodeDialog.show(
       context,
       code: backupCode,
-      accentColor: AppColors.accentYellow,
+      accentColor: AppColors.accentTeal,
     );
 
     if (!saved || !mounted) return;
 
     if (teacher.firebaseUid != null) {
-      await authProvider.trustCurrentDevice(teacher.firebaseUid!);
+      try {
+        await authProvider
+            .trustCurrentDevice(teacher.firebaseUid!)
+            .timeout(const Duration(seconds: 5));
+      } catch (e) {
+        debugPrint('trustCurrentDevice failed (continuing): $e');
+      }
     }
 
     if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
-  }
-
-  /// Called when phone OTP fails due to Firebase billing being disabled.
-  Future<void> _showPhoneUnavailableAndContinue({
-    required Teacher teacher,
-    required AuthProvider authProvider,
-  }) async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-        ),
-        title: const Row(
-          children: [
-            Icon(Icons.info_outline_rounded,
-                color: AppColors.accentOrange, size: 24),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Phone verification unavailable',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: const Text(
-          'We can\'t send SMS codes right now. We\'ll continue with a '
-          'backup code instead, you can use it to log in on a new device. '
-          'You can add a phone number later in Settings → Account & Security.',
-          style: TextStyle(fontFamily: 'Nunito', fontSize: 14),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              SfxService.tap();
-              Navigator.of(ctx).pop();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentYellow,
-              foregroundColor: AppColors.textPrimary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text(
-              'Continue',
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (!mounted) return;
-    setState(() => _isSubmitting = false);
-
-    await _generateAndShowBackupCode(
-      teacher: teacher,
-      authProvider: authProvider,
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/teacher-dashboard',
+      (route) => false,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.teacherBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: AppSpacing.md),
+    final isTablet = Responsive.isTablet(context);
+    final imgSize = Responsive.imageSize(context, base: 120);
 
-                    IconButton(
-                      onPressed: () {
-                        SfxService.tap();
-                        Navigator.of(context).pop();
-                      },
-                      icon: const Icon(Icons.arrow_back,
-                          color: AppColors.textPrimary),
-                      alignment: Alignment.centerLeft,
-                      padding: EdgeInsets.zero,
-                    ),
-
-                    const SizedBox(height: AppSpacing.sm),
-
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Create Account', style: AppText.h1),
-                              SizedBox(height: 2),
-                              Text(
-                                'Set up your teacher profile',
-                                style: AppText.caption,
-                              ),
-                            ],
-                          ),
-                        ),
-                        Image.asset(
-                          'assets/images/mascot/groo_welcoming.png',
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.contain,
-                          cacheWidth: 240,
-                          errorBuilder: (_, _, _) => Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              color:
-                                  AppColors.accentYellow.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.accentYellow,
-                                width: 2,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.school_rounded,
-                              color: AppColors.accentYellow,
-                              size: 42,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: AppSpacing.xl),
-
-                    const FieldLabel('Full Name'),
-                    TextFormField(
-                      controller: _fullNameController,
-                      textInputAction: TextInputAction.next,
-                      validator: Validators.displayName,
-                      decoration: buildInputDecoration(
-                        hint: 'Enter your full name',
-                        focusColor: AppColors.accentYellow,
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    const FieldLabel('Username'),
-                    TextFormField(
-                      controller: _usernameController,
-                      textInputAction: TextInputAction.next,
-                      validator: Validators.username,
-                      decoration: buildInputDecoration(
-                        hint: 'Pick a username',
-                        focusColor: AppColors.accentYellow,
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    const FieldLabel('Email'),
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      validator: Validators.email,
-                      decoration: buildInputDecoration(
-                        hint: 'name@example.com',
-                        focusColor: AppColors.accentYellow,
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    const FieldLabel('School Name'),
-                    TextFormField(
-                      controller: _schoolNameController,
-                      textInputAction: TextInputAction.next,
-                      validator: Validators.schoolName,
-                      decoration: buildInputDecoration(
-                        hint: 'Enter your school name',
-                        focusColor: AppColors.accentYellow,
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    const FieldLabel('Phone Number (optional)'),
-                    TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      textInputAction: TextInputAction.next,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'[\d\s\+\-\(\)]'),
-                        ),
-                      ],
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return null;
-                        if (_normalizePhone(v) == null) {
-                          return 'Enter a valid PH number (e.g. 9123456789)';
-                        }
-                        return null;
-                      },
-                      decoration: buildInputDecoration(
-                        hint: '912 345 6789',
-                        focusColor: AppColors.accentYellow,
-                      ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.only(top: 6, left: 4),
-                      child: Text(
-                        'Recommended. We\'ll send a one-time code to this number '
-                        'when you sign in on a new device. You can skip this and '
-                        'add it later in Settings.',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 11,
-                          color: AppColors.textMuted,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    const FieldLabel('Password'),
-                    PasswordField(
-                      controller: _passwordController,
-                      hintText: 'At least 8 chars, mix letters/numbers',
-                      textInputAction: TextInputAction.next,
-                      focusColor: AppColors.accentYellow,
-                      validator: (v) => Validators.password(v),
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    const FieldLabel('Confirm Password'),
-                    PasswordField(
-                      controller: _confirmController,
-                      hintText: 'Re-enter your password',
-                      textInputAction: TextInputAction.done,
-                      focusColor: AppColors.accentYellow,
-                      validator: (v) => Validators.confirmPassword(
-                        v,
-                        _passwordController.text,
-                      ),
-                    ),
-
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        _errorMessage!,
-                        style: const TextStyle(
-                          color: AppColors.textCoral,
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+    Widget content = SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+        vertical: 20,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: AppSpacing.md),
+            IconButton(
+              onPressed: () {
+                SfxService.tap();
+                Navigator.of(context).pop();
+              },
+              icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+              alignment: Alignment.centerLeft,
+              padding: EdgeInsets.zero,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Create Account', style: AppText.h1),
+                      SizedBox(height: 2),
+                      Text('Set up your teacher profile',
+                          style: AppText.caption),
                     ],
-
-                    const SizedBox(height: AppSpacing.xl),
-
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _isSubmitting ? null : _handleSignup,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentYellow,
-                          foregroundColor: AppColors.textPrimary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.large),
-                          ),
-                        ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  color: AppColors.textPrimary,
-                                  strokeWidth: 2.5,
-                                ),
-                              )
-                            : const Text(
-                                'CREATE ACCOUNT',
-                                style: TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                      ),
+                  ),
+                ),
+                Image.asset(
+                  'assets/images/mascot/groo_welcoming.png',
+                  width: imgSize,
+                  height: imgSize,
+                  fit: BoxFit.contain,
+                  cacheWidth: (imgSize * 2).toInt(),
+                  errorBuilder: (_, _, _) => Container(
+                    width: imgSize,
+                    height: imgSize,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentTeal.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                      border:
+                          Border.all(color: AppColors.accentTeal, width: 2),
                     ),
-
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
+                    child: Icon(Icons.school_rounded,
+                        color: AppColors.accentTeal,
+                        size: imgSize * 0.35),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            const FieldLabel('Full Name'),
+            TextFormField(
+              controller: _fullNameController,
+              textInputAction: TextInputAction.next,
+              validator: Validators.displayName,
+              decoration: buildInputDecoration(
+                hint: 'Enter your full name',
+                focusColor: AppColors.accentTeal,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const FieldLabel('Username'),
+            TextFormField(
+              controller: _usernameController,
+              textInputAction: TextInputAction.next,
+              validator: Validators.username,
+              decoration: buildInputDecoration(
+                hint: 'Pick a username',
+                focusColor: AppColors.accentTeal,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const FieldLabel('Email'),
+            TextFormField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              validator: Validators.email,
+              decoration: buildInputDecoration(
+                hint: 'name@example.com',
+                focusColor: AppColors.accentTeal,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const FieldLabel('School Name'),
+            TextFormField(
+              controller: _schoolNameController,
+              textInputAction: TextInputAction.next,
+              validator: Validators.schoolName,
+              decoration: buildInputDecoration(
+                hint: 'Enter your school name',
+                focusColor: AppColors.accentTeal,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const FieldLabel('Phone Number (Optional)'),
+            TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.next,
+              maxLength: 10,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return null;
+                if (v.length != 10) {
+                  return 'Enter the 10-digit number (no spaces or +63)';
+                }
+                return null;
+              },
+              decoration: buildInputDecoration(
+                hint: '9123456789',
+                focusColor: AppColors.accentTeal,
+              ).copyWith(
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 14, right: 6),
+                  child: Text(
+                    '+63',
+                    style: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                prefixIconConstraints:
+                    const BoxConstraints(minWidth: 0, minHeight: 0),
+                counterText: '',
+                helperText:
+                    'Optional. If SMS is unavailable, we\'ll give you '
+                    'a backup code instead.',
+                helperMaxLines: 2,
+                helperStyle: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                  height: 1.4,
                 ),
               ),
             ),
-          ),
+            const SizedBox(height: AppSpacing.md),
+            const FieldLabel('Password'),
+            PasswordField(
+              controller: _passwordController,
+              hintText: 'Enter a strong password',
+              textInputAction: TextInputAction.next,
+              focusColor: AppColors.accentTeal,
+              validator: (v) => Validators.password(v),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(top: 6, left: 4),
+              child: Text(
+                'At least 8 chars: uppercase, lowercase, number, symbol',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                  height: 1.4,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const FieldLabel('Confirm Password'),
+            PasswordField(
+              controller: _confirmController,
+              hintText: 'Re-enter your password',
+              textInputAction: TextInputAction.done,
+              focusColor: AppColors.accentTeal,
+              validator: (v) => Validators.confirmPassword(
+                v,
+                _passwordController.text,
+              ),
+            ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                _errorMessage!,
+                style: const TextStyle(
+                  color: AppColors.textCoral,
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.xl),
+            SizedBox(
+              height: Responsive.buttonHeight(context),
+              child: ElevatedButton(
+                onPressed: _isSubmitting
+                    ? null
+                    : () {
+                        SfxService.tap();
+                        _handleSignup();
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentTeal,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.large),
+                  ),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'CREATE ACCOUNT',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+          ],
         ),
+      ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.teacherBg,
+      body: SafeArea(child: content),
+    );
+  }
+}
+
+class _HardEmailVerificationDialog extends StatefulWidget {
+  final AuthProvider authProvider;
+  final String email;
+
+  const _HardEmailVerificationDialog({
+    required this.authProvider,
+    required this.email,
+  });
+
+  @override
+  State<_HardEmailVerificationDialog> createState() =>
+      _HardEmailVerificationDialogState();
+}
+
+class _HardEmailVerificationDialogState
+    extends State<_HardEmailVerificationDialog> {
+  bool _checking = false;
+  bool _resending = false;
+  String? _localMessage;
+
+  Future<void> _checkVerified() async {
+    setState(() {
+      _checking = true;
+      _localMessage = null;
+    });
+
+    try {
+      final verified = await widget.authProvider
+          .checkEmailVerified()
+          .timeout(const Duration(seconds: 10));
+
+      debugPrint('HARD GATE: checkEmailVerified returned $verified');
+
+      if (!mounted) return;
+
+      if (verified) {
+        Navigator.of(context).pop(true);
+      } else {
+        setState(() {
+          _checking = false;
+          _localMessage =
+              'Still not verified. Check your inbox and tap again.';
+        });
+      }
+    } on TimeoutException {
+      if (!mounted) return;
+      setState(() {
+        _checking = false;
+        _localMessage =
+            'Connection timed out. Check your internet and try again.';
+      });
+    } catch (e) {
+      debugPrint('HARD GATE error: $e');
+      if (!mounted) return;
+      setState(() {
+        _checking = false;
+        _localMessage = 'Error checking status. Please try again.';
+      });
+    }
+  }
+
+  Future<void> _resendEmail() async {
+    setState(() {
+      _resending = true;
+      _localMessage = null;
+    });
+
+    try {
+      await widget.authProvider.sendVerificationEmail();
+      if (!mounted) return;
+      setState(() {
+        _resending = false;
+        _localMessage = 'New verification email sent!';
+      });
+    } catch (e) {
+      debugPrint('HARD GATE resend error: $e');
+      if (!mounted) return;
+      setState(() {
+        _resending = false;
+        _localMessage = 'Could not resend. Try again in a moment.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.mark_email_unread_rounded,
+                color: AppColors.accentTeal),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Verify Your Email',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+            IconButton(
+              onPressed: _checking
+                  ? null
+                  : () {
+                      SfxService.tap();
+                      Navigator.of(context).pop(false);
+                    },
+              icon: const Icon(Icons.close_rounded, size: 20),
+              color: AppColors.textMuted,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              tooltip: 'Close (you will need to sign in again)',
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'We sent a verification link to ${widget.email}.\n\n'
+              'You must verify your email to continue. Open your inbox, '
+              'click the link, then tap "I Have Verified" below.',
+              style: const TextStyle(fontFamily: 'Nunito', fontSize: 14),
+            ),
+            if (_localMessage != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.accentOrange.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _localMessage!,
+                  style: const TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 12,
+                    color: AppColors.textOrange,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
+        actions: [
+          TextButton(
+            onPressed: _resending || _checking
+                ? null
+                : () {
+                    SfxService.tap();
+                    _resendEmail();
+                  },
+            child: _resending
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text(
+                    'Resend Email',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      color: AppColors.accentTeal,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+          ),
+          ElevatedButton(
+            onPressed: _checking ? null : _checkVerified,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentTeal,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              minimumSize: const Size(130, 40),
+            ),
+            child: _checking
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text(
+                    'I Have Verified',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+          ),
+        ],
       ),
     );
   }

@@ -69,95 +69,103 @@ class _GradeSelectionScreenState extends State<GradeSelectionScreen> {
       );
     }
 
+    final isTablet = Responsive.isTablet(context);
+    final imgSize = Responsive.imageSize(context, base: 90);
+
+    Widget content = Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.md),
+          IconButton(
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(context).pop();
+            },
+            icon: const Icon(Icons.arrow_back,
+                color: AppColors.textPrimary),
+            alignment: Alignment.centerLeft,
+            padding: EdgeInsets.zero,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text('Grade Selection', style: AppText.h1),
+                    SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Choose the grade to study',
+                      style: AppText.caption,
+                    ),
+                  ],
+                ),
+              ),
+              _YseImage(
+                assetPath: 'assets/images/mascot/yse_point.png',
+                size: imgSize,
+                fallbackIcon: Icons.touch_app_rounded,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : GridView.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: AppSpacing.md,
+                    crossAxisSpacing: AppSpacing.md,
+                    childAspectRatio: 1.3,
+                    children: List.generate(6, (index) {
+                      final grade = index + 1;
+                      final isPrimary = grade == student.gradeLevel;
+                      final isLocked = grade > _highestUnlocked;
+
+                      return _GradeCard(
+                        grade: grade,
+                        isPrimary: isPrimary,
+                        isLocked: isLocked,
+                        onTap: () {
+                          if (isLocked) {
+                            _showLockedMessage(grade);
+                            return;
+                          }
+                          Navigator.of(context).pushNamed(
+                            '/difficulty-selection',
+                            arguments: {'gradeLevel': grade},
+                          );
+                        },
+                      );
+                    }),
+                  ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+        ],
+      ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.studentBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: AppSpacing.md),
-                  IconButton(
-                    onPressed: () {
-                      SfxService.tap();
-                      Navigator.of(context).pop();
-                    },
-                    icon: const Icon(Icons.arrow_back,
-                        color: AppColors.textPrimary),
-                    alignment: Alignment.centerLeft,
-                    padding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text('Grade Selection', style: AppText.h1),
-                            SizedBox(height: AppSpacing.xs),
-                            Text(
-                              'Choose the grade to study',
-                              style: AppText.caption,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const _YseImage(
-                        assetPath: 'assets/images/mascot/yse_point.png',
-                        size: 90,
-                        fallbackIcon: Icons.touch_app_rounded,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  Expanded(
-                    child: _loading
-                        ? const Center(child: CircularProgressIndicator())
-                        : GridView.count(
-                            crossAxisCount: 2,
-                            mainAxisSpacing: AppSpacing.md,
-                            crossAxisSpacing: AppSpacing.md,
-                            childAspectRatio: 1.3,
-                            children: List.generate(6, (index) {
-                              final grade = index + 1;
-                              final isPrimary = grade == student.gradeLevel;
-                              final isLocked = grade > _highestUnlocked;
-
-                              return _GradeCard(
-                                grade: grade,
-                                isPrimary: isPrimary,
-                                isLocked: isLocked,
-                                onTap: () {
-                                  if (isLocked) {
-                                    _showLockedMessage(grade);
-                                    return;
-                                  }
-                                  Navigator.of(context).pushNamed(
-                                    '/difficulty-selection',
-                                    arguments: {'gradeLevel': grade},
-                                  );
-                                },
-                              );
-                            }),
-                          ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      body: SafeArea(child: content),
     );
   }
 
   void _showLockedMessage(int grade) {
-    // Friendly hint, tells the learner what to do to unlock.
     final hint = grade == _highestUnlocked + 1
         ? 'Finish Grade $_highestUnlocked (Easy, Medium, and Hard) to unlock Grade $grade.'
         : 'Grade $grade is locked for now.';
@@ -240,52 +248,61 @@ class _GradeCard extends StatelessWidget {
                 ),
               ),
             Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '$grade',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 36,
-                      fontWeight: FontWeight.w800,
-                      color: textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Grade $grade',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: textColor,
-                    ),
-                  ),
-                  if (isPrimary && !isLocked) ...[
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Text(
-                        'YOUR GRADE',
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        '$grade',
                         style: TextStyle(
                           fontFamily: 'Nunito',
-                          fontSize: 9,
+                          fontSize: 36,
                           fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
-                          color: Colors.white,
+                          color: textColor,
                         ),
                       ),
                     ),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'Grade $grade',
+                        style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: textColor,
+                        ),
+                      ),
+                    ),
+                    if (isPrimary && !isLocked) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'YOUR GRADE',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ],

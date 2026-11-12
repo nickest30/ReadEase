@@ -44,12 +44,12 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
   }
 
   Future<void> _loadBatch() async {
-    // SAFE ROUTE ARGUMENTS FALLBACK
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is! Map) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil('/student-home', (route) => false);
+          Navigator.of(context)
+              .pushNamedAndRemoveUntil('/student-home', (route) => false);
         }
       });
       return;
@@ -104,7 +104,6 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
         _loading = false;
       });
 
-      // Record encounter for each word as the lesson loads.
       final studentId = student.id!;
       for (final w in words) {
         if (w.id != null) {
@@ -127,7 +126,6 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
   }
 
   Future<void> _playWordAudio(Word word) async {
-    SfxService.tap();
     final assetPath = word.lessonCueAudio ?? word.audioAsset;
 
     try {
@@ -142,13 +140,11 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
   }
 
   Future<void> _openPractice(Word word) async {
-    SfxService.tap();
     final student = context.read<StudentProvider>().currentStudent;
     if (student?.id == null) return;
 
     final isOnline = context.read<ConnectivityProvider>().isOnline;
 
-    // Stop any playing cue audio before opening the modal.
     try {
       await _audioPlayer.stop();
     } catch (_) {}
@@ -165,7 +161,6 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
   }
 
   void _nextWord() {
-    SfxService.tap();
     _audioPlayer.stop();
     if (_currentWordIndex < _words.length - 1) {
       setState(() => _currentWordIndex++);
@@ -190,7 +185,6 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
   }
 
   void _previousWord() {
-    SfxService.tap();
     _audioPlayer.stop();
     if (_currentWordIndex > 0) {
       setState(() => _currentWordIndex--);
@@ -266,102 +260,104 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
   Widget _buildIntroduce() {
     final word = _words[_currentWordIndex];
     final isLast = _currentWordIndex == _words.length - 1;
+    final isTablet = Responsive.isTablet(context);
 
     final screenH = MediaQuery.of(context).size.height;
-    final imageSize = (screenH * 0.35).clamp(240.0, 320.0);
+    final imageSize = (screenH * 0.40).clamp(280.0, 380.0);
+    final buttonHeight = Responsive.buttonHeight(context);
 
-    // RESPONSIVENESS FIX: Constrain width for tablets
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 600),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
+    Widget content = Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: AppSpacing.md),
+          Row(
             children: [
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      SfxService.tap();
-                      Navigator.of(context).pop();
-                    },
-                    icon: const Icon(Icons.arrow_back,
-                        color: AppColors.textPrimary),
-                    padding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  const Expanded(
-                    child: Text('Learn', style: AppText.h2),
-                  ),
-                  const InfoButton(
-                    title: 'How to Learn',
-                    description: 'Look at the picture and listen to the word.',
-                    steps: [
-                      'Tap LISTEN to hear the word.',
-                      'Tap PRACTICE to try saying it.',
-                      'Tap Next to go to the next word.',
-                      'When you finish all words, the game starts!',
-                    ],
-                  ),
+              IconButton(
+                onPressed: () {
+                  SfxService.tap();
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(Icons.arrow_back,
+                    color: AppColors.textPrimary),
+                padding: EdgeInsets.zero,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              const Expanded(
+                child: Text('Learn', style: AppText.h2),
+              ),
+              const InfoButton(
+                title: 'How to Learn',
+                description: 'Look at the picture and listen to the word.',
+                steps: [
+                  'Tap LISTEN to hear the word.',
+                  'Tap PRACTICE to try saying it.',
+                  'Tap Next to go to the next word.',
+                  'When you finish all words, the game starts!',
                 ],
               ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Word ${_currentWordIndex + 1} of ${_words.length}',
-                style: AppText.caption,
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Word ${_currentWordIndex + 1} of ${_words.length}',
+            style: AppText.caption,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.small),
+            child: LinearProgressIndicator(
+              value: (_currentWordIndex + 1) / _words.length,
+              minHeight: 6,
+              backgroundColor: AppColors.border,
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.accentTeal,
               ),
-              const SizedBox(height: AppSpacing.xs),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(AppRadius.small),
-                child: LinearProgressIndicator(
-                  value: (_currentWordIndex + 1) / _words.length,
-                  minHeight: 6,
-                  backgroundColor: AppColors.border,
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    AppColors.accentTeal,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.xl),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
+            ),
+          ),
+          const Spacer(),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: imageSize,
+                  height: imageSize,
+                  child: Image.asset(
+                    word.imageAsset,
+                    fit: BoxFit.contain,
+                    cacheWidth: (imageSize * 2).toInt(),
+                    errorBuilder: (_, _, _) => Container(
                       width: imageSize,
                       height: imageSize,
-                      child: Image.asset(
-                        word.imageAsset,
-                        fit: BoxFit.contain,
-                        cacheWidth: 400, // MEMORY CACHING FIX
-                        errorBuilder: (_, _, _) => Container(
-                          width: imageSize,
-                          height: imageSize,
-                          decoration: BoxDecoration(
-                            color: AppColors.studentBg.withValues(alpha: 0.6),
-                            borderRadius: BorderRadius.circular(AppRadius.large),
-                          ),
-                          child: const Icon(
-                            Icons.image_outlined,
-                            size: 60,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
+                      decoration: BoxDecoration(
+                        color: AppColors.studentBg.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(AppRadius.large),
+                      ),
+                      child: const Icon(
+                        Icons.image_outlined,
+                        size: 60,
+                        color: AppColors.textMuted,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
 
-                    SizedBox(
-                      width: double.infinity,
-                      height: 90,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SizedBox(
+                      width: constraints.maxWidth,
+                      height: 110,
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.center,
@@ -371,170 +367,206 @@ class _LessonPlayScreenState extends State<LessonPlayScreen> {
                           softWrap: false,
                           style: const TextStyle(
                             fontFamily: 'Nunito',
-                            fontSize: 64,
+                            fontSize: 72,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1.5,
                             color: AppColors.textPrimary,
                           ),
                         ),
                       ),
+                    );
+                  },
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                if (word.category.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: 4,
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    if (word.category.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.accentTeal.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(AppRadius.small),
-                        ),
-                        child: Text(
-                          word.category.replaceAll('_', ' '),
-                          style: const TextStyle(
-                            fontFamily: 'Nunito',
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textTeal,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentTeal.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(AppRadius.small),
+                    ),
+                    child: Text(
+                      word.category.replaceAll('_', ' '),
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textTeal,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: AppSpacing.md),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: buttonHeight,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            SfxService.tap();
+                            _playWordAudio(word);
+                          },
+                          icon: const Icon(Icons.volume_up_rounded,
+                              size: 20),
+                          label: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'LISTEN',
+                              style: TextStyle(
+                                fontFamily: 'Nunito',
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accentTeal,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.large),
+                            ),
                           ),
                         ),
                       ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 52,
-                            child: ElevatedButton.icon(
-                              onPressed: () => _playWordAudio(word),
-                              icon: const Icon(Icons.volume_up_rounded,
-                                  size: 20),
-                              label: const Text(
-                                'LISTEN',
-                                style: TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.accentTeal,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(AppRadius.large),
-                                ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: SizedBox(
+                        height: buttonHeight,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            SfxService.tap();
+                            _openPractice(word);
+                          },
+                          icon: const Icon(Icons.mic_rounded, size: 20),
+                          label: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'PRACTICE',
+                              style: TextStyle(
+                                fontFamily: 'Nunito',
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: SizedBox(
-                            height: 52,
-                            child: OutlinedButton.icon(
-                              onPressed: () => _openPractice(word),
-                              icon: const Icon(Icons.mic_rounded, size: 20),
-                              label: const Text(
-                                'PRACTICE',
-                                style: TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.accentTeal,
-                                side: const BorderSide(
-                                  color: AppColors.accentTeal,
-                                  width: 2,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(AppRadius.large),
-                                ),
-                              ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.accentTeal,
+                            side: const BorderSide(
+                              color: AppColors.accentTeal,
+                              width: 2,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.large),
                             ),
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-              const Spacer(),
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 52,
-                      child: OutlinedButton(
-                        onPressed:
-                            _currentWordIndex > 0 ? _previousWord : null,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.accentOrange,
-                          side: const BorderSide(
-                            color: AppColors.accentOrange,
-                            width: 1.5,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.large),
-                          ),
-                        ),
-                        child: const Text(
-                          'Previous',
-                          style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w700,
-                          ),
+              ],
+            ),
+          ),
+          const Spacer(),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: buttonHeight,
+                  child: OutlinedButton(
+                    onPressed: _currentWordIndex > 0
+                        ? () {
+                            SfxService.tap();
+                            _previousWord();
+                          }
+                        : null,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.accentOrange,
+                      side: const BorderSide(
+                        color: AppColors.accentOrange,
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.large),
+                      ),
+                    ),
+                    child: const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'Previous',
+                        style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: SizedBox(
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _nextWord,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isLast
-                              ? AppColors.accentYellow
-                              : AppColors.accentTeal,
-                          foregroundColor: isLast
-                              ? AppColors.textPrimary
-                              : Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.large),
-                          ),
-                        ),
-                        child: Text(
-                          isLast
-                              ? (_batch?.passageId != null
-                                  ? 'Read the Passage'
-                                  : 'Start Game')
-                              : 'Next',
-                          style: const TextStyle(
-                            fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w700,
-                          ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: SizedBox(
+                  height: buttonHeight,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      SfxService.tap();
+                      _nextWord();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isLast
+                          ? AppColors.accentYellow
+                          : AppColors.accentTeal,
+                      foregroundColor: isLast
+                          ? AppColors.textPrimary
+                          : Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.large),
+                      ),
+                    ),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        isLast
+                            ? (_batch?.passageId != null
+                                ? 'Read the Passage'
+                                : 'Start Game')
+                            : 'Next',
+                        style: const TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
-              const SizedBox(height: AppSpacing.lg),
             ],
           ),
-        ),
+          const SizedBox(height: AppSpacing.lg),
+        ],
       ),
     );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
+    return content;
   }
 }

@@ -22,7 +22,6 @@ class ContentImporter {
     await importGradeIfNeeded(6);
   }
 
-  /// Import content for a single grade if not already up to date.
   Future<bool> importGradeIfNeeded(int gradeLevel) async {
     try {
       final jsonString = await rootBundle.loadString(
@@ -31,7 +30,6 @@ class ContentImporter {
       final data = jsonDecode(jsonString) as Map<String, dynamic>;
       final version = data['content_version'] as String;
 
-      // Skip if already imported at this version
       final existing =
           await DatabaseService.instance.getContentVersion(gradeLevel);
       if (existing != null && existing.version == version) {
@@ -41,12 +39,10 @@ class ContentImporter {
 
       debugPrint('Importing grade $gradeLevel v$version...');
 
-      // Clear any existing content for clean re-import
       if (existing != null) {
         await DatabaseService.instance.clearContentForGrade(gradeLevel);
       }
 
-      // 1. Lesson Intros
       final lessonIntros = (data['lesson_intros'] as List<dynamic>?) ?? [];
       for (final introData in lessonIntros) {
         final intro = LessonIntro(
@@ -62,7 +58,6 @@ class ContentImporter {
       }
       debugPrint('Lesson intros: ${lessonIntros.length}');
 
-      // 2. Game Intros (shared across grades, INSERT OR REPLACE, no clear)
       final gameIntros = (data['game_intros'] as List<dynamic>?) ?? [];
       for (final introData in gameIntros) {
         final intro = GameIntro(
@@ -77,8 +72,6 @@ class ContentImporter {
       }
       debugPrint('Game intros: ${gameIntros.length}');
 
-      // 3. Passages (Grade 4+)
-      // Clear old passages for this grade first, then insert fresh.
       try {
         await DatabaseService.instance.clearPassagesForGrade(gradeLevel);
       } catch (_) {}
@@ -139,13 +132,11 @@ class ContentImporter {
         debugPrint('Passages: ${passagesList.length}');
       }
 
-      // 4. Lessons
       final lessons = (data['lessons'] as List<dynamic>?) ?? [];
       for (final lessonData in lessons) {
         final difficulty = lessonData['difficulty'] as String;
         final theme = (lessonData['theme'] as String?) ?? '';
 
-        // 4a. Quiz config
         final configData = lessonData['quiz_config'] as Map<String, dynamic>;
         final config = QuizConfig(
           gradeLevel: gradeLevel,
@@ -157,15 +148,12 @@ class ContentImporter {
         );
         await DatabaseService.instance.insertQuizConfig(config);
 
-        // 4b. Game config (nullable)
         final gameConfig =
             lessonData['game_config'] as Map<String, dynamic>?;
         final gameType = gameConfig?['game_type'] as String?;
 
-        // 4c. Passage link (nullable, Grade 4+)
         final passageId = lessonData['passage_id'] as String?;
 
-        // 4d. Batches
         final batches = (lessonData['batches'] as List<dynamic>?) ?? [];
         for (final batchData in batches) {
           final batchIndex = batchData['batch_index'] as int;
@@ -181,7 +169,6 @@ class ContentImporter {
           final batchId =
               await DatabaseService.instance.upsertBatchByNaturalKey(batch);
 
-          // 4e. Words for this batch
           final words = (batchData['words'] as List<dynamic>?) ?? [];
           int questionOrder = 0;
 
@@ -216,10 +203,8 @@ class ContentImporter {
             final wordId =
                 await DatabaseService.instance.upsertWordByNaturalKey(word);
 
-            // Clear old questions for this word before re-inserting.
             await DatabaseService.instance.deleteQuizQuestionsForWord(wordId);
 
-            // 4f. Quiz questions for this word
             final questions =
                 (wordData['quiz_questions'] as List<dynamic>?) ?? [];
             for (final qData in questions) {

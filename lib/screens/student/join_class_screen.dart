@@ -30,9 +30,21 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
     super.dispose();
   }
 
-  Future<void> _searchClass() async {
+  Future<void> _pasteCode() async {
     SfxService.tap();
-    
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (data != null && data.text != null) {
+      final pasted = data.text!
+          .trim()
+          .replaceAll(RegExp(r'[^a-zA-Z0-9]'), '')
+          .toUpperCase();
+      if (pasted.isNotEmpty) {
+        _codeController.text = pasted.length > 6 ? pasted.substring(0, 6) : pasted;
+      }
+    }
+  }
+
+  Future<void> _searchClass() async {
     // Fast-fail when offline
     if (!context.read<ConnectivityProvider>().isOnline) {
       setState(() {
@@ -79,7 +91,6 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
   }
 
   Future<void> _confirmJoin() async {
-    SfxService.tap();
     if (_foundClass == null) return;
 
     final studentProvider = context.read<StudentProvider>();
@@ -96,8 +107,6 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
       return;
     }
 
-    // Ensure Firebase Auth session is active before writing to Firestore.
-    // Without this, the write fails silently with PERMISSION_DENIED.
     if (authProvider.uid != student.firebaseUid) {
       debugPrint('JoinClass: restoring session');
       final restored = await authProvider.tryRestoreSessionFor(
@@ -116,7 +125,6 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
       }
     }
 
-    // Warn if switching classes
     final alreadyInClass = student.classFirestoreId != null &&
         student.classFirestoreId!.isNotEmpty;
 
@@ -192,7 +200,6 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
     final classFirestoreId = _foundClass!['firestoreId'] as String;
     final className = _foundClass!['className'] as String;
 
-    // Enroll in Firestore (must await because we need the boolean result).
     bool enrolled = false;
     try {
       enrolled = await FirestoreService.instance.transferStudent(
@@ -218,7 +225,6 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
       return;
     }
 
-    // Save locally
     await DatabaseService.instance.updateStudentClass(
       student.id!,
       classFirestoreId,
@@ -227,14 +233,12 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
 
     if (!mounted) return;
 
-    // Refresh student in provider
     final refreshed =
         await DatabaseService.instance.getStudentById(student.id!);
     if (!mounted || refreshed == null) return;
 
     studentProvider.setStudent(refreshed);
 
-    // Show success
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -305,323 +309,367 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
     }
 
     final isAlreadyJoined = student.classFirestoreId != null;
+    final isTablet = Responsive.isTablet(context);
+    final imgSize = Responsive.imageSize(context, base: 80);
 
-    return Scaffold(
-      backgroundColor: AppColors.studentBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: AppSpacing.md),
-                  IconButton(
-                    onPressed: () {
-                      SfxService.tap();
-                      Navigator.of(context).pop();
-                    },
-                    icon: const Icon(Icons.arrow_back,
-                        color: AppColors.textPrimary),
-                    alignment: Alignment.centerLeft,
-                    padding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Join Class', style: AppText.h1),
-                            SizedBox(height: 2),
-                            Text(
-                              'Enter your teacher\'s code',
-                              style: AppText.caption,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Image.asset(
-                        'assets/images/mascot/groo_welcoming.png',
-                        width: 80,
-                        height: 80,
-                        cacheWidth: 160,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, _, _) => Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: AppColors.accentTeal.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.accentTeal,
-                              width: 2,
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.group_add_rounded,
-                            color: AppColors.accentTeal,
-                            size: 36,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  if (isAlreadyJoined)
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      decoration: BoxDecoration(
-                        color: AppColors.accentTeal.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(AppRadius.large),
-                        border: Border.all(
-                          color: AppColors.accentTeal,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.class_rounded,
-                            color: AppColors.accentTeal,
-                            size: 32,
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Currently in:',
-                                  style: TextStyle(
-                                    fontFamily: 'Nunito',
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textMuted,
-                                  ),
-                                ),
-                                Text(
-                                  student.className ?? 'Class',
-                                  style: const TextStyle(
-                                    fontFamily: 'Nunito',
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 16,
-                                    color: AppColors.textTeal,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (isAlreadyJoined) const SizedBox(height: AppSpacing.lg),
-                  if (!isAlreadyJoined)
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(AppRadius.large),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Column(
-                        children: [
-                          const Icon(
-                            Icons.info_outline_rounded,
-                            color: AppColors.accentTeal,
-                            size: 32,
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          const Text(
-                            'Ask your teacher for the 6-character join code.',
-                            textAlign: TextAlign.center,
-                            style: AppText.caption,
-                          ),
-                        ],
-                      ),
-                    ),
-                  const SizedBox(height: AppSpacing.lg),
-                  const Text(
-                    'Join Code',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  TextField(
-                    controller: _codeController,
-                    textCapitalization: TextCapitalization.characters,
-                    maxLength: 6,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
-                      TextInputFormatter.withFunction((oldValue, newValue) {
-                        return newValue.copyWith(text: newValue.text.toUpperCase());
-                      }),
-                    ],
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 6,
-                      color: AppColors.textPrimary,
-                    ),
-                    textAlign: TextAlign.center,
-                    decoration: InputDecoration(
-                      hintText: 'ABC123',
-                      hintStyle: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 6,
-                        color: AppColors.textMuted.withValues(alpha: 0.4),
-                      ),
-                      filled: true,
-                      fillColor: AppColors.surface,
-                      counterText: '',
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 18),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.medium),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.medium),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.medium),
-                        borderSide:
-                            const BorderSide(color: AppColors.accentTeal, width: 2),
-                      ),
-                    ),
-                  ),
-                  if (_errorMessage != null) ...[
-                    const SizedBox(height: AppSpacing.md),
+    Widget content = SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+        vertical: 20,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.md),
+          IconButton(
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(context).pop();
+            },
+            icon: const Icon(Icons.arrow_back,
+                color: AppColors.textPrimary),
+            alignment: Alignment.centerLeft,
+            padding: EdgeInsets.zero,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Join Class', style: AppText.h1),
+                    SizedBox(height: 2),
                     Text(
-                      _errorMessage!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppColors.textCoral,
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w600,
-                      ),
+                      'Enter your teacher\'s code',
+                      style: AppText.caption,
                     ),
                   ],
-                  const SizedBox(height: AppSpacing.lg),
-                  if (_foundClass == null)
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: _isSubmitting ? null : _searchClass,
-                        icon: const Icon(Icons.search_rounded),
-                        label: const Text(
-                          'FIND CLASS',
+                ),
+              ),
+              Image.asset(
+                'assets/images/mascot/groo_welcoming.png',
+                width: imgSize,
+                height: imgSize,
+                cacheWidth: (imgSize * 2).toInt(),
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => Container(
+                  width: imgSize,
+                  height: imgSize,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentTeal.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.accentTeal,
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.group_add_rounded,
+                    color: AppColors.accentTeal,
+                    size: imgSize * 0.45,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          
+          if (isAlreadyJoined)
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.accentTeal.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadius.large),
+                border: Border.all(
+                  color: AppColors.accentTeal,
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.class_rounded,
+                    color: AppColors.accentTeal,
+                    size: 32,
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Currently in:',
                           style: TextStyle(
                             fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textMuted,
                           ),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentTeal,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.large),
-                          ),
-                        ),
-                      ),
-                    ),
-                  if (_foundClass != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(AppRadius.large),
-                        border: Border.all(
-                          color: AppColors.accentTeal,
-                          width: 2,
-                        ),
-                        boxShadow: AppShadows.soft,
-                      ),
-                      child: Column(
-                        children: [
-                          const Icon(
-                            Icons.school_rounded,
-                            color: AppColors.accentTeal,
-                            size: 40,
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
-                            _foundClass!['className'] as String,
-                            textAlign: TextAlign.center,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            student.className ?? 'Class',
                             style: const TextStyle(
                               fontFamily: 'Nunito',
-                              fontSize: 18,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
+                              fontSize: 16,
+                              color: AppColors.textTeal,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Grade ${_foundClass!['gradeLevel']}',
-                            style: AppText.caption,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: _isSubmitting ? null : _confirmJoin,
-                        icon: const Icon(Icons.check_circle_rounded),
-                        label: const Text(
-                          'JOIN THIS CLASS',
-                          style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w700,
-                          ),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentTeal,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.large),
-                          ),
-                        ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    TextButton(
-                      onPressed: () {
-                        SfxService.tap();
-                        setState(() {
-                          _foundClass = null;
-                          _codeController.clear();
-                        });
-                      },
-                      child: const Text(
-                        'Try a different code',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: AppSpacing.xl),
+                  ),
                 ],
               ),
             ),
+          if (isAlreadyJoined) const SizedBox(height: AppSpacing.lg),
+          
+          if (!isAlreadyJoined)
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.large),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    color: AppColors.accentTeal,
+                    size: 32,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Text(
+                    'Ask your teacher for the 6-character join code.',
+                    textAlign: TextAlign.center,
+                    style: AppText.caption,
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: AppSpacing.lg),
+          
+          const Text(
+            'Join Code',
+            style: TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textMuted,
+            ),
           ),
-        ),
+          const SizedBox(height: 5),
+          TextField(
+            controller: _codeController,
+            textCapitalization: TextCapitalization.characters,
+            maxLength: 6,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+              TextInputFormatter.withFunction((oldValue, newValue) {
+                return newValue.copyWith(text: newValue.text.toUpperCase());
+              }),
+            ],
+            style: const TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 6,
+              color: AppColors.textPrimary,
+            ),
+            textAlign: TextAlign.center,
+            decoration: InputDecoration(
+              hintText: 'ABC123',
+              hintStyle: TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 6,
+                color: AppColors.textMuted.withValues(alpha: 0.4),
+              ),
+              filled: true,
+              fillColor: AppColors.surface,
+              counterText: '',
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.paste_rounded, color: AppColors.textMuted),
+                tooltip: 'Paste code',
+                onPressed: _pasteCode,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 18),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+                borderSide:
+                    const BorderSide(color: AppColors.accentTeal, width: 2),
+              ),
+            ),
+          ),
+          
+          if (_errorMessage != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textCoral,
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          
+          const SizedBox(height: AppSpacing.lg),
+          
+          if (_foundClass == null)
+            SizedBox(
+              height: Responsive.buttonHeight(context),
+              child: ElevatedButton.icon(
+                onPressed: _isSubmitting
+                    ? null
+                    : () {
+                        SfxService.tap();
+                        _searchClass();
+                      },
+                icon: const Icon(Icons.search_rounded),
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'FIND CLASS',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentTeal,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.large),
+                  ),
+                ),
+              ),
+            ),
+            
+          if (_foundClass != null) ...[
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.large),
+                border: Border.all(
+                  color: AppColors.accentTeal,
+                  width: 2,
+                ),
+                boxShadow: AppShadows.soft,
+              ),
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.school_rounded,
+                    color: AppColors.accentTeal,
+                    size: 40,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _foundClass!['className'] as String,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Grade ${_foundClass!['gradeLevel']}',
+                    style: AppText.caption,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            SizedBox(
+              height: Responsive.buttonHeight(context),
+              child: ElevatedButton.icon(
+                onPressed: _isSubmitting
+                    ? null
+                    : () {
+                        SfxService.tap();
+                        _confirmJoin();
+                      },
+                icon: const Icon(Icons.check_circle_rounded),
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'JOIN THIS CLASS',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentTeal,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.large),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextButton(
+              onPressed: () {
+                SfxService.tap();
+                setState(() {
+                  _foundClass = null;
+                  _codeController.clear();
+                });
+              },
+              child: const Text(
+                'Try a different code',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textMuted,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.xl),
+        ],
       ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.studentBg,
+      body: SafeArea(child: content),
     );
   }
 }

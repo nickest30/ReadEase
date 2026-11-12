@@ -69,7 +69,6 @@ class _ResultsScreenState extends State<ResultsScreen> {
   void _loadArgs() {
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is! Map) {
-      // If arguments are lost (e.g. app resumed from background), go home safely.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil(
@@ -134,8 +133,6 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 
   void _onNextTapped() {
-    SfxService.tap();
-
     if (!_isPassing) {
       Navigator.of(context).pushNamedAndRemoveUntil(
         '/difficulty-selection',
@@ -174,16 +171,19 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 
   void _showBadgeDialog() {
-    SfxService.tap();
     final badgeName = AchievementBadge.nameFor(_gradeLevel, _difficulty);
     final imagePath = AchievementBadge.imagePathFor(_gradeLevel, _difficulty);
+    final imgSize = Responsive.imageSize(context, base: 160);
 
     showDialog(
       context: context,
       barrierDismissible: true,
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(AppSpacing.xl),
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: Responsive.horizontalPadding(context),
+          vertical: AppSpacing.xl,
+        ),
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.xl),
           decoration: BoxDecoration(
@@ -225,15 +225,15 @@ class _ResultsScreenState extends State<ResultsScreen> {
                 ),
               ),
               SizedBox(
-                width: 160,
-                height: 160,
+                width: imgSize,
+                height: imgSize,
                 child: Image.asset(
                   imagePath,
                   fit: BoxFit.contain,
-                  cacheWidth: 300,
+                  cacheWidth: (imgSize * 2).toInt(),
                   errorBuilder: (_, _, _) => Container(
-                    width: 120,
-                    height: 120,
+                    width: imgSize * 0.75,
+                    height: imgSize * 0.75,
                     decoration: BoxDecoration(
                       color: AppColors.accentYellow.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
@@ -242,24 +242,30 @@ class _ResultsScreenState extends State<ResultsScreen> {
                         width: 3,
                       ),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.emoji_events_rounded,
-                      size: 64,
+                      size: imgSize * 0.4,
                       color: AppColors.accentYellow,
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              Text(
-                badgeName,
-                textAlign: TextAlign.center,
-                style: AppText.h1.copyWith(color: AppColors.textYellow),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  badgeName,
+                  textAlign: TextAlign.center,
+                  style: AppText.h1.copyWith(color: AppColors.textYellow),
+                ),
               ),
               const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Grade $_gradeLevel - ${_difficulty[0].toUpperCase()}${_difficulty.substring(1)}',
-                style: AppText.caption,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Grade $_gradeLevel - ${_difficulty[0].toUpperCase()}${_difficulty.substring(1)}',
+                  style: AppText.caption,
+                ),
               ),
               const SizedBox(height: AppSpacing.md),
               Container(height: 1, color: AppColors.border),
@@ -282,7 +288,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
               const SizedBox(height: AppSpacing.xl),
               SizedBox(
                 width: double.infinity,
-                height: 48,
+                height: Responsive.buttonHeight(context),
                 child: ElevatedButton(
                   onPressed: () {
                     SfxService.tap();
@@ -295,11 +301,14 @@ class _ResultsScreenState extends State<ResultsScreen> {
                       borderRadius: BorderRadius.circular(AppRadius.medium),
                     ),
                   ),
-                  child: const Text(
-                    'Awesome!',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Awesome!',
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -313,332 +322,449 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.studentBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.lg,
+    final isTablet = Responsive.isTablet(context);
+    final imgSize = Responsive.imageSize(context, base: 180);
+    final buttonHeight = Responsive.buttonHeight(context);
+
+    Widget content = SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+        vertical: AppSpacing.lg,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.md),
+          Center(
+            child: SizedBox(
+              width: imgSize,
+              height: imgSize,
+              child: Image.asset(
+                _yseAsset,
+                fit: BoxFit.contain,
+                cacheWidth: (imgSize * 2).toInt(),
+                errorBuilder: (_, _, _) => Container(
+                  width: imgSize,
+                  height: imgSize,
+                  decoration: BoxDecoration(
+                    color: _yseFallbackColor.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _yseFallbackColor,
+                      width: 3,
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      _yseFallbackIcon,
+                      size: imgSize * 0.5,
+                      color: _yseFallbackColor,
+                    ),
+                  ),
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: AppSpacing.md),
-                  Center(
-                    child: SizedBox(
-                      width: 180,
-                      height: 180,
-                      child: Image.asset(
-                        _yseAsset,
-                        fit: BoxFit.contain,
-                        cacheWidth: 400,
-                        errorBuilder: (_, _, _) => Container(
-                          width: 180,
-                          height: 180,
-                          decoration: BoxDecoration(
-                            color: _yseFallbackColor.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: _yseFallbackColor,
-                              width: 3,
-                            ),
-                          ),
-                          child: Center(
-                            child: Icon(
-                              _yseFallbackIcon,
-                              size: 90,
-                              color: _yseFallbackColor,
-                            ),
-                          ),
-                        ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              _comment,
+              textAlign: TextAlign.center,
+              style: AppText.h2,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '$_score / $_totalQuestions',
+              textAlign: TextAlign.center,
+              style: AppText.display.copyWith(
+                color:
+                    _isPassing ? AppColors.textTeal : AppColors.textOrange,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (i) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Icon(
+                  i < _starsEarned
+                      ? Icons.star_rounded
+                      : Icons.star_border_rounded,
+                  color: AppColors.accentYellow,
+                  size: 36,
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          if (_pointsDelta == 0 && _score > 0) ...[
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.accentTeal.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.medium),
+                  border: Border.all(
+                    color: AppColors.accentTeal.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.emoji_events_rounded,
+                      size: 16,
+                      color: AppColors.accentTeal,
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      'Best score already counted',
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textTeal,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Text(
-                    _comment,
-                    textAlign: TextAlign.center,
-                    style: AppText.h2,
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  Text(
-                    '$_score / $_totalQuestions',
-                    textAlign: TextAlign.center,
-                    style: AppText.display.copyWith(
-                      color:
-                          _isPassing ? AppColors.textTeal : AppColors.textOrange,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(5, (i) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Icon(
-                          i < _starsEarned
-                              ? Icons.star_rounded
-                              : Icons.star_border_rounded,
-                          color: AppColors.accentYellow,
-                          size: 36,
-                        ),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  if (_pointsDelta == 0 && _score > 0) ...[
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                          vertical: AppSpacing.sm,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.accentTeal.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(AppRadius.medium),
-                          border: Border.all(
-                            color: AppColors.accentTeal.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.emoji_events_rounded,
-                              size: 16,
-                              color: AppColors.accentTeal,
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              'Best score already counted',
-                              style: TextStyle(
-                                fontFamily: 'Nunito',
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textTeal,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
                   ],
-                  if (_isFinalLevel && _isPassing) ...[
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                          vertical: AppSpacing.md,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.accentYellow.withValues(alpha: 0.25),
-                              AppColors.accentTeal.withValues(alpha: 0.25),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(AppRadius.xl),
-                          border: Border.all(
-                            color: AppColors.accentYellow,
-                            width: 2,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            const Icon(
-                              Icons.emoji_events_rounded,
-                              color: AppColors.accentYellow,
-                              size: 40,
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              'You finished all grades!',
-                              style: AppText.h2.copyWith(fontSize: 18),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Grade 1 through Grade 6 complete.',
-                              style: AppText.caption,
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                  ],
-                  if (_isPassing)
-                    Center(
-                      child: InkWell(
-                        onTap: _showBadgeDialog,
-                        borderRadius: BorderRadius.circular(AppRadius.xl),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.lg,
-                            vertical: AppSpacing.md,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(AppRadius.xl),
-                            border: Border.all(
-                              color: AppColors.accentYellow,
-                              width: 2,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.emoji_events_rounded,
-                                color: AppColors.accentYellow,
-                                size: 24,
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Text(
-                                _isNewBadge
-                                    ? 'NEW Badge Unlocked!'
-                                    : 'Badge Unlocked!',
-                                style: const TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 15,
-                                  color: AppColors.textYellow,
-                                ),
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              const Icon(
-                                Icons.touch_app_rounded,
-                                color: AppColors.textMuted,
-                                size: 18,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: AppSpacing.lg),
-                  if (_pointsDelta > 0)
-                    Center(
-                      child: Text(
-                        '+$_pointsDelta points',
-                        style: const TextStyle(
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: AppColors.textYellow,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: AppSpacing.xl),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 52,
-                          child: OutlinedButton(
-                            onPressed: () {
-                              SfxService.tap();
-                              Navigator.of(context).pushNamedAndRemoveUntil(
-                                '/lesson-intro',
-                                ModalRoute.withName('/grade-selection'),
-                                arguments: {
-                                  'gradeLevel': _gradeLevel,
-                                  'difficulty': _difficulty,
-                                },
-                              );
-                            },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.accentOrange,
-                              side: const BorderSide(
-                                color: AppColors.accentOrange,
-                                width: 1.5,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(AppRadius.large),
-                              ),
-                            ),
-                            child: const Text(
-                              'Try Again',
-                              style: TextStyle(
-                                fontFamily: 'Nunito',
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (_isPassing) ...[
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: SizedBox(
-                            height: 52,
-                            child: ElevatedButton(
-                              onPressed: _onNextTapped,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.accentTeal,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(AppRadius.large),
-                                ),
-                              ),
-                              child: Text(
-                                _nextButtonLabel,
-                                style: const TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+          if (_isFinalLevel && _isPassing) ...[
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.accentYellow.withValues(alpha: 0.25),
+                      AppColors.accentTeal.withValues(alpha: 0.25),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  SizedBox(
-                    height: 50,
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        SfxService.tap();
-                        // Clear the stack so the back button doesn't return to results.
-                        Navigator.of(context).pushNamedAndRemoveUntil(
-                          '/student-home',
-                          (route) => false,
-                        );
-                      },
-                      icon: const Icon(Icons.home_rounded, size: 20),
-                      label: const Text(
-                        'Home',
+                  borderRadius: BorderRadius.circular(AppRadius.xl),
+                  border: Border.all(
+                    color: AppColors.accentYellow,
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.emoji_events_rounded,
+                      color: AppColors.accentYellow,
+                      size: 40,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'You finished all grades!',
+                        style: AppText.h2.copyWith(fontSize: 18),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Grade 1 through Grade 6 complete.',
+                      style: AppText.caption,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+          if (_isPassing)
+            Center(
+              child: InkWell(
+                onTap: () {
+                  SfxService.tap();
+                  _showBadgeDialog();
+                },
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.md,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
+                    border: Border.all(
+                      color: AppColors.accentYellow,
+                      width: 2,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.emoji_events_rounded,
+                        color: AppColors.accentYellow,
+                        size: 24,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            _isNewBadge
+                                ? 'NEW Badge Unlocked!'
+                                : 'Badge Unlocked!',
+                            style: const TextStyle(
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              color: AppColors.textYellow,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      const Icon(
+                        Icons.touch_app_rounded,
+                        color: AppColors.textMuted,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: AppSpacing.lg),
+          if (_pointsDelta > 0)
+            Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '+$_pointsDelta points',
+                  style: const TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: AppColors.textYellow,
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: AppSpacing.xl),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: buttonHeight,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      SfxService.tap();
+                      Navigator.of(context).pushNamedAndRemoveUntil(
+                        '/lesson-intro',
+                        ModalRoute.withName('/grade-selection'),
+                        arguments: {
+                          'gradeLevel': _gradeLevel,
+                          'difficulty': _difficulty,
+                        },
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.accentOrange,
+                      side: const BorderSide(
+                        color: AppColors.accentOrange,
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.large),
+                      ),
+                    ),
+                    child: const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'Try Again',
                         style: TextStyle(
                           fontFamily: 'Nunito',
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textMuted,
-                        side: const BorderSide(color: AppColors.border),
+                    ),
+                  ),
+                ),
+              ),
+              if (_isPassing) ...[
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: SizedBox(
+                    height: buttonHeight,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        SfxService.tap();
+                        _onNextTapped();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accentTeal,
+                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.large),
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.large),
+                        ),
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          _nextButtonLabel,
+                          style: const TextStyle(
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                ],
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            height: buttonHeight,
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                SfxService.tap();
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/student-home',
+                  (route) => false,
+                );
+              },
+              icon: const Icon(Icons.home_rounded, size: 20),
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Home',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textMuted,
+                side: const BorderSide(color: AppColors.border),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.large),
+                ),
               ),
             ),
           ),
-        ),
+          const SizedBox(height: AppSpacing.lg),
+        ],
       ),
     );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.studentBg,
+      body: SafeArea(child: content),
+    );
   }
+}
+
+/// Reusable friendly error dialog for game screens.
+/// Returns `true` if the user wants to try again, `false` if they want to go home.
+/// Does NOT navigate automatically — the caller decides what to do.
+Future<bool?> showGameErrorDialog(
+  BuildContext context, {
+  String title = 'Something went wrong',
+  String message =
+      'The app had a small hiccup. Would you like to try again?',
+}) {
+  return showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+      ),
+      backgroundColor: AppColors.surface,
+      title: Row(
+        children: [
+          const Icon(Icons.error_outline_rounded,
+              color: AppColors.accentOrange, size: 26),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w800,
+                fontSize: 17,
+              ),
+            ),
+          ),
+        ],
+      ),
+      content: Text(
+        message,
+        style: const TextStyle(fontFamily: 'Nunito', fontSize: 14),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            SfxService.tap();
+            Navigator.of(ctx).pop(false);
+          },
+          child: const Text(
+            'Go Home',
+            style: TextStyle(
+              fontFamily: 'Nunito',
+              color: AppColors.textMuted,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            SfxService.tap();
+            Navigator.of(ctx).pop(true);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.accentTeal,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: const Text(
+            'Try Again',
+            style: TextStyle(
+              fontFamily: 'Nunito',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }

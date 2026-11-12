@@ -6,14 +6,7 @@ import '../services/auth_service.dart';
 import '../services/credential_storage.dart';
 import '../services/firestore_service.dart';
 
-/// Session states for the app.
-enum SessionState {
-  /// Firebase Auth has an active user
-  online,
-
-  /// No Firebase Auth session (PIN-only, offline)
-  offline,
-}
+enum SessionState { online, offline }
 
 class AuthProvider extends ChangeNotifier {
   AuthProvider() {
@@ -61,10 +54,6 @@ class AuthProvider extends ChangeNotifier {
     return ok;
   }
 
-  /// Send a password reset email via Firebase Auth.
-  /// Returns true if Firebase accepted the request.
-  /// Note: callers should show a success message regardless of the
-  /// return value to avoid leaking whether the email is registered.
   Future<bool> sendPasswordResetEmail(String email) async {
     try {
       await AuthService.instance.sendPasswordResetEmail(
@@ -77,23 +66,18 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Attempt to restore a Firebase Auth session for a specific UID.
-  /// Called during PIN entry when we know which user should be restored.
   Future<bool> tryRestoreSessionFor({required String uid}) async {
-    // 1. Sign out if a DIFFERENT user is currently signed in
     if (isSignedIn && _firebaseUser?.uid != uid) {
       debugPrint('tryRestoreSessionFor: wrong user signed in '
           '(${_firebaseUser?.uid}) - signing out');
       await signOut();
     }
 
-    // 2. Already correct user, done
     if (isSignedIn && _firebaseUser?.uid == uid) {
       debugPrint('tryRestoreSessionFor: already signed in as $uid');
       return true;
     }
 
-    // 3. Look for saved credentials
     final creds = await CredentialStorage.instance.read(uid);
     if (creds == null) {
       debugPrint('tryRestoreSessionFor: no credentials for $uid '
@@ -119,8 +103,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Sign in with saved credentials for a specific UID (used after
-  /// creating a child account when we need to restore the parent session).
   Future<bool> signInWithSavedCredentials(String uid) async {
     if (isSignedIn && _firebaseUser?.uid != uid) {
       await signOut();
@@ -130,7 +112,6 @@ class AuthProvider extends ChangeNotifier {
     return AuthService.instance.signIn(creds['email']!, creds['password']!);
   }
 
-  /// Save credentials after a successful signup/login.
   Future<void> saveCredentials({
     required String uid,
     required String email,
@@ -145,8 +126,6 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> signOut() async {
     await AuthService.instance.signOut();
-    // We do NOT clear credentials here, the current user
-    // may still need them. Individual clears happen via clear(uid).
     _sessionState = SessionState.offline;
     notifyListeners();
   }
@@ -173,22 +152,67 @@ class AuthProvider extends ChangeNotifier {
     return true;
   }
 
-  /// Send verification email to current user (Firebase handles rate-limit).
   Future<void> sendVerificationEmail() async {
     await AuthService.instance.sendEmailVerification();
   }
 
-  /// Check if the current user's email is verified.
+  /// Returns the cached emailVerified value (fast, no network).
+  /// Use this for UI logic that just needs to know the current state.
   Future<bool> isEmailVerified() async {
     return AuthService.instance.isEmailVerified();
   }
 
+  /// Checks email verification status by forcing a reload from Firebase.
+  /// This is the one the "I Have Verified" button should call.
+  ///
+  /// Why this exists: Firebase caches the `User` object in memory. After
+  /// the user clicks the verification link in their email, the SERVER
+  /// knows it's verified, but the client's cached User still reports
+  /// `emailVerified == false` until the app restarts or you call `reload()`.
+  ///
+  /// By calling `user.reload()` we force a fresh fetch from the server.
   Future<bool> checkEmailVerified() async {
-    return AuthService.instance.isEmailVerified();
-  }
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      debugPrint('VERIFY: ❌ no user signed in');
+      return false;
+    }
 
-  /// Start phone verification flow.
-  /// Used at signup (linked to account) and login (as 2FA step).
+    debugPrint('VERIFY: uid=${user.uid}');
+
+    try {
+      final tokenResult = await user
+          .getIdTokenResult(true)
+          .timeout(const Duration(seconds: 10));
+
+      final claimVerified = tokenResult.claims?['email_verified'];
+      debugPrint('VERIFY: token claim email_verified=$claimVerified');
+
+      if (claimVerified == true) {
+        debugPrint('VERIFY: ✅ verified via token claim');
+        try {
+          await user.reload();
+        } catch (_) {}
+        return true;
+      }
+
+      try {
+        await user.reload().timeout(const Duration(seconds: 8));
+      } catch (e) {
+        debugPrint('VERIFY: reload failed: $e');
+      }
+
+      debugPrint('VERIFY: user.emailVerified=${user.emailVerified}');
+      return user.emailVerified;
+    } on TimeoutException {
+      debugPrint('VERIFY: ❌ token fetch timed out');
+      return false;
+    } catch (e) {
+      debugPrint('VERIFY: ❌ error: $e');
+      return false;
+    }
+  }
+  
   Future<void> startPhoneVerification({
     required String phoneNumber,
     required void Function() onCodeSent,
@@ -203,14 +227,11 @@ class AuthProvider extends ChangeNotifier {
     );
   }
 
-  /// Confirm an OTP code. Returns true if verified.
   Future<bool> confirmPhoneCode(String smsCode) async {
     final ok = await AuthService.instance.confirmPhoneCode(smsCode);
     if (ok) {
-      // Update cloud marker for current user
       final uid = AuthService.instance.currentUid;
       if (uid != null) {
-        // Try both parent and teacher, one will succeed
         try {
           await FirestoreService.instance.markPhoneVerified(uid, 'parent');
         } catch (_) {}
@@ -222,18 +243,14 @@ class AuthProvider extends ChangeNotifier {
     return ok;
   }
 
-  /// Whether the current device is trusted for this uid.
-  /// If true, skip the OTP step at login.
   Future<bool> isCurrentDeviceTrusted(String uid) async {
     return CredentialStorage.instance.isDeviceTrusted(uid);
   }
 
-  /// Mark the current device as trusted for this uid.
   Future<void> trustCurrentDevice(String uid) async {
     await CredentialStorage.instance.trustDevice(uid);
   }
 
-  /// Get the phone number linked to the current user (if any).
   String? get currentPhoneNumber => AuthService.instance.currentPhoneNumber;
 
   @override

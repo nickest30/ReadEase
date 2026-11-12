@@ -33,7 +33,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 22,
+      version: 23,
       onCreate: _createTables,
       onUpgrade: _upgradeTables,
     );
@@ -48,6 +48,7 @@ class DatabaseService {
         display_name TEXT NOT NULL,
         grade_level INTEGER NOT NULL,
         pin_hash TEXT,
+        recovery_code_hash TEXT,
         is_linked INTEGER NOT NULL DEFAULT 0,
         parent_id INTEGER,
         parent_firebase_uid TEXT,                  
@@ -999,6 +1000,13 @@ class DatabaseService {
     }
     if (oldVersion < 22) {
       try { await db.execute('ALTER TABLE students ADD COLUMN avatar_index INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
+    }
+    if (oldVersion < 23) {
+      try {
+        await db.execute(
+          'ALTER TABLE students ADD COLUMN recovery_code_hash TEXT',
+        );
+      } catch (_) {}
     }
   }
 }

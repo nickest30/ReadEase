@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../services/sfx_service.dart';
 import '../utils/app_theme.dart';
+
 
 /// Shared text-field decoration used across all ReadEase forms.
 /// [focusColor] defaults to teal (student role); pass purple for parent/teacher.
@@ -13,10 +13,7 @@ InputDecoration buildInputDecoration({
     hintText: hint,
     filled: true,
     fillColor: AppColors.surface,
-    contentPadding: const EdgeInsets.symmetric(
-      horizontal: 14,
-      vertical: 14,
-    ),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(AppRadius.medium),
       borderSide: const BorderSide(color: AppColors.border),
@@ -65,6 +62,7 @@ class FieldLabel extends StatelessWidget {
 
 /// Password input with show/hide toggle.
 /// Tap target is 48x48 per NFR-11.
+/// Note: no SFX on the toggle — text input shouldn't produce tap sounds.
 class PasswordField extends StatefulWidget {
   final TextEditingController controller;
   final String hintText;
@@ -90,10 +88,7 @@ class PasswordField extends StatefulWidget {
 class _PasswordFieldState extends State<PasswordField> {
   bool _obscured = true;
 
-  void _toggle() {
-    SfxService.tap();
-    setState(() => _obscured = !_obscured);
-  }
+  void _toggle() => setState(() => _obscured = !_obscured);
 
   @override
   Widget build(BuildContext context) {

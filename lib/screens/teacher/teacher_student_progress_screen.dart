@@ -126,8 +126,8 @@ class _TeacherStudentProgressScreenState
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Responsive.horizontalPadding(context),
                     vertical: AppSpacing.md,
                   ),
                   child: Row(
@@ -173,6 +173,8 @@ class _TeacherStudentProgressScreenState
   }
 
   Widget _buildEmpty() {
+    final imgSize = Responsive.imageSize(context, base: 180);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
@@ -181,12 +183,12 @@ class _TeacherStudentProgressScreenState
           children: [
             Image.asset(
               'assets/images/mascot/groo_reading.png',
-              width: 180,
-              height: 180,
-              cacheWidth: 360,
-              errorBuilder: (_, _, _) => const Icon(
+              width: imgSize,
+              height: imgSize,
+              cacheWidth: (imgSize * 2).toInt(),
+              errorBuilder: (_, _, _) => Icon(
                 Icons.menu_book_rounded,
-                size: 80,
+                size: imgSize * 0.45,
                 color: AppColors.accentYellow,
               ),
             ),
@@ -224,7 +226,9 @@ class _TeacherStudentProgressScreenState
         (_masteryBreakdown['struggling'] ?? 0);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -319,29 +323,40 @@ class _TeacherStudentProgressScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Grade $grade - $diffLabel',
-                          style: const TextStyle(
-                            fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                            color: AppColors.textPrimary,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Grade $grade - $diffLabel',
+                            style: const TextStyle(
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
                         ),
                         if (theme.isNotEmpty)
-                          Text(theme, style: AppText.caption),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(theme, style: AppText.caption),
+                          ),
                       ],
                     ),
                   ),
-                  Text(
-                    '$score/$total',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                      color: isPassing
-                          ? AppColors.textTeal
-                          : AppColors.textCoral,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      '$score/$total',
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: isPassing
+                            ? AppColors.textTeal
+                            : AppColors.textCoral,
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -429,16 +444,22 @@ class _StatCard extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 22),
             const SizedBox(height: 4),
-            Text(
-              value,
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: color,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
               ),
             ),
-            Text(label, style: AppText.caption),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(label, style: AppText.caption),
+            ),
           ],
         ),
       ),

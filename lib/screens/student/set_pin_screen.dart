@@ -99,7 +99,6 @@ class _SetPinScreenState extends State<SetPinScreen> {
     await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
-    // Safe Null Fallback for Route Arguments
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is! Student) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -119,8 +118,6 @@ class _SetPinScreenState extends State<SetPinScreen> {
 
     await DatabaseService.instance.updatePin(student.id!, hashedPin);
 
-    // Push PIN hash to Firestore for new-device verification.
-    // Wrapped in unawaited to ensure the UI navigates instantly, even if offline.
     if (student.firebaseUid != null) {
       unawaited(() async {
         try {
@@ -153,91 +150,108 @@ class _SetPinScreenState extends State<SetPinScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.studentBg,
-      body: SafeArea(
-        child: Center(
+    final isTablet = Responsive.isTablet(context);
+    final horizontalPadding = Responsive.horizontalPadding(context);
+
+    Widget content = LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xxl,
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
+            ),
+            child: IntrinsicHeight(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.lock_outline_rounded,
+                    size: 56,
+                    color: AppColors.accentTeal,
                   ),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
-                    child: IntrinsicHeight(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.lock_outline_rounded,
-                            size: 56,
-                            color: AppColors.accentTeal,
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                          Text(
-                            _isConfirming ? 'Confirm Your PIN' : 'Set Your PIN',
-                            style: AppText.h1,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          const Text(
-                            'Choose a 4-digit PIN for quick access',
-                            style: AppText.caption,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: AppSpacing.xl),
-                          PinDots(
-                            filledCount: _currentPin.length,
-                            state: _dotState,
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          SizedBox(
-                            height: 22,
-                            child: _errorMessage != null
-                                ? Text(
-                                    _errorMessage!,
-                                    style: const TextStyle(
-                                      color: AppColors.textCoral,
-                                      fontFamily: 'Nunito',
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  )
-                                : _dotState == PinDotState.success
-                                    ? const Text(
-                                        'PIN set!',
-                                        style: TextStyle(
-                                          color: kPinSuccessColor,
-                                          fontFamily: 'Nunito',
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      )
-                                    : const SizedBox.shrink(),
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                          NumberPad(
-                            enabled: !_isSaving,
-                            onDigit: _onDigitPressed,
-                            onBackspace: _onBackspace,
-                          ),
-                          const SizedBox(height: AppSpacing.xl),
-                        ],
-                      ),
+                  const SizedBox(height: AppSpacing.lg),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _isConfirming ? 'Confirm Your PIN' : 'Set Your PIN',
+                      style: AppText.h1,
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                );
-              },
+                  const SizedBox(height: AppSpacing.xs),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Choose a 4-digit PIN for quick access',
+                      style: AppText.caption,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  PinDots(
+                    filledCount: _currentPin.length,
+                    state: _dotState,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(
+                    height: 22,
+                    child: _errorMessage != null
+                        ? FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              _errorMessage!,
+                              style: const TextStyle(
+                                color: AppColors.textCoral,
+                                fontFamily: 'Nunito',
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        : _dotState == PinDotState.success
+                            ? const FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'PIN set!',
+                                  style: TextStyle(
+                                    color: kPinSuccessColor,
+                                    fontFamily: 'Nunito',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  NumberPad(
+                    enabled: !_isSaving,
+                    onDigit: _onDigitPressed,
+                    onBackspace: _onBackspace,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                ],
+              ),
             ),
           ),
+        );
+      },
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
         ),
-      ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.studentBg,
+      body: SafeArea(child: content),
     );
   }
 }

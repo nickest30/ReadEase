@@ -7,11 +7,8 @@ class AuthService {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// Stream of auth state changes. Used by AuthProvider.
   Stream<User?> authStateChanges() => _auth.authStateChanges();
 
-  /// Register a new user with Firebase Auth.
-  /// Returns the Firebase UID on success, null on failure.
   Future<String?> registerUser(String email, String password) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -28,7 +25,6 @@ class AuthService {
     }
   }
 
-  /// Sign in with Firebase Auth. Returns true on success.
   Future<bool> signIn(String email, String password) async {
     try {
       await _auth.signInWithEmailAndPassword(
@@ -45,26 +41,20 @@ class AuthService {
     }
   }
 
-  /// Sign out from Firebase Auth.
   Future<void> signOut() async {
     await _auth.signOut();
   }
 
-  /// Whether a user is currently signed in.
   bool get isSignedIn => _auth.currentUser != null;
 
-  /// Get the current Firebase user.
   User? get currentUser => _auth.currentUser;
 
-  /// Get the current user's Firebase UID.
   String? get currentUid => _auth.currentUser?.uid;
 
   Future<void> sendPasswordResetEmail(String email) async {
     await _auth.sendPasswordResetEmail(email: email);
   }
 
-  /// Send a verification email to the currently signed-in user.
-  /// Safe to call multiple times, Firebase rate-limits.
   Future<void> sendEmailVerification() async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -77,7 +67,6 @@ class AuthService {
     }
   }
 
-  /// Reload the current user and return their verified state.
   Future<bool> isEmailVerified() async {
     final user = _auth.currentUser;
     if (user == null) return false;
@@ -93,14 +82,6 @@ class AuthService {
   String? _pendingVerificationId;
   int? _pendingResendToken;
 
-  /// Initiate a phone verification flow.
-  /// If a user is already signed in, the phone is LINKED to their account.
-  /// If no user is signed in, it's a fresh sign-in-by-phone flow.
-  ///
-  /// Callbacks:
-  ///  - onCodeSent: OTP was sent. Store the verificationId for later.
-  ///  - onAutoVerified: Android auto-retrieved the code. Link already done.
-  ///  - onError: Something failed (bad number, quota, etc.)
   Future<void> startPhoneVerification({
     required String phoneNumber,
     required void Function(String verificationId) onCodeSent,
@@ -112,8 +93,6 @@ class AuthService {
         phoneNumber: phoneNumber,
 
         verificationCompleted: (PhoneAuthCredential credential) async {
-          // Android auto-retrieval, link immediately if signed in,
-          // otherwise sign in with the credential.
           try {
             final user = _auth.currentUser;
             if (user != null) {
@@ -151,9 +130,6 @@ class AuthService {
     }
   }
 
-  /// Confirm the OTP code entered by the user.
-  /// On success, the phone is linked to the currently signed-in user
-  /// (or a new session is created if no one was signed in).
   Future<bool> confirmPhoneCode(String smsCode) async {
     final verificationId = _pendingVerificationId;
     if (verificationId == null) {

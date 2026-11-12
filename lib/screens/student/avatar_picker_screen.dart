@@ -32,7 +32,6 @@ class _AvatarPickerScreenState extends State<AvatarPickerScreen> {
   }
 
   Future<void> _save() async {
-    SfxService.tap();
     final student = context.read<StudentProvider>().currentStudent;
     if (student?.id == null) return;
 
@@ -109,8 +108,8 @@ class _AvatarPickerScreenState extends State<AvatarPickerScreen> {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Responsive.horizontalPadding(context),
                     vertical: AppSpacing.md,
                   ),
                   child: Row(
@@ -151,8 +150,8 @@ class _AvatarPickerScreenState extends State<AvatarPickerScreen> {
                       if (constraints.maxWidth > 500) crossAxisCount = 6;
 
                       return GridView.builder(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: Responsive.horizontalPadding(context),
                         ),
                         gridDelegate:
                             SliverGridDelegateWithFixedCrossAxisCount(
@@ -181,8 +180,8 @@ class _AvatarPickerScreenState extends State<AvatarPickerScreen> {
                 ),
 
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Responsive.horizontalPadding(context),
                     vertical: AppSpacing.md,
                   ),
                   child: Column(
@@ -195,9 +194,14 @@ class _AvatarPickerScreenState extends State<AvatarPickerScreen> {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       SizedBox(
-                        height: 56,
+                        height: Responsive.buttonHeight(context),
                         child: ElevatedButton(
-                          onPressed: _saving ? null : _save,
+                          onPressed: _saving
+                              ? null
+                              : () {
+                                  SfxService.tap();
+                                  _save();
+                                },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.accentTeal,
                             foregroundColor: Colors.white,
@@ -215,12 +219,15 @@ class _AvatarPickerScreenState extends State<AvatarPickerScreen> {
                                     strokeWidth: 2.5,
                                   ),
                                 )
-                              : const Text(
-                                  'SAVE',
-                                  style: TextStyle(
-                                    fontFamily: 'Nunito',
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 1,
+                              : const FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    'SAVE',
+                                    style: TextStyle(
+                                      fontFamily: 'Nunito',
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1,
+                                    ),
                                   ),
                                 ),
                         ),

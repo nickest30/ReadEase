@@ -10,22 +10,12 @@ import '../../utils/app_theme.dart';
 import '../../utils/backup_code.dart';
 import '../../widgets/app_form.dart';
 
-/// Shown when a user can't receive the SMS OTP.
-/// Verifies the backup code they saved at signup against a bcrypt hash.
-///
-/// Rate-limited: 5 failed attempts → 15-minute lockout, keyed by
-/// `backup:{uid}` in the login_attempts table. Re-entering the password
-/// does NOT reset this lockout, only a successful verification does.
 class BackupCodeEntryScreen extends StatefulWidget {
   final String uid;
   final String backupCodeHash;
   final Color accentColor;
   final Color backgroundColor;
-
-  /// Called with the newly-generated backup code after successful verification.
   final void Function(String newBackupCode) onVerified;
-
-  /// Called when the user wants to go back to the OTP screen.
   final VoidCallback? onBackPressed;
 
   const BackupCodeEntryScreen({
@@ -113,8 +103,6 @@ class _BackupCodeEntryScreenState extends State<BackupCodeEntryScreen> {
   Future<void> _verify() async {
     if (_isLocked || _isVerifying) return;
 
-    SfxService.tap();
-
     final code = _controller.text.trim();
     if (code.length != 6) {
       setState(() => _errorMessage = 'Enter the 6-digit code');
@@ -126,7 +114,6 @@ class _BackupCodeEntryScreenState extends State<BackupCodeEntryScreen> {
       _errorMessage = null;
     });
 
-    // Re-check lock (another device might have triggered it).
     final alreadyLocked =
         await DatabaseService.instance.isLoginRateLimited(_rateKey);
     if (!mounted) return;
@@ -143,7 +130,6 @@ class _BackupCodeEntryScreenState extends State<BackupCodeEntryScreen> {
     if (!isCorrect) {
       HapticFeedback.mediumImpact();
 
-      // Record the failure
       await DatabaseService.instance.recordLoginAttempt(
         identifier: _rateKey,
         success: false,
@@ -151,14 +137,12 @@ class _BackupCodeEntryScreenState extends State<BackupCodeEntryScreen> {
 
       if (!mounted) return;
 
-      // Did this attempt trigger lockout?
       final remaining = await DatabaseService.instance
           .loginRateLimitRemaining(_rateKey);
 
       if (!mounted) return;
 
       if (remaining != null) {
-        // Locked out
         setState(() {
           _isVerifying = false;
           _isLocked = true;
@@ -178,163 +162,187 @@ class _BackupCodeEntryScreenState extends State<BackupCodeEntryScreen> {
       return;
     }
 
-    // Success
     HapticFeedback.heavyImpact();
     _lockTimer?.cancel();
 
-    // Clear attempt history so future logins start fresh
     await DatabaseService.instance.clearLoginAttempts(_rateKey);
 
     if (!mounted) return;
 
-    // Generate fresh code, the used one is now consumed
     final newCode = BackupCode.generate();
     widget.onVerified(newCode);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: widget.backgroundColor,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: AppSpacing.md),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      onPressed: () {
-                        SfxService.tap();
-                        if (widget.onBackPressed != null) {
-                          widget.onBackPressed!();
-                        } else {
-                          Navigator.of(context).pop();
-                        }
-                      },
-                      icon: const Icon(Icons.arrow_back,
-                          color: AppColors.textPrimary),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Center(
-                    child: Container(
-                      width: 96,
-                      height: 96,
-                      decoration: BoxDecoration(
-                        color: (_isLocked
-                                ? AppColors.accentCoral
-                                : widget.accentColor)
-                            .withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _isLocked ? Icons.lock_rounded : Icons.key_rounded,
-                        size: 48,
-                        color: _isLocked
-                            ? AppColors.accentCoral
-                            : widget.accentColor,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Text(
-                    _isLocked ? 'Too many attempts' : 'Enter your backup code',
-                    style: AppText.h1,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    _isLocked
-                        ? 'Try again in ${_formatRemaining(_lockRemaining)}'
-                        : 'Use the 6-digit code you saved at signup.',
-                    style: AppText.caption,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
-                  TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    enabled: !_isLocked && !_isVerifying,
-                    keyboardType: TextInputType.number,
-                    maxLength: 6,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 8,
-                    ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                    decoration: buildInputDecoration(
-                      hint: '••••••',
-                      focusColor: widget.accentColor,
-                    ).copyWith(counterText: ''),
-                    onChanged: (value) {
-                      if (value.length == 6 && !_isLocked) _verify();
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  SizedBox(
-                    height: 22,
-                    child: _errorMessage != null
-                        ? Text(
-                            _errorMessage!,
-                            textAlign: TextAlign.center,
-                            style: AppText.caption.copyWith(
-                              color: AppColors.textCoral,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  SizedBox(
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed:
-                          (_isLocked || _isVerifying) ? null : _verify,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: widget.accentColor,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: AppColors.border,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.large),
-                        ),
-                      ),
-                      child: _isVerifying
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : Text(
-                              _isLocked ? 'LOCKED' : 'VERIFY',
-                              style: const TextStyle(
-                                fontFamily: 'Nunito',
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                ],
+    final isTablet = Responsive.isTablet(context);
+    final iconSize = Responsive.imageSize(context, base: 96);
+    final buttonHeight = Responsive.buttonHeight(context);
+
+    Widget content = SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+        vertical: 20,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.md),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: IconButton(
+              onPressed: () {
+                SfxService.tap();
+                if (widget.onBackPressed != null) {
+                  widget.onBackPressed!();
+                } else {
+                  Navigator.of(context).pop();
+                }
+              },
+              icon: const Icon(Icons.arrow_back,
+                  color: AppColors.textPrimary),
+              padding: EdgeInsets.zero,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Center(
+            child: Container(
+              width: iconSize,
+              height: iconSize,
+              decoration: BoxDecoration(
+                color: (_isLocked
+                        ? AppColors.accentCoral
+                        : widget.accentColor)
+                    .withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _isLocked ? Icons.lock_rounded : Icons.key_rounded,
+                size: iconSize * 0.5,
+                color: _isLocked
+                    ? AppColors.accentCoral
+                    : widget.accentColor,
               ),
             ),
           ),
-        ),
+          const SizedBox(height: AppSpacing.lg),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              _isLocked ? 'Too many attempts' : 'Enter your backup code',
+              style: AppText.h1,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              _isLocked
+                  ? 'Try again in ${_formatRemaining(_lockRemaining)}'
+                  : 'Use the 6-digit code you saved at signup.',
+              style: AppText.caption,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+          TextField(
+            controller: _controller,
+            focusNode: _focusNode,
+            enabled: !_isLocked && !_isVerifying,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 8,
+            ),
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+            ],
+            decoration: buildInputDecoration(
+              hint: '••••••',
+              focusColor: widget.accentColor,
+            ).copyWith(counterText: ''),
+            onChanged: (value) {
+              if (value.length == 6 && !_isLocked) _verify();
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            height: 22,
+            child: _errorMessage != null
+                ? FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: AppText.caption.copyWith(
+                        color: AppColors.textCoral,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          SizedBox(
+            height: buttonHeight,
+            child: ElevatedButton(
+              onPressed: (_isLocked || _isVerifying)
+                  ? null
+                  : () {
+                      SfxService.tap();
+                      _verify();
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: widget.accentColor,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: AppColors.border,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.large),
+                ),
+              ),
+              child: _isVerifying
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        _isLocked ? 'LOCKED' : 'VERIFY',
+                        style: const TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+        ],
       ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: widget.backgroundColor,
+      body: SafeArea(child: content),
     );
   }
 }

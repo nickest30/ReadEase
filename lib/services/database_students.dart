@@ -276,4 +276,32 @@ extension DatabaseStudents on DatabaseService {
     final rows = await db.update('students', {'recovery_email': email}, where: 'id = ?', whereArgs: [studentId]);
     return rows > 0;
   }
+
+  Future<bool> updateStudentRecoveryCodeHash(
+    int studentId,
+    String codeHash,
+  ) async {
+    final db = await database;
+    final rows = await db.update(
+      'students',
+      {'recovery_code_hash': codeHash},
+      where: 'id = ?',
+      whereArgs: [studentId],
+    );
+    return rows > 0;
+  }
+
+  Future<bool> updateStudentPasswordHash(
+    int studentId,
+    String passwordHash,
+  ) async {
+    final db = await database;
+    final rows = await db.update(
+      'students',
+      {'password_hash': passwordHash},
+      where: 'id = ?',
+      whereArgs: [studentId],
+    );
+    return rows > 0;
+  }
 }

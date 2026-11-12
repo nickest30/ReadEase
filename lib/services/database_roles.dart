@@ -65,6 +65,24 @@ extension DatabaseRoles on DatabaseService {
     return rows > 0;
   }
 
+  Future<void> updateParentProfile(
+    int parentId, {
+    String? fullName,
+    String? username,
+  }) async {
+    final db = await database;
+    final updates = <String, dynamic>{};
+    if (fullName != null) updates['full_name'] = fullName;
+    if (username != null) updates['username'] = username;
+    if (updates.isEmpty) return;
+    await db.update(
+      'parents',
+      updates,
+      where: 'id = ?',
+      whereArgs: [parentId],
+    );
+  }
+
   Future<bool> updateParentBackupCodeHash(int parentId, String hash) async {
     final db = await database;
     final rows = await db.update(
@@ -73,12 +91,6 @@ extension DatabaseRoles on DatabaseService {
       where: 'id = ?',
       whereArgs: [parentId],
     );
-    return rows > 0;
-  }
-
-  Future<bool> updateParentPasswordHash(int parentId, String passwordHash) async {
-    final db = await database;
-    final rows = await db.update('parents', {'password_hash': passwordHash}, where: 'id = ?', whereArgs: [parentId]);
     return rows > 0;
   }
 
@@ -130,6 +142,24 @@ extension DatabaseRoles on DatabaseService {
     return rows > 0;
   }
 
+  Future<void> updateTeacherProfile(
+    int teacherId, {
+    String? fullName,
+    String? schoolName,
+  }) async {
+    final db = await database;
+    final updates = <String, dynamic>{};
+    if (fullName != null) updates['full_name'] = fullName;
+    if (schoolName != null) updates['school_name'] = schoolName;
+    if (updates.isEmpty) return;
+    await db.update(
+      'teachers',
+      updates,
+      where: 'id = ?',
+      whereArgs: [teacherId],
+    );
+  }
+
   Future<bool> updateTeacherBackupCodeHash(int teacherId, String hash) async {
     final db = await database;
     final rows = await db.update(
@@ -145,6 +175,16 @@ extension DatabaseRoles on DatabaseService {
     final db = await database;
     final rows = await db.update('teachers', {'password_hash': passwordHash}, where: 'id = ?', whereArgs: [teacherId]);
     return rows > 0;
+  }
+
+  Future<void> updateParentPasswordHash(int parentId, String newHash) async {
+    final db = await database;
+    await db.update(
+      'parents',
+      {'password_hash': newHash},
+      where: 'id = ?',
+      whereArgs: [parentId],
+    );
   }
 
   Future<int> insertClassGroup(ClassGroup group) async {

@@ -8,7 +8,6 @@ import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/app_form.dart';
 
-/// Full-screen OTP entry for phone verification.
 class OtpVerificationScreen extends StatefulWidget {
   final String phoneNumber;
   final Color accentColor;
@@ -79,8 +78,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   Future<void> _verifyCode() async {
-    SfxService.tap();
-
     final code = _codeController.text.trim();
     if (code.length != 6) {
       setState(() => _errorMessage = 'Enter the 6-digit code');
@@ -120,7 +117,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   Future<void> _resendCode() async {
     if (!_canResend) return;
-    SfxService.tap();
 
     setState(() {
       _errorMessage = null;
@@ -162,177 +158,216 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: !widget.isSignup,
-      child: Scaffold(
-        backgroundColor: widget.backgroundColor,
-        body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: AppSpacing.md),
-                    if (!widget.isSignup)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: IconButton(
-                          onPressed: () {
-                            SfxService.tap();
-                            Navigator.of(context).pop();
-                          },
-                          icon: const Icon(Icons.arrow_back,
-                              color: AppColors.textPrimary),
-                          padding: EdgeInsets.zero,
-                        ),
-                      ),
-                    const SizedBox(height: AppSpacing.lg),
-                    Center(
-                      child: Container(
-                        width: 96,
-                        height: 96,
-                        decoration: BoxDecoration(
-                          color: widget.accentColor.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.sms_rounded,
-                          size: 48,
-                          color: widget.accentColor,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    Text(
-                      'Enter your code',
-                      style: AppText.h1,
+    final isTablet = Responsive.isTablet(context);
+    final iconSize = Responsive.imageSize(context, base: 96);
+    final buttonHeight = Responsive.buttonHeight(context);
+
+    Widget content = SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+        vertical: 20,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.md),
+          if (!widget.isSignup)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                onPressed: () {
+                  SfxService.tap();
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(Icons.arrow_back,
+                    color: AppColors.textPrimary),
+                padding: EdgeInsets.zero,
+              ),
+            ),
+          const SizedBox(height: AppSpacing.lg),
+          Center(
+            child: Container(
+              width: iconSize,
+              height: iconSize,
+              decoration: BoxDecoration(
+                color: widget.accentColor.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.sms_rounded,
+                size: iconSize * 0.5,
+                color: widget.accentColor,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          const FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              'Enter your code',
+              style: AppText.h1,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              'We sent a 6-digit code to\n${widget.phoneNumber}',
+              style: AppText.caption,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+          TextField(
+            controller: _codeController,
+            focusNode: _focusNode,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 8,
+            ),
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+            ],
+            decoration: buildInputDecoration(
+              hint: '••••••',
+              focusColor: widget.accentColor,
+            ).copyWith(counterText: ''),
+            onChanged: (value) {
+              if (value.length == 6) {
+                _verifyCode();
+              }
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            height: 22,
+            child: _errorMessage != null
+                ? FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _errorMessage!,
                       textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'We sent a 6-digit code to\n${widget.phoneNumber}',
-                      style: AppText.caption,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.xxl),
-                    TextField(
-                      controller: _codeController,
-                      focusNode: _focusNode,
-                      keyboardType: TextInputType.number,
-                      maxLength: 6,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 8,
+                      style: AppText.caption.copyWith(
+                        color: AppColors.textCoral,
+                        fontWeight: FontWeight.w700,
                       ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      decoration: buildInputDecoration(
-                        hint: '••••••',
-                        focusColor: widget.accentColor,
-                      ).copyWith(counterText: ''),
-                      onChanged: (value) {
-                        if (value.length == 6) {
-                          _verifyCode();
-                        }
-                      },
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    SizedBox(
+                  )
+                : const SizedBox.shrink(),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          SizedBox(
+            height: buttonHeight,
+            child: ElevatedButton(
+              onPressed: _isVerifying
+                  ? null
+                  : () {
+                      SfxService.tap();
+                      _verifyCode();
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: widget.accentColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.large),
+                ),
+              ),
+              child: _isVerifying
+                  ? const SizedBox(
+                      width: 22,
                       height: 22,
-                      child: _errorMessage != null
-                          ? Text(
-                              _errorMessage!,
-                              textAlign: TextAlign.center,
-                              style: AppText.caption.copyWith(
-                                color: AppColors.textCoral,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _isVerifying ? null : _verifyCode,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: widget.accentColor,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.large),
-                          ),
-                        ),
-                        child: _isVerifying
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2.5,
-                                ),
-                              )
-                            : const Text(
-                                'VERIFY',
-                                style: TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Center(
-                      child: TextButton(
-                        onPressed: _canResend ? _resendCode : null,
-                        child: Text(
-                          _canResend
-                              ? 'Resend code'
-                              : 'Resend in ${_resendCooldown}s',
-                          style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w700,
-                            color: _canResend
-                                ? widget.accentColor
-                                : AppColors.textMuted,
-                          ),
+                    )
+                  : const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'VERIFY',
+                        style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
-                    if (!widget.isSignup && widget.onNoPhoneFallback != null) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      Center(
-                        child: TextButton(
-                          onPressed: () {
-                            SfxService.tap();
-                            widget.onNoPhoneFallback?.call();
-                            Navigator.of(context).pop(false);
-                          },
-                          child: const Text(
-                            'I don\'t have my phone',
-                            style: TextStyle(
-                              fontFamily: 'Nunito',
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                              color: AppColors.textMuted,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Center(
+            child: TextButton(
+              onPressed: _canResend
+                  ? () {
+                      SfxService.tap();
+                      _resendCode();
+                    }
+                  : null,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  _canResend
+                      ? 'Resend code'
+                      : 'Resend in ${_resendCooldown}s',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w700,
+                    color: _canResend
+                        ? widget.accentColor
+                        : AppColors.textMuted,
+                  ),
                 ),
               ),
             ),
           ),
+          if (!widget.isSignup && widget.onNoPhoneFallback != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  SfxService.tap();
+                  widget.onNoPhoneFallback?.call();
+                  Navigator.of(context).pop(false);
+                },
+                child: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'I don\'t have my phone',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.xl),
+        ],
+      ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
         ),
+      );
+    }
+
+    return PopScope(
+      canPop: !widget.isSignup,
+      child: Scaffold(
+        backgroundColor: widget.backgroundColor,
+        body: SafeArea(child: content),
       ),
     );
   }

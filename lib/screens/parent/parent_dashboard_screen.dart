@@ -149,7 +149,6 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
   }
 
   Future<void> _handleLogout() async {
-    SfxService.tap();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -184,7 +183,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
             ),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(true);
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentCoral,
               foregroundColor: Colors.white,
@@ -206,17 +208,23 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
 
     if (confirmed != true || !mounted) return;
 
-    context.read<AuthProvider>().signOut();
-    context.read<ParentProvider>().logout();
+    final authProvider = context.read<AuthProvider>();
+    final parentProvider = context.read<ParentProvider>();
 
+    // Await the sign out to prevent race conditions
+    await authProvider.signOut();
+    parentProvider.logout();
+
+    if (!mounted) return;
+    
+    // Clear the entire stack to prevent black screens on pop
     Navigator.of(context).pushNamedAndRemoveUntil(
-      '/parent-welcome',
-      ModalRoute.withName('/role-selection'),
+      '/role-selection',
+      (route) => false,
     );
   }
 
   Future<void> _deleteChild(Student child) async {
-    SfxService.tap();
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -267,7 +275,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
             ),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(true);
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentCoral,
               foregroundColor: Colors.white,
@@ -326,8 +337,8 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil(
-            '/parent-welcome',
-            ModalRoute.withName('/role-selection'),
+            '/role-selection',
+            (route) => false,
           );
         }
       });
@@ -337,43 +348,53 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
       );
     }
 
+    final isTablet = Responsive.isTablet(context);
+
+    Widget content = Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.md),
+          _buildHeader(parent.fullName),
+          const SizedBox(height: AppSpacing.md),
+
+          if (parent.firebaseUid != null && !parent.emailVerified)
+            EmailVerificationBanner(
+              accentColor: AppColors.accentPurple,
+              role: 'parent',
+            ),
+
+          const SizedBox(height: AppSpacing.sm),
+          Expanded(child: _buildBody()),
+          const SizedBox(height: AppSpacing.md),
+          _buildActions(),
+          const SizedBox(height: AppSpacing.md),
+        ],
+      ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: content,
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.parentBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: AppSpacing.md),
-                  _buildHeader(parent.fullName),
-                  const SizedBox(height: AppSpacing.md),
-
-                  if (parent.firebaseUid != null && !parent.emailVerified)
-                    EmailVerificationBanner(
-                      accentColor: AppColors.accentPurple,
-                      role: 'parent',
-                    ),
-
-                  const SizedBox(height: AppSpacing.sm),
-                  Expanded(child: _buildBody()),
-                  const SizedBox(height: AppSpacing.md),
-                  _buildActions(),
-                  const SizedBox(height: AppSpacing.md),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      body: SafeArea(child: content),
     );
   }
 
   Widget _buildHeader(String fullName) {
     final firstName = fullName.split(' ').first;
+    final imgSize = Responsive.imageSize(context, base: 70);
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -389,13 +410,13 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
         ),
         Image.asset(
           'assets/images/mascot/motter_base.png',
-          width: 70,
-          height: 70,
+          width: imgSize,
+          height: imgSize,
           fit: BoxFit.contain,
-          cacheWidth: 150,
+          cacheWidth: (imgSize * 2).toInt(),
           errorBuilder: (_, _, _) => Container(
-            width: 70,
-            height: 70,
+            width: imgSize,
+            height: imgSize,
             decoration: BoxDecoration(
               color: AppColors.accentPurple.withValues(alpha: 0.15),
               shape: BoxShape.circle,
@@ -404,10 +425,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
                 width: 2,
               ),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.family_restroom_rounded,
               color: AppColors.accentPurple,
-              size: 34,
+              size: imgSize * 0.45,
             ),
           ),
         ),
@@ -466,7 +487,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
                     arguments: {'child': child},
                   );
                 },
-                onLongPress: () => _deleteChild(child),
+                onLongPress: () {
+                  SfxService.tap();
+                  _deleteChild(child);
+                },
               );
             },
           );
@@ -483,19 +507,22 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
       children: [
         if (canAddMore) ...[
           SizedBox(
-            height: 52,
+            height: Responsive.buttonHeight(context),
             child: OutlinedButton.icon(
               onPressed: () {
                 SfxService.tap();
                 Navigator.of(context).pushNamed('/generate-link-code');
               },
               icon: const Icon(Icons.qr_code_rounded),
-              label: const Text(
-                'Link Code for Your Kids',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Link Code for Your Kids',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
                 ),
               ),
               style: OutlinedButton.styleFrom(
@@ -513,7 +540,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
           const SizedBox(height: AppSpacing.sm),
 
           SizedBox(
-            height: 56,
+            height: Responsive.buttonHeight(context),
             child: ElevatedButton.icon(
               onPressed: () async {
                 SfxService.tap();
@@ -521,11 +548,14 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
                 _loadChildren();
               },
               icon: const Icon(Icons.add),
-              label: const Text(
-                'Add Child',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w700,
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Add Child',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               style: ElevatedButton.styleFrom(
@@ -541,19 +571,22 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
         ],
 
         SizedBox(
-          height: 46,
+          height: Responsive.buttonHeight(context),
           child: OutlinedButton.icon(
             onPressed: () {
               SfxService.tap();
               Navigator.of(context).pushNamed('/parent-settings');
             },
             icon: const Icon(Icons.settings_outlined, size: 18),
-            label: const Text(
-              'Settings',
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
+            label: const FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                'Settings',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
               ),
             ),
             style: OutlinedButton.styleFrom(
@@ -569,9 +602,12 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
         const SizedBox(height: AppSpacing.sm),
 
         SizedBox(
-          height: 50,
+          height: Responsive.buttonHeight(context),
           child: OutlinedButton(
-            onPressed: _handleLogout,
+            onPressed: () {
+              SfxService.tap();
+              _handleLogout();
+            },
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.textCoral,
               side: const BorderSide(color: AppColors.accentCoral),
@@ -579,11 +615,14 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
                 borderRadius: BorderRadius.circular(AppRadius.large),
               ),
             ),
-            child: const Text(
-              'Log Out',
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontWeight: FontWeight.w700,
+            child: const FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                'Log Out',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -593,6 +632,8 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
   }
 
   Widget _buildEmptyState() {
+    final imgSize = Responsive.imageSize(context, base: 160);
+
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -602,13 +643,13 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
           const SizedBox(height: AppSpacing.xxl),
           Image.asset(
             'assets/images/mascot/motter_gentle.png',
-            width: 160,
-            height: 160,
+            width: imgSize,
+            height: imgSize,
             fit: BoxFit.contain,
-            cacheWidth: 300,
+            cacheWidth: (imgSize * 2).toInt(),
             errorBuilder: (_, _, _) => Container(
-              width: 160,
-              height: 160,
+              width: imgSize,
+              height: imgSize,
               decoration: BoxDecoration(
                 color: AppColors.accentPurple.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
@@ -617,9 +658,9 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
                   width: 2,
                 ),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.person_add_alt_rounded,
-                size: 72,
+                size: imgSize * 0.45,
                 color: AppColors.accentPurple,
               ),
             ),
@@ -642,7 +683,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
           ),
           const SizedBox(height: AppSpacing.xl),
           SizedBox(
-            height: 52,
+            height: Responsive.buttonHeight(context),
             child: ElevatedButton.icon(
               onPressed: () async {
                 SfxService.tap();
@@ -650,12 +691,15 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen>
                 _loadChildren();
               },
               icon: const Icon(Icons.add, size: 20),
-              label: const Text(
-                'Add Your First Child',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Add Your First Child',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                 ),
               ),
               style: ElevatedButton.styleFrom(
@@ -750,29 +794,38 @@ class _ChildCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              child.displayName,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontFamily: 'Nunito',
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-                color: AppColors.textPrimary,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                child.displayName,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ),
-            Text(
-              'Grade ${child.gradeLevel}',
-              style: AppText.caption,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                'Grade ${child.gradeLevel}',
+                style: AppText.caption,
+              ),
             ),
             const SizedBox(height: 4),
-            Text(
-              '${child.totalPoints} pts',
-              style: const TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textYellow,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '${child.totalPoints} pts',
+                style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textYellow,
+                ),
               ),
             ),
           ],

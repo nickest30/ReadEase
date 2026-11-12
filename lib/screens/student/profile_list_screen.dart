@@ -34,124 +34,139 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.studentBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: AppSpacing.md),
-                  IconButton(
-                    onPressed: () {
-                      SfxService.tap();
-                      if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
-                      } else {
-                        Navigator.of(context).pushNamedAndRemoveUntil(
-                          '/role-selection',
-                          (route) => false,
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-                    alignment: Alignment.centerLeft,
-                    padding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text("Who's reading\ntoday?", style: AppText.h1),
-                            SizedBox(height: AppSpacing.xs),
-                            Text(
-                              'Pick your profile to start',
-                              style: AppText.caption,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const _YseImage(
-                        assetPath: 'assets/images/mascot/yse_thinking.png',
-                        size: 90,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  Expanded(
-                    child: _loading
-                        ? const Center(child: CircularProgressIndicator())
-                        : _profiles.isEmpty
-                            ? _buildEmptyState()
-                            : _buildProfileGrid(),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  SizedBox(
-                    height: 56,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        SfxService.tap();
-                        Navigator.of(context).pushNamed('/solo-signup');
-                      },
-                      icon: const Icon(Icons.person_add_alt_1_rounded),
-                      label: const Text(
-                        'Register on Your Own',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accentTeal,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.large),
-                        ),
-                      ),
+    final isTablet = Responsive.isTablet(context);
+    final imgSize = Responsive.imageSize(context, base: 90);
+
+    Widget content = Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.md),
+          IconButton(
+            onPressed: () {
+              SfxService.tap();
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              } else {
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/role-selection',
+                  (route) => false,
+                );
+              }
+            },
+            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+            alignment: Alignment.centerLeft,
+            padding: EdgeInsets.zero,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Who's reading\ntoday?", style: AppText.h1),
+                    SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Pick your profile to start',
+                      style: AppText.caption,
                     ),
+                  ],
+                ),
+              ),
+              _YseImage(
+                assetPath: 'assets/images/mascot/yse_thinking.png',
+                size: imgSize,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _profiles.isEmpty
+                    ? _buildEmptyState()
+                    : _buildProfileGrid(),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            height: Responsive.buttonHeight(context),
+            child: ElevatedButton.icon(
+              onPressed: () {
+                SfxService.tap();
+                Navigator.of(context).pushNamed('/solo-signup');
+              },
+              icon: const Icon(Icons.person_add_alt_1_rounded),
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Register on Your Own',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  SizedBox(
-                    height: 52,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        SfxService.tap();
-                        Navigator.of(context).pushNamed('/student-signin');
-                      },
-                      icon: const Icon(Icons.login_rounded),
-                      label: const Text(
-                        'Log In with Credentials',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.accentTeal,
-                        side: const BorderSide(color: AppColors.accentTeal, width: 1.5),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.large),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                ],
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentTeal,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.large),
+                ),
               ),
             ),
           ),
-        ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            height: Responsive.buttonHeight(context),
+            child: OutlinedButton.icon(
+              onPressed: () {
+                SfxService.tap();
+                Navigator.of(context).pushNamed('/student-signin');
+              },
+              icon: const Icon(Icons.login_rounded),
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Log In with Credentials',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.accentTeal,
+                side: const BorderSide(color: AppColors.accentTeal, width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.large),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+        ],
       ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.studentBg,
+      body: SafeArea(child: content),
     );
   }
 
@@ -214,6 +229,8 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final avatarSize = Responsive.imageSize(context, base: 68);
+
     return InkWell(
       onTap: () {
         SfxService.tap();
@@ -231,8 +248,8 @@ class _ProfileCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 68,
-              height: 68,
+              width: avatarSize,
+              height: avatarSize,
               decoration: BoxDecoration(
                 color: AppColors.accentTeal.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
@@ -246,7 +263,7 @@ class _ProfileCard extends StatelessWidget {
                 child: Image.asset(
                   avatarAssetPath(student.avatarIndex),
                   fit: BoxFit.cover,
-                  cacheWidth: 136,
+                  cacheWidth: (avatarSize * 2).toInt(),
                   errorBuilder: (_, _, _) {
                     final initial = student.displayName.isNotEmpty
                         ? student.displayName[0].toUpperCase()
@@ -270,31 +287,38 @@ class _ProfileCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              student.displayName,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                student.displayName,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ),
             const SizedBox(height: 2),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.accentTeal.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Grade ${student.gradeLevel}',
-                style: const TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textTeal,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.accentTeal.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Grade ${student.gradeLevel}',
+                  style: const TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textTeal,
+                  ),
                 ),
               ),
             ),

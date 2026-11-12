@@ -26,7 +26,11 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
   int _badgeCount = 0;
   double _accuracy = 0.0;
   Map<String, Map<String, int>> _questionTypeStats = {};
-  Map<String, int> _masteryBreakdown = {'mastered': 0, 'learning': 0, 'struggling': 0};
+  Map<String, int> _masteryBreakdown = {
+    'mastered': 0,
+    'learning': 0,
+    'struggling': 0
+  };
 
   @override
   void initState() {
@@ -88,7 +92,6 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
     }
   }
 
-  /// Best attempt per batch (deduped).
   Map<int, Map<String, dynamic>> get _bestPerBatch {
     final Map<int, Map<String, dynamic>> best = {};
     for (final a in _attempts) {
@@ -123,28 +126,34 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
       );
     }
 
+    final isTablet = Responsive.isTablet(context);
+
+    Widget content = Column(
+      children: [
+        _buildHeader(),
+        Expanded(child: _buildBody()),
+      ],
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: content,
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.studentBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
-            child: Column(
-              children: [
-                _buildHeader(),
-                Expanded(child: _buildBody()),
-              ],
-            ),
-          ),
-        ),
-      ),
+      body: SafeArea(child: content),
     );
   }
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xl,
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
         vertical: AppSpacing.md,
       ),
       child: Row(
@@ -193,28 +202,33 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
   }
 
   Widget _buildEmpty() {
+    final imgSize = Responsive.imageSize(context, base: 160);
+
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(AppSpacing.xl),
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+        vertical: AppSpacing.xl,
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const SizedBox(height: AppSpacing.xxl),
           Image.asset(
             'assets/images/mascot/yse_thinking.png',
-            width: 160,
-            height: 160,
-            cacheWidth: 320,
+            width: imgSize,
+            height: imgSize,
+            cacheWidth: (imgSize * 2).toInt(),
             errorBuilder: (_, _, _) => Container(
-              width: 160,
-              height: 160,
+              width: imgSize,
+              height: imgSize,
               decoration: BoxDecoration(
                 color: AppColors.accentTeal.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.insights_rounded,
-                size: 80,
+                size: imgSize * 0.5,
                 color: AppColors.accentTeal,
               ),
             ),
@@ -236,19 +250,22 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
           ),
           const SizedBox(height: AppSpacing.xl),
           SizedBox(
-            height: 52,
+            height: Responsive.buttonHeight(context),
             child: ElevatedButton.icon(
               onPressed: () {
                 SfxService.tap();
                 Navigator.of(context).pushNamed('/grade-selection');
               },
               icon: const Icon(Icons.school_rounded, size: 20),
-              label: const Text(
-                'Start Learning',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Start Learning',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                 ),
               ),
               style: ElevatedButton.styleFrom(
@@ -284,7 +301,9 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
       color: AppColors.accentTeal,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+        padding: EdgeInsets.symmetric(
+          horizontal: Responsive.horizontalPadding(context),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -376,32 +395,43 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Grade $grade - $diffLabel',
-                            style: const TextStyle(
-                              fontFamily: 'Nunito',
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                              color: AppColors.textPrimary,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Grade $grade - $diffLabel',
+                              style: const TextStyle(
+                                fontFamily: 'Nunito',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                                color: AppColors.textPrimary,
+                              ),
                             ),
                           ),
                           if (theme.isNotEmpty)
-                            Text(
-                              theme,
-                              style: AppText.caption,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                theme,
+                                style: AppText.caption,
+                              ),
                             ),
                         ],
                       ),
                     ),
-                    Text(
-                      '$score/$total',
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
-                        color: isPassing
-                            ? AppColors.textTeal
-                            : AppColors.textCoral,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        '$score/$total',
+                        style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                          color: isPassing
+                              ? AppColors.textTeal
+                              : AppColors.textCoral,
+                        ),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
@@ -545,16 +575,22 @@ class _StatCard extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 22),
             const SizedBox(height: 4),
-            Text(
-              value,
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: color,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
               ),
             ),
-            Text(label, style: AppText.caption),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(label, style: AppText.caption),
+            ),
           ],
         ),
       ),

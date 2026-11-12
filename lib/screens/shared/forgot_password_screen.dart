@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../services/firestore_service.dart';
 import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/validators.dart';
 import '../../widgets/app_form.dart';
 
-/// Roles that support password reset via email.
 enum ForgotPasswordRole { parent, teacher }
 
 extension _RoleVisuals on ForgotPasswordRole {
@@ -31,6 +31,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
   bool _isSubmitting = false;
   bool _sent = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -41,20 +42,47 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _handleSend() async {
     if (!_formKey.currentState!.validate()) return;
 
-    SfxService.tap();
-
-    setState(() => _isSubmitting = true);
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
 
     final authProvider = context.read<AuthProvider>();
     final email = _emailController.text.trim().toLowerCase();
 
+    // ── Step 1: Validate email exists in the correct role collection ──
+    bool exists = true; // default true — if check fails, proceed anyway
     try {
-      // We always show success to avoid leaking whether the email is registered.
+      if (widget.role == ForgotPasswordRole.parent) {
+        exists = await FirestoreService.instance.parentEmailExists(email);
+      } else {
+        exists = await FirestoreService.instance.teacherEmailExists(email);
+      }
+    } catch (e) {
+      debugPrint('Email existence check failed (allowing): $e');
+      // Fall back to sending — the user might still have an account
+      exists = true;
+    }
+
+    if (!mounted) return;
+
+    if (!exists) {
+      setState(() {
+        _errorMessage =
+            'No ${widget.role.label.toLowerCase()} account found with '
+            'this email.\n\n'
+            'Double-check the address, or sign up first.';
+        _isSubmitting = false;
+      });
+      return;
+    }
+
+    // ── Step 2: Send reset email via Firebase ──
+    try {
       await authProvider.sendPasswordResetEmail(email);
     } catch (e) {
-      // Silently swallow network errors so the user still sees the confirmation
-      // screen. This prevents email enumeration attacks.
       debugPrint('Password reset email failed: $e');
+      // Firebase usually doesn't throw for security. Continue to confirmation.
     }
 
     if (!mounted) return;
@@ -66,55 +94,72 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = Responsive.isTablet(context);
+    final buttonHeight = Responsive.buttonHeight(context);
+
+    Widget content = SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+        vertical: 20,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.md),
+          IconButton(
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(context).pop();
+            },
+            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+            alignment: Alignment.centerLeft,
+            padding: EdgeInsets.zero,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          if (_sent)
+            _buildConfirmation(buttonHeight)
+          else
+            _buildRequestForm(buttonHeight),
+        ],
+      ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: widget.role.background,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: AppSpacing.md),
-                  IconButton(
-                    onPressed: () {
-                      SfxService.tap();
-                      Navigator.of(context).pop();
-                    },
-                    icon: const Icon(Icons.arrow_back,
-                        color: AppColors.textPrimary),
-                    alignment: Alignment.centerLeft,
-                    padding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  if (_sent) _buildConfirmation() else _buildRequestForm(),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      body: SafeArea(child: content),
     );
   }
 
-  Widget _buildRequestForm() {
+  Widget _buildRequestForm(double buttonHeight) {
+    final isTeacher = widget.role == ForgotPasswordRole.teacher;
+
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(
+          Icon(
             Icons.lock_reset_rounded,
             size: 56,
-            color: AppColors.accentPurple,
+            color: isTeacher ? AppColors.accentTeal : AppColors.accentPurple,
           ),
           const SizedBox(height: AppSpacing.md),
-          Text(
-            'Forgot Password?',
-            style: AppText.h1,
-            textAlign: TextAlign.center,
+          const FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              'Forgot Password?',
+              style: AppText.h1,
+              textAlign: TextAlign.center,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -133,35 +178,82 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             validator: Validators.email,
             decoration: buildInputDecoration(
               hint: 'name@example.com',
-              focusColor: AppColors.accentPurple,
+              focusColor: isTeacher
+                  ? AppColors.accentTeal
+                  : AppColors.accentPurple,
             ),
           ),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.accentCoral.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+                border: Border.all(
+                  color: AppColors.accentCoral.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline_rounded,
+                      color: AppColors.accentCoral, size: 20),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textCoral,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.xl),
           SizedBox(
-            height: 56,
+            height: buttonHeight,
             child: ElevatedButton(
-              onPressed: _isSubmitting ? null : _handleSend,
+              onPressed: _isSubmitting
+                  ? null
+                  : () {
+                      SfxService.tap();
+                      _handleSend();
+                    },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentPurple,
-                foregroundColor: Colors.white,
+                backgroundColor: isTeacher
+                    ? AppColors.accentYellow
+                    : AppColors.accentPurple,
+                foregroundColor: isTeacher
+                    ? const Color(0xFF2C2C2C)
+                    : Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.large),
                 ),
               ),
               child: _isSubmitting
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(
-                        color: Colors.white,
+                        color: isTeacher
+                            ? const Color(0xFF2C2C2C)
+                            : Colors.white,
                         strokeWidth: 2.5,
                       ),
                     )
-                  : const Text(
-                      'SEND RESET LINK',
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w700,
+                  : const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'SEND RESET LINK',
+                        style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
             ),
@@ -186,7 +278,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  Widget _buildConfirmation() {
+  Widget _buildConfirmation(double buttonHeight) {
+    final isTeacher = widget.role == ForgotPasswordRole.teacher;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -197,17 +291,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           color: AppColors.accentGreen,
         ),
         const SizedBox(height: AppSpacing.lg),
-        const Text(
-          'Check Your Email',
-          style: AppText.h1,
-          textAlign: TextAlign.center,
+        const FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            'Check Your Email',
+            style: AppText.h1,
+            textAlign: TextAlign.center,
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: Text(
-            'If an account exists for ${_emailController.text.trim()}, '
-            'you\'ll receive a password reset link in a few minutes. '
+            'We sent a password reset link to ${_emailController.text.trim()}.\n\n'
+            'Click the link in your email to set a new password.\n\n'
+            'After resetting, log back in with your EMAIL ADDRESS '
+            'and your new password.\n\n'
             'Be sure to check your spam folder too.',
             style: AppText.body,
             textAlign: TextAlign.center,
@@ -215,24 +314,31 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         const SizedBox(height: AppSpacing.xxl),
         SizedBox(
-          height: 56,
+          height: buttonHeight,
           child: ElevatedButton(
             onPressed: () {
               SfxService.tap();
               Navigator.of(context).pop();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentPurple,
-              foregroundColor: Colors.white,
+              backgroundColor: isTeacher
+                  ? AppColors.accentYellow
+                  : AppColors.accentPurple,
+              foregroundColor: isTeacher
+                  ? const Color(0xFF2C2C2C)
+                  : Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppRadius.large),
               ),
             ),
-            child: const Text(
-              'BACK TO LOGIN',
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontWeight: FontWeight.w700,
+            child: const FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                'BACK TO LOGIN',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ),

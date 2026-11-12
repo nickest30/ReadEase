@@ -50,7 +50,6 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
-    SfxService.tap();
 
     final authProvider = context.read<AuthProvider>();
     final teacherProvider = context.read<TeacherProvider>();
@@ -94,44 +93,57 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
           .getTeacherByUsername(input.toLowerCase());
 
       if (localTeacher != null) {
-        final isCorrect =
-            BCrypt.checkpw(password, localTeacher.passwordHash);
+        final isCorrect = BCrypt.checkpw(password, localTeacher.passwordHash);
 
-        if (!isCorrect) {
-          await DatabaseService.instance.recordLoginAttempt(
-            identifier: identifier,
-            success: false,
-          );
+        if (isCorrect) {
+          // Local password matches — try Firebase silently (allow offline)
+          try {
+            await authProvider.signIn(localTeacher.email, password);
+          } catch (_) {}
+
+          await DatabaseService.instance.clearLoginAttempts(identifier);
           if (!mounted) return;
-          setState(() {
-            _errorMessage = 'Incorrect password.';
-            _isSubmitting = false;
-          });
+          teacherProvider.setTeacher(localTeacher);
+          Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
           return;
         }
 
-        try {
-          await authProvider.signIn(localTeacher.email, password);
-        } catch (_) {}
-
-        // Refresh classes from cloud (so classes created on other
-        // devices show up here).
-        if (localTeacher.firebaseUid != null) {
-          try {
-            await CloudSyncService.instance.downloadTeacherClasses(
-              localTeacherId: localTeacher.id!,
-              firebaseUid: localTeacher.firebaseUid!,
-            );
-          } catch (e) {
-            debugPrint('Class refresh failed (continuing): $e');
-          }
-        }
-
-        await DatabaseService.instance.clearLoginAttempts(identifier);
+        debugPrint('Local hash mismatch — trying Firebase for ${localTeacher.email}');
+        final firebaseOk = await authProvider.signIn(
+          localTeacher.email,
+          password,
+        );
 
         if (!mounted) return;
-        teacherProvider.setTeacher(localTeacher);
-        Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
+
+        if (firebaseOk) {
+          // Password was reset via Firebase. Sync local hash.
+          final freshHash = BCrypt.hashpw(password, BCrypt.gensalt());
+          try {
+            await DatabaseService.instance
+                .updateTeacherPasswordHash(localTeacher.id!, freshHash);
+          } catch (e) {
+            debugPrint('Hash sync failed (continuing): $e');
+          }
+
+          await DatabaseService.instance.clearLoginAttempts(identifier);
+          if (!mounted) return;
+          teacherProvider.setTeacher(localTeacher);
+          Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
+          return;
+        }
+
+        await DatabaseService.instance.recordLoginAttempt(
+          identifier: identifier,
+          success: false,
+        );
+        if (!mounted) return;
+        setState(() {
+          _errorMessage =
+              'Incorrect password. If you recently reset it via email, '
+              'try logging in with your email address.';
+          _isSubmitting = false;
+        });
         return;
       }
 
@@ -147,7 +159,7 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
         _isSubmitting = false;
       });
     } catch (e) {
-      debugPrint('Teacher login ERROR: $e');
+      debugPrint('Teacher login error: $e');
       if (!mounted) return;
       setState(() {
         _errorMessage = 'Something went wrong. Please try again.';
@@ -451,142 +463,159 @@ class _TeacherLoginScreenState extends State<TeacherLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.teacherBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: AppSpacing.md),
+    final isTablet = Responsive.isTablet(context);
 
-                    IconButton(
-                      onPressed: () {
-                        SfxService.tap();
-                        Navigator.of(context).pop();
-                      },
-                      icon: const Icon(Icons.arrow_back,
-                          color: AppColors.textPrimary),
-                      alignment: Alignment.centerLeft,
-                      padding: EdgeInsets.zero,
-                    ),
+    Widget content = SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+        vertical: 20,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: AppSpacing.md),
 
-                    const SizedBox(height: AppSpacing.sm),
+            IconButton(
+              onPressed: () {
+                SfxService.tap();
+                Navigator.of(context).pop();
+              },
+              icon: const Icon(Icons.arrow_back,
+                  color: AppColors.textPrimary),
+              alignment: Alignment.centerLeft,
+              padding: EdgeInsets.zero,
+            ),
 
-                    const Text('Teacher Login', style: AppText.h1),
-                    const SizedBox(height: 2),
-                    const Text('Sign in to continue', style: AppText.caption),
+            const SizedBox(height: AppSpacing.sm),
 
-                    const SizedBox(height: AppSpacing.xl),
+            const Text('Teacher Login', style: AppText.h1),
+            const SizedBox(height: 2),
+            const Text('Sign in to continue', style: AppText.caption),
 
-                    const FieldLabel('Username or Email'),
-                    TextFormField(
-                      controller: _identifierController,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      validator: Validators.usernameOrEmail,
-                      decoration: buildInputDecoration(
-                        hint: 'Enter username or email',
-                        focusColor: AppColors.accentYellow,
+            const SizedBox(height: AppSpacing.xl),
+
+            const FieldLabel('Username or Email'),
+            TextFormField(
+              controller: _identifierController,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              validator: Validators.usernameOrEmail,
+              decoration: buildInputDecoration(
+                hint: 'Enter username or email',
+                focusColor: AppColors.accentYellow,
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.lg),
+
+            const FieldLabel('Password'),
+            PasswordField(
+              controller: _passwordController,
+              hintText: 'Enter your password',
+              textInputAction: TextInputAction.done,
+              focusColor: AppColors.accentYellow,
+              validator: (v) => (v == null || v.isEmpty)
+                  ? 'Please enter your password'
+                  : null,
+            ),
+
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () {
+                  SfxService.tap();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ForgotPasswordScreen(
+                        role: ForgotPasswordRole.teacher,
                       ),
                     ),
-
-                    const SizedBox(height: AppSpacing.lg),
-
-                    const FieldLabel('Password'),
-                    PasswordField(
-                      controller: _passwordController,
-                      hintText: 'Enter your password',
-                      textInputAction: TextInputAction.done,
-                      focusColor: AppColors.accentYellow,
-                      validator: (v) => (v == null || v.isEmpty)
-                          ? 'Please enter your password'
-                          : null,
-                    ),
-
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          SfxService.tap();
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ForgotPasswordScreen(
-                                role: ForgotPasswordRole.teacher,
-                              ),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          'Forgot password?',
-                          style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: AppColors.textYellow,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        _errorMessage!,
-                        style: const TextStyle(
-                          color: AppColors.textCoral,
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: AppSpacing.xl),
-
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _isSubmitting ? null : _handleLogin,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentYellow,
-                          foregroundColor: AppColors.textPrimary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.large),
-                          ),
-                        ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  color: AppColors.textPrimary,
-                                  strokeWidth: 2.5,
-                                ),
-                              )
-                            : const Text(
-                                'LOGIN',
-                                style: TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
+                  );
+                },
+                child: const Text(
+                  'Forgot password?',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: AppColors.textYellow,
+                  ),
                 ),
               ),
             ),
-          ),
+
+            if (_errorMessage != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                _errorMessage!,
+                style: const TextStyle(
+                  color: AppColors.textCoral,
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+
+            const SizedBox(height: AppSpacing.xl),
+
+            SizedBox(
+              height: Responsive.buttonHeight(context),
+              child: ElevatedButton(
+                onPressed: _isSubmitting
+                    ? null
+                    : () {
+                        SfxService.tap();
+                        _handleLogin();
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentYellow,
+                  foregroundColor: AppColors.textPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.large),
+                  ),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: AppColors.textPrimary,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'LOGIN',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.xl),
+          ],
         ),
       ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.teacherBg,
+      body: SafeArea(child: content),
     );
   }
 }

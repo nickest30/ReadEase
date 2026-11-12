@@ -1,30 +1,24 @@
 class Student {
   final int? id;
   final String username;
-  
-  // Nullable because linked children created by parents have no password.
-  final String? passwordHash; 
-  
+  final String? passwordHash;
   final String displayName;
   final int gradeLevel;
   final String? pinHash;
   final bool isLinked;
   final int? parentId;
-  
-  // String representation used for cross-device parent linking.
-  final String? parentFirebaseUid; 
-  
+  final String? parentFirebaseUid;
   final int totalPoints;
   final String? recoveryEmail;
   final bool recoveryEmailVerified;
+  final String? recoveryCodeHash; 
   final String createdAt;
   final String? firebaseUid;
   final String? classFirestoreId;
   final String? className;
   final String? lastSyncedAt;
   final bool pendingSync;
-  
-  final int avatarIndex; 
+  final int avatarIndex;
 
   Student({
     this.id,
@@ -39,6 +33,7 @@ class Student {
     this.totalPoints = 0,
     this.recoveryEmail,
     this.recoveryEmailVerified = false,
+    this.recoveryCodeHash,
     required this.createdAt,
     this.firebaseUid,
     this.classFirestoreId,
@@ -62,6 +57,7 @@ class Student {
       'total_points': totalPoints,
       'recovery_email': recoveryEmail,
       'recovery_email_verified': recoveryEmailVerified ? 1 : 0,
+      'recovery_code_hash': recoveryCodeHash,
       'created_at': createdAt,
       'firebase_uid': firebaseUid,
       'class_firestore_id': classFirestoreId,
@@ -86,6 +82,7 @@ class Student {
       totalPoints: (map['total_points'] as int?) ?? 0,
       recoveryEmail: map['recovery_email'] as String?,
       recoveryEmailVerified: ((map['recovery_email_verified'] as int?) ?? 0) == 1,
+      recoveryCodeHash: map['recovery_code_hash'] as String?,
       createdAt: map['created_at'] as String,
       firebaseUid: map['firebase_uid'] as String?,
       classFirestoreId: map['class_firestore_id'] as String?,
@@ -103,6 +100,7 @@ class Student {
     String? parentFirebaseUid,
     String? recoveryEmail,
     bool? recoveryEmailVerified,
+    String? recoveryCodeHash,
     String? firebaseUid,
     String? classFirestoreId,
     String? className,
@@ -123,6 +121,7 @@ class Student {
       totalPoints: totalPoints ?? this.totalPoints,
       recoveryEmail: recoveryEmail ?? this.recoveryEmail,
       recoveryEmailVerified: recoveryEmailVerified ?? this.recoveryEmailVerified,
+      recoveryCodeHash: recoveryCodeHash ?? this.recoveryCodeHash,
       createdAt: createdAt,
       firebaseUid: firebaseUid ?? this.firebaseUid,
       classFirestoreId: classFirestoreId ?? this.classFirestoreId,

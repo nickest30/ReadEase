@@ -47,8 +47,6 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
     super.dispose();
   }
 
-  /// Normalize PH phone to E.164. Returns null if invalid.
-  /// Accepts: "9123456789" (10 digits), "+639123456789", "09123456789".
   String? _normalizePhone(String raw) {
     final digits = raw.replaceAll(RegExp(r'\D'), '');
     if (digits.isEmpty) return null;
@@ -61,22 +59,27 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
   }
 
   Future<void> _handleSignup() async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
-    SfxService.tap();
-
-    final agreed = await TermsModal.show(
-      context,
-      intro: 'ReadEase keeps your child\'s data private and safe.',
-    );
-    if (!agreed || !mounted) return;
-
-    final authProvider = context.read<AuthProvider>();
-    final parentProvider = context.read<ParentProvider>();
 
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
     });
+
+    final agreed = await TermsModal.show(
+      context,
+      intro: 'ReadEase keeps your child\'s data private and safe.',
+    );
+    if (!agreed) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      return;
+    }
+    if (!mounted) return;
+
+    final authProvider = context.read<AuthProvider>();
+    final parentProvider = context.read<ParentProvider>();
 
     try {
       final email = _emailController.text.trim().toLowerCase();
@@ -95,11 +98,6 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
         return;
       }
 
-      final hashedPassword = BCrypt.hashpw(
-        _passwordController.text,
-        BCrypt.gensalt(),
-      );
-
       final firebaseUid = await authProvider.register(
         email,
         _passwordController.text,
@@ -116,6 +114,10 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
         return;
       }
 
+      final hashedPassword = BCrypt.hashpw(
+        _passwordController.text,
+        BCrypt.gensalt(),
+      );
       final newParent = Parent(
         username: _usernameController.text.trim(),
         passwordHash: hashedPassword,
@@ -124,7 +126,6 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
         createdAt: DateTime.now().toIso8601String(),
         firebaseUid: firebaseUid,
       );
-
       final newId = await DatabaseService.instance.insertParent(newParent);
       if (!mounted) return;
 
@@ -140,30 +141,64 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
         password: _passwordController.text,
       );
 
-      await FirestoreService.instance.saveParent(
-        parentUid: firebaseUid,
-        username: createdParent.username,
-        fullName: createdParent.fullName,
-        email: createdParent.email,
-        phoneNumber: normalizedPhone,
-        phoneVerified: false,
-        emailVerified: false,
-      );
+      try {
+        await FirestoreService.instance
+            .saveParent(
+              parentUid: firebaseUid,
+              username: createdParent.username,
+              fullName: createdParent.fullName,
+              email: createdParent.email,
+              phoneNumber: normalizedPhone,
+              phoneVerified: false,
+              emailVerified: false,
+            )
+            .timeout(const Duration(seconds: 8));
+      } catch (e) {
+        debugPrint('Cloud saveParent failed (continuing): $e');
+      }
       if (!mounted) return;
 
       unawaited(_sendEmailVerification(authProvider));
 
+      final verified = await _showEmailVerificationGate(authProvider);
+      if (!mounted) return;
+
+      if (!verified) {
+        await authProvider.signOut();
+        if (!mounted) return;
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/parent-login',
+          (route) => false,
+        );
+        return;
+      }
+
+      try {
+        await DatabaseService.instance
+            .markParentEmailVerified(createdParent.id!);
+      } catch (e) {
+        debugPrint('markParentEmailVerified (local) failed: $e');
+      }
+
+      try {
+        await FirestoreService.instance
+            .markEmailVerified(firebaseUid, 'parent')
+            .timeout(const Duration(seconds: 5));
+      } catch (e) {
+        debugPrint('markEmailVerified (cloud) failed: $e');
+      }
+
+      await _generateAndShowBackupCode(
+        parent: createdParent,
+        authProvider: authProvider,
+      );
+
       if (normalizedPhone != null) {
-        await _runPhoneVerificationFlow(
+        unawaited(_runPhoneVerificationFlow(
           normalizedPhone: normalizedPhone,
           parent: createdParent,
           authProvider: authProvider,
-        );
-      } else {
-        await _generateAndShowBackupCode(
-          parent: createdParent,
-          authProvider: authProvider,
-        );
+        ));
       }
     } catch (e) {
       debugPrint('Signup ERROR: $e');
@@ -184,7 +219,18 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
     }
   }
 
-  /// Start phone verification → push OTP screen → on success show backup code.
+  Future<bool> _showEmailVerificationGate(AuthProvider authProvider) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _HardEmailVerificationDialog(
+        authProvider: authProvider,
+        email: _emailController.text.trim(),
+      ),
+    );
+    return result ?? false;
+  }
+
   Future<void> _runPhoneVerificationFlow({
     required String normalizedPhone,
     required Parent parent,
@@ -193,42 +239,29 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
     final completer = Completer<void>();
     bool codeSent = false;
 
-    await authProvider.startPhoneVerification(
-      phoneNumber: normalizedPhone,
-      onCodeSent: () {
-        codeSent = true;
-        if (!completer.isCompleted) completer.complete();
-      },
-      onAutoVerified: () {
-        if (!completer.isCompleted) completer.complete();
-      },
-      onError: (msg) {
-        if (!completer.isCompleted) {
-          completer.completeError(msg);
-        }
-      },
-    );
+    try {
+      await authProvider.startPhoneVerification(
+        phoneNumber: normalizedPhone,
+        onCodeSent: () {
+          codeSent = true;
+          if (!completer.isCompleted) completer.complete();
+        },
+        onAutoVerified: () {
+          if (!completer.isCompleted) completer.complete();
+        },
+        onError: (msg) {
+          if (!completer.isCompleted) completer.completeError(msg);
+        },
+      );
+    } catch (e) {
+      debugPrint('Phone verification unavailable (continuing): $e');
+      return;
+    }
 
     try {
-      await completer.future;
+      await completer.future.timeout(const Duration(seconds: 15));
     } catch (e) {
-      if (!mounted) return;
-      final raw = e.toString().toLowerCase();
-      final isBilling =
-          raw.contains('billing_not_enabled') || raw.contains('billing');
-
-      if (isBilling) {
-        await _showPhoneUnavailableAndContinue(
-          parent: parent,
-          authProvider: authProvider,
-        );
-        return;
-      }
-
-      setState(() {
-        _errorMessage = 'Could not send code: $e';
-        _isSubmitting = false;
-      });
+      debugPrint('Phone verification error (continuing): $e');
       return;
     }
 
@@ -249,26 +282,15 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
     if (!mounted) return;
 
     if (parent.firebaseUid != null) {
-      await FirestoreService.instance
-          .markPhoneVerified(parent.firebaseUid!, 'parent');
+      try {
+        await FirestoreService.instance
+            .markPhoneVerified(parent.firebaseUid!, 'parent');
+      } catch (e) {
+        debugPrint('markPhoneVerified failed: $e');
+      }
     }
-
-    if (!mounted) return;
-
-    await _generateAndShowBackupCode(
-      parent: parent,
-      authProvider: authProvider,
-    );
   }
 
-  /// Generate, save, and display a one-time backup code.
-  ///
-  /// Called at the end of signup regardless of whether a phone number was
-  /// provided. This ensures every parent account has a second-factor
-  /// recovery path (backup code) even if they didn't link a phone.
-  ///
-  /// On success: saves the bcrypt-hashed code to SQLite + Firestore,
-  /// shows the modal, and trusts the device for 30 days.
   Future<void> _generateAndShowBackupCode({
     required Parent parent,
     required AuthProvider authProvider,
@@ -276,15 +298,25 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
     final backupCode = BackupCode.generate();
     final hashedBackup = BCrypt.hashpw(backupCode, BCrypt.gensalt());
 
-    await DatabaseService.instance
-        .updateParentBackupCodeHash(parent.id!, hashedBackup);
+    try {
+      await DatabaseService.instance
+          .updateParentBackupCodeHash(parent.id!, hashedBackup);
+    } catch (e) {
+      debugPrint('Local backup code save failed: $e');
+    }
 
     if (parent.firebaseUid != null) {
-      await FirestoreService.instance.saveBackupCodeHash(
-        parent.firebaseUid!,
-        'parent',
-        hashedBackup,
-      );
+      try {
+        await FirestoreService.instance
+            .saveBackupCodeHash(
+              parent.firebaseUid!,
+              'parent',
+              hashedBackup,
+            )
+            .timeout(const Duration(seconds: 5));
+      } catch (e) {
+        debugPrint('Cloud backup code sync failed (continuing): $e');
+      }
     }
 
     if (!mounted) return;
@@ -298,313 +330,478 @@ class _ParentSignupScreenState extends State<ParentSignupScreen> {
     if (!saved || !mounted) return;
 
     if (parent.firebaseUid != null) {
-      await authProvider.trustCurrentDevice(parent.firebaseUid!);
+      try {
+        await authProvider
+            .trustCurrentDevice(parent.firebaseUid!)
+            .timeout(const Duration(seconds: 5));
+      } catch (e) {
+        debugPrint('trustCurrentDevice failed (continuing): $e');
+      }
     }
 
     if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/parent-dashboard');
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/parent-dashboard',
+      (route) => false,
+    );
   }
 
-  /// Called when phone OTP fails due to Firebase billing being disabled.
-  /// Shows a friendly dialog, then continues with backup-code-only signup.
-  Future<void> _showPhoneUnavailableAndContinue({
-    required Parent parent,
-    required AuthProvider authProvider,
-  }) async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
+  @override
+  Widget build(BuildContext context) {
+    final isTablet = Responsive.isTablet(context);
+    final imgSize = Responsive.imageSize(context, base: 120);
+
+    Widget content = SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+        vertical: 20,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: AppSpacing.md),
+            IconButton(
+              onPressed: () {
+                SfxService.tap();
+                Navigator.of(context).pop();
+              },
+              icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+              alignment: Alignment.centerLeft,
+              padding: EdgeInsets.zero,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Create Account', style: AppText.h1),
+                      SizedBox(height: 2),
+                      Text('Set up your parent profile',
+                          style: AppText.caption),
+                    ],
+                  ),
+                ),
+                Image.asset(
+                  'assets/images/mascot/motter_welcoming.png',
+                  width: imgSize,
+                  height: imgSize,
+                  fit: BoxFit.contain,
+                  cacheWidth: (imgSize * 2).toInt(),
+                  errorBuilder: (_, _, _) => Container(
+                    width: imgSize,
+                    height: imgSize,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentPurple.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                      border:
+                          Border.all(color: AppColors.accentPurple, width: 2),
+                    ),
+                    child: Icon(Icons.family_restroom_rounded,
+                        color: AppColors.accentPurple,
+                        size: imgSize * 0.35),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            const FieldLabel('Full Name'),
+            TextFormField(
+              controller: _fullNameController,
+              textInputAction: TextInputAction.next,
+              validator: Validators.displayName,
+              decoration: buildInputDecoration(
+                hint: 'Enter your full name',
+                focusColor: AppColors.accentPurple,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const FieldLabel('Username'),
+            TextFormField(
+              controller: _usernameController,
+              textInputAction: TextInputAction.next,
+              validator: Validators.username,
+              decoration: buildInputDecoration(
+                hint: 'Pick a username',
+                focusColor: AppColors.accentPurple,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const FieldLabel('Email'),
+            TextFormField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              validator: Validators.email,
+              decoration: buildInputDecoration(
+                hint: 'name@example.com',
+                focusColor: AppColors.accentPurple,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const FieldLabel('Phone Number (Optional)'),
+            TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.next,
+              maxLength: 10,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return null;
+                if (v.length != 10) {
+                  return 'Enter the 10-digit number (no spaces or +63)';
+                }
+                return null;
+              },
+              decoration: buildInputDecoration(
+                hint: '9123456789',
+                focusColor: AppColors.accentPurple,
+              ).copyWith(
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 14, right: 6),
+                  child: Text(
+                    '+63',
+                    style: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                prefixIconConstraints:
+                    const BoxConstraints(minWidth: 0, minHeight: 0),
+                counterText: '',
+                helperText:
+                    'Optional. If SMS is unavailable, we\'ll give you '
+                    'a backup code instead.',
+                helperMaxLines: 2,
+                helperStyle: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                  height: 1.4,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const FieldLabel('Password'),
+            PasswordField(
+              controller: _passwordController,
+              hintText: 'Enter your password',
+              textInputAction: TextInputAction.next,
+              focusColor: AppColors.accentPurple,
+              validator: (v) => Validators.password(v),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(top: 6, left: 4),
+              child: Text(
+                'Use at least 8 characters with uppercase, lowercase, '
+                'number, and symbol.',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                  height: 1.4,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const FieldLabel('Confirm Password'),
+            PasswordField(
+              controller: _confirmController,
+              hintText: 'Re-enter your password',
+              textInputAction: TextInputAction.done,
+              focusColor: AppColors.accentPurple,
+              validator: (v) => Validators.confirmPassword(
+                v,
+                _passwordController.text,
+              ),
+            ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                _errorMessage!,
+                style: const TextStyle(
+                  color: AppColors.textCoral,
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.xl),
+            SizedBox(
+              height: Responsive.buttonHeight(context),
+              child: ElevatedButton(
+                onPressed: _isSubmitting
+                    ? null
+                    : () {
+                        SfxService.tap();
+                        _handleSignup();
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentPurple,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.large),
+                  ),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'CREATE ACCOUNT',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+          ],
+        ),
+      ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.parentBg,
+      body: SafeArea(child: content),
+    );
+  }
+}
+
+class _HardEmailVerificationDialog extends StatefulWidget {
+  final AuthProvider authProvider;
+  final String email;
+
+  const _HardEmailVerificationDialog({
+    required this.authProvider,
+    required this.email,
+  });
+
+  @override
+  State<_HardEmailVerificationDialog> createState() =>
+      _HardEmailVerificationDialogState();
+}
+
+class _HardEmailVerificationDialogState
+    extends State<_HardEmailVerificationDialog> {
+  bool _checking = false;
+  bool _resending = false;
+  String? _localMessage;
+
+  Future<void> _checkVerified() async {
+    setState(() {
+      _checking = true;
+      _localMessage = null;
+    });
+
+    try {
+      final verified = await widget.authProvider
+          .checkEmailVerified()
+          .timeout(const Duration(seconds: 10));
+
+      debugPrint('HARD GATE: checkEmailVerified returned $verified');
+
+      if (!mounted) return;
+
+      if (verified) {
+        Navigator.of(context).pop(true);
+      } else {
+        setState(() {
+          _checking = false;
+          _localMessage =
+              'Still not verified. Check your inbox and tap again.';
+        });
+      }
+    } on TimeoutException {
+      if (!mounted) return;
+      setState(() {
+        _checking = false;
+        _localMessage =
+            'Connection timed out. Check your internet and try again.';
+      });
+    } catch (e) {
+      debugPrint('HARD GATE error: $e');
+      if (!mounted) return;
+      setState(() {
+        _checking = false;
+        _localMessage = 'Error checking status. Please try again.';
+      });
+    }
+  }
+
+  Future<void> _resendEmail() async {
+    setState(() {
+      _resending = true;
+      _localMessage = null;
+    });
+
+    try {
+      await widget.authProvider.sendVerificationEmail();
+      if (!mounted) return;
+      setState(() {
+        _resending = false;
+        _localMessage = 'New verification email sent!';
+      });
+    } catch (e) {
+      debugPrint('HARD GATE resend error: $e');
+      if (!mounted) return;
+      setState(() {
+        _resending = false;
+        _localMessage = 'Could not resend. Try again in a moment.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.xl),
         ),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.info_outline_rounded,
-                color: AppColors.accentOrange, size: 24),
-            SizedBox(width: 8),
-            Expanded(
+            const Icon(Icons.mark_email_unread_rounded,
+                color: AppColors.accentPurple),
+            const SizedBox(width: 8),
+            const Expanded(
               child: Text(
-                'Phone verification unavailable',
+                'Verify Your Email',
                 style: TextStyle(
                   fontFamily: 'Nunito',
                   fontWeight: FontWeight.w800,
-                  fontSize: 16,
+                  fontSize: 18,
                 ),
               ),
             ),
+            IconButton(
+              onPressed: _checking
+                  ? null
+                  : () {
+                      SfxService.tap();
+                      Navigator.of(context).pop(false);
+                    },
+              icon: const Icon(Icons.close_rounded, size: 20),
+              color: AppColors.textMuted,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              tooltip: 'Close (you will need to sign in again)',
+            ),
           ],
         ),
-        content: const Text(
-          'We can\'t send SMS codes right now. We\'ll continue with a '
-          'backup code instead, you can use it to log in on a new device. '
-          'You can add a phone number later in Settings → Account & Security.',
-          style: TextStyle(fontFamily: 'Nunito', fontSize: 14),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'We sent a verification link to ${widget.email}.\n\n'
+              'You must verify your email to continue. Open your inbox, '
+              'click the link, then tap "I Have Verified" below.',
+              style: const TextStyle(fontFamily: 'Nunito', fontSize: 14),
+            ),
+            if (_localMessage != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.accentOrange.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _localMessage!,
+                  style: const TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 12,
+                    color: AppColors.textOrange,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
+          TextButton(
+            onPressed: _resending || _checking
+                ? null
+                : () {
+                    SfxService.tap();
+                    _resendEmail();
+                  },
+            child: _resending
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text(
+                    'Resend Email',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      color: AppColors.accentPurple,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+          ),
           ElevatedButton(
-            onPressed: () {
-              SfxService.tap();
-              Navigator.of(ctx).pop();
-            },
+            onPressed: _checking ? null : _checkVerified,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentPurple,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
+              minimumSize: const Size(130, 40),
             ),
-            child: const Text(
-              'Continue',
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            child: _checking
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text(
+                    'I Have Verified',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
           ),
         ],
-      ),
-    );
-
-    if (!mounted) return;
-    setState(() => _isSubmitting = false);
-
-    await _generateAndShowBackupCode(
-      parent: parent,
-      authProvider: authProvider,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.parentBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: AppSpacing.md),
-
-                    IconButton(
-                      onPressed: () {
-                        SfxService.tap();
-                        Navigator.of(context).pop();
-                      },
-                      icon: const Icon(Icons.arrow_back,
-                          color: AppColors.textPrimary),
-                      alignment: Alignment.centerLeft,
-                      padding: EdgeInsets.zero,
-                    ),
-
-                    const SizedBox(height: AppSpacing.sm),
-
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Create Account', style: AppText.h1),
-                              SizedBox(height: 2),
-                              Text(
-                                'Set up your parent profile',
-                                style: AppText.caption,
-                              ),
-                            ],
-                          ),
-                        ),
-                        Image.asset(
-                          'assets/images/mascot/motter_welcoming.png',
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.contain,
-                          cacheWidth: 240,
-                          errorBuilder: (_, _, _) => Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              color:
-                                  AppColors.accentPurple.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.accentPurple,
-                                width: 2,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.family_restroom_rounded,
-                              color: AppColors.accentPurple,
-                              size: 42,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: AppSpacing.xl),
-
-                    const FieldLabel('Full Name'),
-                    TextFormField(
-                      controller: _fullNameController,
-                      textInputAction: TextInputAction.next,
-                      validator: Validators.displayName,
-                      decoration: buildInputDecoration(
-                        hint: 'Enter your full name',
-                        focusColor: AppColors.accentPurple,
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    const FieldLabel('Username'),
-                    TextFormField(
-                      controller: _usernameController,
-                      textInputAction: TextInputAction.next,
-                      validator: Validators.username,
-                      decoration: buildInputDecoration(
-                        hint: 'Pick a username',
-                        focusColor: AppColors.accentPurple,
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    const FieldLabel('Email'),
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      validator: Validators.email,
-                      decoration: buildInputDecoration(
-                        hint: 'name@example.com',
-                        focusColor: AppColors.accentPurple,
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    const FieldLabel('Phone Number (optional)'),
-                    TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      textInputAction: TextInputAction.next,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'[\d\s\+\-\(\)]'),
-                        ),
-                      ],
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return null;
-                        if (_normalizePhone(v) == null) {
-                          return 'Enter a valid PH number (e.g. 9123456789)';
-                        }
-                        return null;
-                      },
-                      decoration: buildInputDecoration(
-                        hint: '912 345 6789',
-                        focusColor: AppColors.accentPurple,
-                      ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.only(top: 6, left: 4),
-                      child: Text(
-                        'Recommended. We\'ll send a one-time code to this number '
-                        'when you sign in on a new device. You can skip this and '
-                        'add it later in Settings.',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 11,
-                          color: AppColors.textMuted,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    const FieldLabel('Password'),
-                    PasswordField(
-                      controller: _passwordController,
-                      hintText: 'At least 8 chars, mix letters/numbers',
-                      textInputAction: TextInputAction.next,
-                      focusColor: AppColors.accentPurple,
-                      validator: (v) => Validators.password(v),
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    const FieldLabel('Confirm Password'),
-                    PasswordField(
-                      controller: _confirmController,
-                      hintText: 'Re-enter your password',
-                      textInputAction: TextInputAction.done,
-                      focusColor: AppColors.accentPurple,
-                      validator: (v) => Validators.confirmPassword(
-                        v,
-                        _passwordController.text,
-                      ),
-                    ),
-
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        _errorMessage!,
-                        style: const TextStyle(
-                          color: AppColors.textCoral,
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: AppSpacing.xl),
-
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _isSubmitting ? null : _handleSignup,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentPurple,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.large),
-                          ),
-                        ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2.5,
-                                ),
-                              )
-                            : const Text(
-                                'CREATE ACCOUNT',
-                                style: TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

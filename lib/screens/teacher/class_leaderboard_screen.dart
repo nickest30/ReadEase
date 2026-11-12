@@ -33,6 +33,8 @@ class ClassLeaderboardScreen extends StatelessWidget {
     final students = List<Student>.from(args['students'] as List)
       ..sort((a, b) => b.totalPoints.compareTo(a.totalPoints));
 
+    final imgSize = Responsive.imageSize(context, base: 180);
+
     return Scaffold(
       backgroundColor: AppColors.teacherBg,
       body: SafeArea(
@@ -42,8 +44,8 @@ class ClassLeaderboardScreen extends StatelessWidget {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Responsive.horizontalPadding(context),
                     vertical: AppSpacing.md,
                   ),
                   child: Row(
@@ -85,13 +87,13 @@ class ClassLeaderboardScreen extends StatelessWidget {
 
                         Image.asset(
                           'assets/images/mascot/groo_victory.png',
-                          width: 180,
-                          height: 180,
+                          width: imgSize,
+                          height: imgSize,
                           fit: BoxFit.contain,
-                          cacheWidth: 360,
+                          cacheWidth: (imgSize * 2).toInt(),
                           errorBuilder: (_, _, _) => Container(
-                            width: 180,
-                            height: 180,
+                            width: imgSize,
+                            height: imgSize,
                             decoration: BoxDecoration(
                               color: AppColors.accentYellow
                                   .withValues(alpha: 0.15),
@@ -101,9 +103,9 @@ class ClassLeaderboardScreen extends StatelessWidget {
                                 width: 2,
                               ),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.emoji_events_rounded,
-                              size: 72,
+                              size: imgSize * 0.4,
                               color: AppColors.accentYellow,
                             ),
                           ),
@@ -112,8 +114,9 @@ class ClassLeaderboardScreen extends StatelessWidget {
                         const SizedBox(height: AppSpacing.md),
 
                         Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.xl),
+                          padding: EdgeInsets.symmetric(
+                              horizontal:
+                                  Responsive.horizontalPadding(context)),
                           child: students.isEmpty
                               ? Container(
                                   padding: const EdgeInsets.all(AppSpacing.xl),
@@ -225,29 +228,40 @@ class _RankRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  student.displayName,
-                  style: const TextStyle(
-                    fontFamily: 'Nunito',
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: AppColors.textPrimary,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    student.displayName,
+                    style: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
-                Text(
-                  'Grade ${student.gradeLevel}',
-                  style: AppText.caption,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Grade ${student.gradeLevel}',
+                    style: AppText.caption,
+                  ),
                 ),
               ],
             ),
           ),
-          Text(
-            '${student.totalPoints} pts',
-            style: const TextStyle(
-              fontFamily: 'Nunito',
-              fontWeight: FontWeight.w800,
-              fontSize: 13,
-              color: AppColors.textYellow,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '${student.totalPoints} pts',
+              style: const TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+                color: AppColors.textYellow,
+              ),
             ),
           ),
         ],

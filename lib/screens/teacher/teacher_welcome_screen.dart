@@ -8,6 +8,10 @@ class TeacherWelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imgSize = Responsive.imageSize(context, base: 200);
+    final mainButtonHeight = Responsive.buttonHeight(context) + 8;
+    final backButtonHeight = Responsive.buttonHeight(context);
+
     return Scaffold(
       backgroundColor: AppColors.teacherBg,
       body: SafeArea(
@@ -15,8 +19,8 @@ class TeacherWelcomeScreen extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xxl,
+              padding: EdgeInsets.symmetric(
+                horizontal: Responsive.horizontalPadding(context),
                 vertical: AppSpacing.xl,
               ),
               child: Column(
@@ -27,13 +31,13 @@ class TeacherWelcomeScreen extends StatelessWidget {
                   Center(
                     child: Image.asset(
                       'assets/images/mascot/groo_base.png',
-                      width: 200,
-                      height: 200,
+                      width: imgSize,
+                      height: imgSize,
                       fit: BoxFit.contain,
-                      cacheWidth: 400,
+                      cacheWidth: (imgSize * 2).toInt(),
                       errorBuilder: (_, _, _) => Container(
-                        width: 200,
-                        height: 200,
+                        width: imgSize,
+                        height: imgSize,
                         decoration: BoxDecoration(
                           color: AppColors.accentYellow.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
@@ -42,9 +46,9 @@ class TeacherWelcomeScreen extends StatelessWidget {
                             width: 2,
                           ),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.school_rounded,
-                          size: 80,
+                          size: imgSize * 0.4,
                           color: AppColors.accentYellow,
                         ),
                       ),
@@ -68,27 +72,31 @@ class TeacherWelcomeScreen extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xxxl),
 
                   SizedBox(
-                    height: 64,
+                    height: mainButtonHeight,
                     child: ElevatedButton.icon(
                       onPressed: () {
                         SfxService.tap();
                         Navigator.of(context).pushNamed('/teacher-login');
                       },
                       icon: const Icon(Icons.login_rounded, size: 22),
-                      label: const Text(
-                        'LOGIN',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
+                      label: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'LOGIN',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
+                          ),
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accentYellow,
                         foregroundColor: AppColors.textPrimary,
                         elevation: 4,
-                        shadowColor: AppColors.accentYellow.withValues(alpha: 0.4),
+                        shadowColor:
+                            AppColors.accentYellow.withValues(alpha: 0.4),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppRadius.large),
                         ),
@@ -99,27 +107,31 @@ class TeacherWelcomeScreen extends StatelessWidget {
                   const SizedBox(height: AppSpacing.md),
 
                   SizedBox(
-                    height: 64,
+                    height: mainButtonHeight,
                     child: ElevatedButton.icon(
                       onPressed: () {
                         SfxService.tap();
                         Navigator.of(context).pushNamed('/teacher-signup');
                       },
                       icon: const Icon(Icons.person_add_alt_1_rounded, size: 22),
-                      label: const Text(
-                        'REGISTER',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
+                      label: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'REGISTER',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
+                          ),
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accentTeal,
                         foregroundColor: Colors.white,
                         elevation: 4,
-                        shadowColor: AppColors.accentTeal.withValues(alpha: 0.4),
+                        shadowColor:
+                            AppColors.accentTeal.withValues(alpha: 0.4),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppRadius.large),
                         ),
@@ -130,7 +142,7 @@ class TeacherWelcomeScreen extends StatelessWidget {
                   const SizedBox(height: AppSpacing.md),
 
                   SizedBox(
-                    height: 52,
+                    height: backButtonHeight,
                     child: OutlinedButton(
                       onPressed: () {
                         SfxService.tap();
@@ -143,11 +155,14 @@ class TeacherWelcomeScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(AppRadius.large),
                         ),
                       ),
-                      child: const Text(
-                        'BACK',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w700,
+                      child: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'BACK',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),

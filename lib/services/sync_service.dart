@@ -42,8 +42,6 @@ class SyncService {
 
     if (!connectivity.isOnline) return;
 
-    // Firestore writes will fail with PERMISSION_DENIED if the
-    // Firebase Auth session is not active. Restore it first.
     if (authProvider.uid != uid) {
       final restored = await authProvider.tryRestoreSessionFor(uid: uid);
       if (!restored) return;

@@ -10,12 +10,6 @@ import '../../models/word.dart';
 import '../../services/database_service.dart';
 import '../../utils/app_theme.dart';
 
-/// Pronunciation practice modal, opened from My Dictionary on weak words.
-///
-/// Uses the platform speech-to-text engine to check whether the student's
-/// spoken word is recognizable. This is NOT a phoneme-level assessment.
-/// Success means the recognizer identified the target word, not that every
-/// phonetic detail was produced correctly.
 class PronunciationModal extends StatefulWidget {
   final Word word;
   final int studentId;
@@ -73,22 +67,18 @@ class _PronunciationModalState extends State<PronunciationModal> {
   String? _errorMessage;
   final List<double> _bars = List.filled(_barCount, 0.0);
 
-  // Guards against double-fire from onError + onStatus('done')
   bool _evaluateLock = false;
-
   Timer? _evaluateTimeout;
+  Timer? _debounceTimer;
 
   @override
   void dispose() {
     _evaluateTimeout?.cancel();
+    _debounceTimer?.cancel();
     _speech.cancel();
     _audio.dispose();
     super.dispose();
   }
-
-  // ────────────────────────────────────────────────────────────
-  // Speech setup
-  // ────────────────────────────────────────────────────────────
 
   Future<bool> _ensureSpeechReady() async {
     if (_speechInitialized) return _speechAvailable;
@@ -112,38 +102,52 @@ class _PronunciationModalState extends State<PronunciationModal> {
 
   void _onSpeechStatus(String status) {
     if (!mounted) return;
+    debugPrint('Speech status: $status');
+
     if (status == 'done' || status == 'notListening') {
-      if (_phase == _Phase.listening) {
-        _evaluate();
+      if (_phase == _Phase.listening && !_evaluateLock) {
+        // Debounce: give the final result a chance to arrive first
+        _debounceTimer?.cancel();
+        _debounceTimer = Timer(const Duration(milliseconds: 400), () {
+          if (!mounted) return;
+          if (_phase == _Phase.listening && !_evaluateLock) {
+            debugPrint('Debounced evaluate after status done');
+            _evaluate();
+          }
+        });
       }
     }
   }
 
-  /// The recognizer throws `error_no_match` when it can't identify any word.
-  /// It can also throw network/timeout errors.
   void _onSpeechError(dynamic e) {
     final msg = e.errorMsg.toString().toLowerCase();
     debugPrint('Speech error: $msg');
-    
+
     if (!mounted) return;
-    
-    if (_phase == _Phase.listening) {
-      if (msg.contains('network') || msg.contains('timeout') || msg.contains('unavailable')) {
-        // Technical failure, do not count as an attempt
-        setState(() {
-          _phase = _Phase.error;
-          _errorMessage = 'Connection dropped or mic interrupted. Tap the mic to try again.';
-        });
-      } else {
-        // Default to mismatch (e.g., error_no_match)
+    if (_phase != _Phase.listening) return;
+
+    if (msg.contains('network') ||
+        msg.contains('timeout') ||
+        msg.contains('unavailable')) {
+      setState(() {
+        _phase = _Phase.error;
+        _errorMessage =
+            'Connection dropped or mic interrupted. Tap the mic to try again.';
+      });
+      return;
+    }
+
+    // error_no_match and similar: DEBOUNCE. Android sometimes fires this
+    // BEFORE the actual result arrives. Waiting gives the result time.
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      if (_phase == _Phase.listening && !_evaluateLock) {
+        debugPrint('Debounced evaluate after error');
         _evaluate();
       }
-    }
+    });
   }
-
-  // ────────────────────────────────────────────────────────────
-  // Mic flow
-  // ────────────────────────────────────────────────────────────
 
   Future<void> _onMicTap() async {
     if (!widget.isOnline) return;
@@ -170,6 +174,8 @@ class _PronunciationModalState extends State<PronunciationModal> {
     }
 
     if (!mounted) return;
+    _debounceTimer?.cancel();
+    _evaluateTimeout?.cancel();
     _evaluateLock = false;
     setState(() {
       _phase = _Phase.listening;
@@ -188,7 +194,7 @@ class _PronunciationModalState extends State<PronunciationModal> {
           listenFor: const Duration(seconds: 5),
           pauseFor: const Duration(seconds: 2),
           localeId: 'en_US',
-          partialResults: false,
+          partialResults: true,
           cancelOnError: true,
         ),
       );
@@ -212,21 +218,23 @@ class _PronunciationModalState extends State<PronunciationModal> {
   }
 
   void _onSpeechResult(SpeechRecognitionResult result) {
-    _lastTranscript = result.recognizedWords;
-    if (result.finalResult) {
+    final transcript = result.recognizedWords;
+    debugPrint(
+        'Speech result: "$transcript" final=${result.finalResult}');
+    _lastTranscript = transcript;
+
+    if (result.finalResult && !_evaluateLock && _phase == _Phase.listening) {
+      _debounceTimer?.cancel();
       _evaluate();
     }
   }
-
-  // ────────────────────────────────────────────────────────────
-  // Evaluation
-  // ────────────────────────────────────────────────────────────
 
   Future<void> _evaluate() async {
     if (_evaluateLock) return;
     _evaluateLock = true;
 
-    // Failsafe, if the platform recognizer wedges, force a mismatch.
+    _debounceTimer?.cancel();
+
     _evaluateTimeout?.cancel();
     _evaluateTimeout = Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
@@ -255,13 +263,20 @@ class _PronunciationModalState extends State<PronunciationModal> {
     final target = _normalize(widget.word.text);
     final heard = _normalize(_lastTranscript);
     final matched = _matches(heard, target);
+    debugPrint('EVAL: target="$target" heard="$heard" matched=$matched');
 
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
+
+    final latestTranscript = _normalize(_lastTranscript);
+    final lateMatched = _matches(latestTranscript, target);
+    if (!matched && lateMatched) {
+      debugPrint('EVAL: late transcript rescued: "$latestTranscript"');
+    }
 
     _evaluateTimeout?.cancel();
 
-    if (matched) {
+    if (matched || lateMatched) {
       setState(() => _phase = _Phase.success);
 
       if (widget.updateMastery) {
@@ -301,30 +316,26 @@ class _PronunciationModalState extends State<PronunciationModal> {
     setState(() => _phase = _Phase.mismatch);
   }
 
-  /// Compares a heard word against the target.
-  /// Handles the case where the recognizer returns extra words.
+  /// Robust match: handles case, punctuation, extra words, and concatenation.
   bool _matches(String heard, String target) {
     if (heard.isEmpty || target.isEmpty) return false;
     if (heard == target) return true;
 
-    // If the recognizer returned a phrase, check each token.
+    // Token match: "the dog" -> contains "dog"
     final tokens = heard.split(RegExp(r'\s+'));
     if (tokens.contains(target)) return true;
 
-    // Also try concatenation, e.g. "sun flower" -> "sunflower".
+    // Concatenation match: "sun flower" -> "sunflower"
     if (heard.replaceAll(' ', '') == target) return true;
+
+    // Contains fallback: "dog barking" contains "dog"
+    if (heard.contains(target) && target.length >= 3) return true;
 
     return false;
   }
 
-  /// Lowercase + strip anything that isn't a-z or space.
-  /// "Apple." and "apple" match; "the apple" does not.
   String _normalize(String s) =>
       s.toLowerCase().replaceAll(RegExp(r'[^a-z\s]'), '').trim();
-
-  // ────────────────────────────────────────────────────────────
-  // Reference audio
-  // ────────────────────────────────────────────────────────────
 
   Future<void> _playReference() async {
     final asset = widget.word.audioAsset;
@@ -339,10 +350,6 @@ class _PronunciationModalState extends State<PronunciationModal> {
       debugPrint('Reference audio failed: $e');
     }
   }
-
-  // ────────────────────────────────────────────────────────────
-  // Permission dialog
-  // ────────────────────────────────────────────────────────────
 
   void _showMicPermissionDialog({bool permanentlyDenied = false}) {
     showDialog<void>(
@@ -361,8 +368,8 @@ class _PronunciationModalState extends State<PronunciationModal> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel',
-                style: TextStyle(fontFamily: 'Nunito')),
+            child:
+                const Text('Cancel', style: TextStyle(fontFamily: 'Nunito')),
           ),
           TextButton(
             onPressed: () {
@@ -378,10 +385,6 @@ class _PronunciationModalState extends State<PronunciationModal> {
       ),
     );
   }
-
-  // ────────────────────────────────────────────────────────────
-  // Build
-  // ────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -501,7 +504,6 @@ class _PronunciationModalState extends State<PronunciationModal> {
       );
 
   Widget _waveform() {
-    // Border + bar colors depend on the phase.
     Color borderColor;
     Color barColor;
     switch (_phase) {
@@ -570,9 +572,8 @@ class _PronunciationModalState extends State<PronunciationModal> {
         text = widget.isOnline
             ? 'Tap the mic and say the word'
             : 'Pronunciation practice needs internet';
-        color = widget.isOnline
-            ? AppColors.textMuted
-            : AppColors.textCoral;
+        color =
+            widget.isOnline ? AppColors.textMuted : AppColors.textCoral;
         break;
       case _Phase.listening:
         text = 'Listening…';
@@ -600,7 +601,8 @@ class _PronunciationModalState extends State<PronunciationModal> {
         break;
       case _Phase.error:
         mascot = 'assets/images/mascot/yse_try_again.png';
-        text = _errorMessage ?? 'Something went wrong. Tap the mic to try again.';
+        text = _errorMessage ??
+            'Something went wrong. Tap the mic to try again.';
         color = AppColors.textCoral;
         break;
     }

@@ -8,6 +8,7 @@ import '../../utils/app_theme.dart';
 import '../../utils/formatting.dart';
 import '../../widgets/about_modal.dart';
 import '../shared/account_security_screen.dart';
+import 'parent_edit_profile_screen.dart';
 
 class ParentSettingsScreen extends StatelessWidget {
   const ParentSettingsScreen({super.key});
@@ -19,7 +20,7 @@ class ParentSettingsScreen extends StatelessWidget {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil(
-            '/parent-welcome',
+            '/role-selection',
             (route) => false,
           );
         }
@@ -30,195 +31,237 @@ class ParentSettingsScreen extends StatelessWidget {
       );
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.parentBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: AppSpacing.md),
+    final isTablet = Responsive.isTablet(context);
+    final imgSize = Responsive.imageSize(context, base: 70);
 
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          SfxService.tap();
-                          Navigator.of(context).pop();
-                        },
-                        icon: const Icon(Icons.arrow_back,
-                            color: AppColors.textPrimary),
-                        padding: EdgeInsets.zero,
+    Widget content = SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+        vertical: 20,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.md),
+
+          Row(
+            children: [
+              IconButton(
+                onPressed: () {
+                  SfxService.tap();
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(Icons.arrow_back,
+                    color: AppColors.textPrimary),
+                padding: EdgeInsets.zero,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Settings', style: AppText.h1),
+                    SizedBox(height: 2),
+                    Text('Manage your account', style: AppText.caption),
+                  ],
+                ),
+              ),
+              Image.asset(
+                'assets/images/mascot/motter_base.png',
+                width: imgSize,
+                height: imgSize,
+                fit: BoxFit.contain,
+                cacheWidth: (imgSize * 2).toInt(),
+                errorBuilder: (_, _, _) => Icon(
+                  Icons.settings_rounded,
+                  size: imgSize * 0.6,
+                  color: AppColors.accentPurple,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppSpacing.lg),
+
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.large),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: const BoxDecoration(
+                    color: AppColors.accentPurple,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      parent.fullName.isNotEmpty
+                          ? parent.fullName[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Settings', style: AppText.h1),
-                            SizedBox(height: 2),
-                            Text('Manage your account', style: AppText.caption),
-                          ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          parent.fullName,
+                          style: const TextStyle(
+                            fontFamily: 'Nunito',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                       ),
-                      Image.asset(
-                        'assets/images/mascot/motter_base.png',
-                        width: 70,
-                        height: 70,
-                        fit: BoxFit.contain,
-                        cacheWidth: 140,
-                        errorBuilder: (_, _, _) => const Icon(
-                          Icons.settings_rounded,
-                          size: 48,
-                          color: AppColors.accentPurple,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          parent.username,
+                          style: AppText.caption,
+                        ),
+                      ),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          maskEmail(parent.email),
+                          style: AppText.caption,
                         ),
                       ),
                     ],
                   ),
+                ),
+              ],
+            ),
+          ),
 
-                  const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.lg),
 
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(AppRadius.large),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: const BoxDecoration(
-                            color: AppColors.accentPurple,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Text(
-                              parent.fullName.isNotEmpty
-                                  ? parent.fullName[0].toUpperCase()
-                                  : '?',
-                              style: const TextStyle(
-                                fontFamily: 'Nunito',
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                parent.fullName,
-                                style: const TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              Text(
-                                parent.username,
-                                style: AppText.caption,
-                              ),
-                              Text(
-                                maskEmail(parent.email),
-                                style: AppText.caption,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+          _SettingCard(
+            icon: Icons.edit_rounded,
+            iconColor: AppColors.accentPurple,
+            label: 'Edit Profile',
+            subtitle: 'Change display name and username',
+            onTap: () {
+              SfxService.tap();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const ParentEditProfileScreen(),
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: AppSpacing.md),
+
+          _SettingCard(
+            icon: Icons.shield_outlined,
+            iconColor: AppColors.accentPurple,
+            label: 'Account & Security',
+            subtitle: 'Change password, phone, backup code',
+            onTap: () {
+              SfxService.tap();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      const AccountSecurityScreen(role: 'parent'),
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: AppSpacing.md),
+
+          _SettingCard(
+            icon: Icons.key_rounded,
+            iconColor: AppColors.accentOrange,
+            label: 'Change Password',
+            subtitle: 'Send a reset link to your email',
+            onTap: () {
+              SfxService.tap();
+              _confirmChangePassword(context);
+            },
+          ),
+
+          const SizedBox(height: AppSpacing.md),
+
+          _SettingCard(
+            icon: Icons.info_outline_rounded,
+            iconColor: AppColors.accentTeal,
+            label: 'About ReadEase',
+            subtitle: 'Version, developers, privacy',
+            onTap: () {
+              SfxService.tap();
+              AboutModal.show(context);
+            },
+          ),
+
+          const SizedBox(height: AppSpacing.xl),
+
+          SizedBox(
+            height: Responsive.buttonHeight(context),
+            child: OutlinedButton.icon(
+              onPressed: () {
+                SfxService.tap();
+                _confirmLogout(context);
+              },
+              icon: const Icon(Icons.logout_rounded),
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Log Out',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w700,
                   ),
-
-                  const SizedBox(height: AppSpacing.lg),
-
-                  _SettingCard(
-                    icon: Icons.shield_outlined,
-                    iconColor: AppColors.accentPurple,
-                    label: 'Account & Security',
-                    subtitle: 'Change password, phone, backup code',
-                    onTap: () {
-                      SfxService.tap();
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              const AccountSecurityScreen(role: 'parent'),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: AppSpacing.md),
-
-                  _SettingCard(
-                    icon: Icons.key_rounded,
-                    iconColor: AppColors.accentOrange,
-                    label: 'Change Password',
-                    subtitle: 'Send a reset link to your email',
-                    onTap: () {
-                      SfxService.tap();
-                      _confirmChangePassword(context);
-                    },
-                  ),
-
-                  const SizedBox(height: AppSpacing.md),
-
-                  _SettingCard(
-                    icon: Icons.info_outline_rounded,
-                    iconColor: AppColors.accentTeal,
-                    label: 'About ReadEase',
-                    subtitle: 'Version, developers, privacy',
-                    onTap: () {
-                      SfxService.tap();
-                      AboutModal.show(context);
-                    },
-                  ),
-
-                  const SizedBox(height: AppSpacing.xl),
-
-                  SizedBox(
-                    height: 52,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        SfxService.tap();
-                        _confirmLogout(context);
-                      },
-                      icon: const Icon(Icons.logout_rounded),
-                      label: const Text(
-                        'Log Out',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textCoral,
-                        side: const BorderSide(color: AppColors.accentCoral),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.large),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: AppSpacing.xxl),
-                ],
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textCoral,
+                side: const BorderSide(color: AppColors.accentCoral),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.large),
+                ),
               ),
             ),
           ),
-        ),
+
+          const SizedBox(height: AppSpacing.xxl),
+        ],
       ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.parentBg,
+      body: SafeArea(child: content),
     );
   }
 
@@ -257,7 +300,10 @@ class ParentSettingsScreen extends StatelessWidget {
             ),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(true);
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentCoral,
               foregroundColor: Colors.white,
@@ -284,7 +330,7 @@ class ParentSettingsScreen extends StatelessWidget {
 
     if (!context.mounted) return;
     navigator.pushNamedAndRemoveUntil(
-      '/parent-welcome',
+      '/role-selection',
       (route) => false,
     );
   }
@@ -332,7 +378,10 @@ class ParentSettingsScreen extends StatelessWidget {
             ),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(true);
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentPurple,
               foregroundColor: Colors.white,
@@ -414,16 +463,24 @@ class _SettingCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
-                  Text(subtitle, style: AppText.caption),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(subtitle, style: AppText.caption),
+                  ),
                 ],
               ),
             ),

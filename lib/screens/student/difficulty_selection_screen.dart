@@ -23,8 +23,6 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Re-check on every dependency change so unlock states stay fresh
-    // after the student returns from a lesson.
     _checkUnlocks();
   }
 
@@ -98,97 +96,103 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
       );
     }
 
+    final isTablet = Responsive.isTablet(context);
+    final imgSize = Responsive.imageSize(context, base: 90);
+
+    Widget content = Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.md),
+          IconButton(
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(context).pop();
+            },
+            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+            alignment: Alignment.centerLeft,
+            padding: EdgeInsets.zero,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Choose Difficulty', style: AppText.h1),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Grade $gradeLevel lessons',
+                      style: AppText.caption,
+                    ),
+                  ],
+                ),
+              ),
+              _YseImage(
+                assetPath: 'assets/images/mascot/yse_proud.png',
+                size: imgSize,
+                fallbackIcon: Icons.emoji_events_rounded,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          if (_loading)
+            const Expanded(
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else ...[
+            _DifficultyCard(
+              emoji: '😎',
+              label: 'Easy',
+              sublabel: 'Unlocked',
+              unlocked: true,
+              color: AppColors.accentGreen,
+              onTap: () => _goToLesson(context, student, gradeLevel, 'easy'),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _DifficultyCard(
+              emoji: '😐',
+              label: 'Medium',
+              sublabel: _mediumUnlocked ? 'Unlocked' : 'Complete Easy first',
+              unlocked: _mediumUnlocked,
+              color: AppColors.accentOrange,
+              onTap: _mediumUnlocked
+                  ? () => _goToLesson(context, student, gradeLevel, 'medium')
+                  : null,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _DifficultyCard(
+              emoji: '😤',
+              label: 'Hard',
+              sublabel: _hardUnlocked ? 'Unlocked' : 'Complete Medium first',
+              unlocked: _hardUnlocked,
+              color: AppColors.accentCoral,
+              onTap: _hardUnlocked
+                  ? () => _goToLesson(context, student, gradeLevel, 'hard')
+                  : null,
+            ),
+            const Spacer(),
+          ],
+        ],
+      ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.studentBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: AppSpacing.md),
-                  IconButton(
-                    onPressed: () {
-                      SfxService.tap();
-                      Navigator.of(context).pop();
-                    },
-                    icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-                    alignment: Alignment.centerLeft,
-                    padding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Choose Difficulty', style: AppText.h1),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              'Grade $gradeLevel lessons',
-                              style: AppText.caption,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const _YseImage(
-                        assetPath: 'assets/images/mascot/yse_proud.png',
-                        size: 90,
-                        fallbackIcon: Icons.emoji_events_rounded,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  if (_loading)
-                    const Expanded(
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  else ...[
-                    _DifficultyCard(
-                      emoji: '😎',
-                      label: 'Easy',
-                      sublabel: 'Unlocked',
-                      unlocked: true,
-                      color: AppColors.accentGreen,
-                      onTap: () =>
-                          _goToLesson(context, student, gradeLevel, 'easy'),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    _DifficultyCard(
-                      emoji: '😐',
-                      label: 'Medium',
-                      sublabel:
-                          _mediumUnlocked ? 'Unlocked' : 'Complete Easy first',
-                      unlocked: _mediumUnlocked,
-                      color: AppColors.accentOrange,
-                      onTap: _mediumUnlocked
-                          ? () => _goToLesson(context, student, gradeLevel, 'medium')
-                          : null,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    _DifficultyCard(
-                      emoji: '😤',
-                      label: 'Hard',
-                      sublabel:
-                          _hardUnlocked ? 'Unlocked' : 'Complete Medium first',
-                      unlocked: _hardUnlocked,
-                      color: AppColors.accentCoral,
-                      onTap: _hardUnlocked
-                          ? () => _goToLesson(context, student, gradeLevel, 'hard')
-                          : null,
-                    ),
-                    const Spacer(),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      body: SafeArea(child: content),
     );
   }
 
@@ -265,18 +269,26 @@ class _DifficultyCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w800,
-                        fontSize: 17,
-                        color: AppColors.textPrimary,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w800,
+                          fontSize: 17,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
-                    Text(
-                      sublabel,
-                      style: AppText.caption,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        sublabel,
+                        style: AppText.caption,
+                      ),
                     ),
                   ],
                 ),

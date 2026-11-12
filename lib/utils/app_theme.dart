@@ -112,6 +112,9 @@ class AppColorsCB {
   static const triTeal = Color(0xFF9B6B9E);
   static const triGreen = Color(0xFF6BCB77);
   static const triYellow = Color(0xFFE8A93B);
+
+  static const Color textAsh = Color(0xFF2C2C2C);
+  static const Color textSoft = Color(0xFF5A5A5A);
 }
 
 class AppShadows {
@@ -140,4 +143,44 @@ class AppShadows {
           offset: const Offset(0, 8),
         ),
       ];
+}
+class Responsive {
+  Responsive._();
+
+  /// Horizontal padding that adapts to screen width.
+  static double horizontalPadding(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (width < 360) return 16.0;
+    if (width < 400) return 20.0;
+    if (width < 600) return 24.0;
+    return 32.0;
+  }
+
+  /// True for very narrow phones (< 360px logical width).
+  static bool isSmallPhone(BuildContext context) {
+    return MediaQuery.sizeOf(context).width < 360;
+  }
+
+  /// True for tablets and wider devices (>= 600px logical width).
+  /// Use this to conditionally apply Center + ConstrainedBox wrappers.
+  static bool isTablet(BuildContext context) {
+    return MediaQuery.sizeOf(context).width >= 600;
+  }
+
+  /// Adaptive image size — shrinks on small screens so mascots
+  /// don't crowd out form fields.
+  static double imageSize(BuildContext context, {required double base}) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (width < 360) return base * 0.7;
+    if (width < 400) return base * 0.85;
+    return base;
+  }
+
+  /// Adaptive button height — still meets NFR-11 tap target (>= 48px)
+  /// but shrinks slightly on small screens to leave room for content.
+  static double buttonHeight(BuildContext context, {double base = 56}) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (width < 360) return base.clamp(48.0, 52.0);
+    return base;
+  }
 }

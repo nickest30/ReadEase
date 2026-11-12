@@ -93,22 +93,6 @@ class _LessonIntroScreenState extends State<LessonIntroScreen> {
     }
   }
 
-  void _onLetsGo() {
-    SfxService.tap();
-    _audioPlayer.stop();
-    
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is! Map) return;
-    
-    Navigator.of(context).pushReplacementNamed(
-      '/lesson-play',
-      arguments: {
-        'gradeLevel': args['gradeLevel'],
-        'difficulty': args['difficulty'],
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -133,102 +117,126 @@ class _LessonIntroScreenState extends State<LessonIntroScreen> {
     }
 
     final intro = _intro!;
+    final isTablet = Responsive.isTablet(context);
+    final imgSize = Responsive.imageSize(context, base: 260);
+    final horizontalPadding = Responsive.horizontalPadding(context);
+    final buttonHeight = Responsive.buttonHeight(context) + 8;
+
+    Widget content = Stack(
+      children: [
+        Positioned(
+          left: -20,
+          bottom: -20,
+          child: Image.asset(
+            'assets/images/mascot/${intro.poseAsset}',
+            width: imgSize,
+            height: imgSize,
+            cacheWidth: (imgSize * 2).toInt(),
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => SizedBox(
+              width: imgSize,
+              height: imgSize,
+              child: Icon(
+                Icons.auto_stories_rounded,
+                size: imgSize * 0.6,
+                color: AppColors.accentTeal,
+              ),
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: horizontalPadding,
+                right: horizontalPadding,
+                bottom: imgSize * 0.75,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    intro.header,
+                    textAlign: TextAlign.center,
+                    style: AppText.h1.copyWith(
+                      fontSize: 30,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
+                    intro.body,
+                    textAlign: TextAlign.center,
+                    style: AppText.body.copyWith(
+                      fontSize: 18,
+                      height: 1.5,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxl),
+                  SizedBox(
+                    height: buttonHeight,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        SfxService.tap();
+                        _audioPlayer.stop();
+                        final args = ModalRoute.of(context)?.settings.arguments;
+                        if (args is! Map) return;
+                        Navigator.of(context).pushReplacementNamed(
+                          '/lesson-play',
+                          arguments: {
+                            'gradeLevel': args['gradeLevel'],
+                            'difficulty': args['difficulty'],
+                          },
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accentTeal,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xxl,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.large),
+                        ),
+                        elevation: 3,
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          intro.buttonLabel,
+                          style: const TextStyle(
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w800,
+                            fontSize: 20,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.studentBg,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned(
-              left: -20,
-              bottom: -20,
-              child: Image.asset(
-                'assets/images/mascot/${intro.poseAsset}',
-                width: 260,
-                height: 260,
-                cacheWidth: 520,
-                fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => const SizedBox(
-                  width: 260,
-                  height: 260,
-                  child: Icon(
-                    Icons.auto_stories_rounded,
-                    size: 160,
-                    color: AppColors.accentTeal,
-                  ),
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 600),
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      left: AppSpacing.xl,
-                      right: AppSpacing.xl,
-                      // Reserve space so content doesn't sit under Yse
-                      bottom: 200,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          intro.header,
-                          textAlign: TextAlign.center,
-                          style: AppText.h1.copyWith(
-                            fontSize: 30,
-                            height: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        Text(
-                          intro.body,
-                          textAlign: TextAlign.center,
-                          style: AppText.body.copyWith(
-                            fontSize: 18,
-                            height: 1.5,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xxl),
-                        SizedBox(
-                          height: 64,
-                          child: ElevatedButton(
-                            onPressed: _onLetsGo,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.accentTeal,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.xxl,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(AppRadius.large),
-                              ),
-                              elevation: 3,
-                            ),
-                            child: Text(
-                              intro.buttonLabel,
-                              style: const TextStyle(
-                                fontFamily: 'Nunito',
-                                fontWeight: FontWeight.w800,
-                                fontSize: 20,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      body: SafeArea(child: content),
     );
   }
 }

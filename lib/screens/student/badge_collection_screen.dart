@@ -74,12 +74,16 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
     final badgeName = AchievementBadge.nameFor(gradeLevel, difficulty);
     final imagePath = AchievementBadge.imagePathFor(gradeLevel, difficulty);
     final diffLabel = difficulty[0].toUpperCase() + difficulty.substring(1);
+    final imgSize = Responsive.imageSize(context, base: 180);
 
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(AppSpacing.xl),
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: Responsive.horizontalPadding(context),
+          vertical: AppSpacing.xl,
+        ),
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.xl),
           decoration: BoxDecoration(
@@ -128,12 +132,12 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
                 ),
               ),
               SizedBox(
-                width: 180,
-                height: 180,
+                width: imgSize,
+                height: imgSize,
                 child: Image.asset(
                   imagePath,
                   fit: BoxFit.contain,
-                  cacheWidth: 360,
+                  cacheWidth: (imgSize * 2).toInt(),
                   color: earned == null
                       ? Colors.grey.withValues(alpha: 0.4)
                       : null,
@@ -141,7 +145,7 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
                       earned == null ? BlendMode.saturation : null,
                   errorBuilder: (_, _, _) => Icon(
                     Icons.emoji_events_rounded,
-                    size: 120,
+                    size: imgSize * 0.6,
                     color: earned == null
                         ? AppColors.textMuted
                         : AppColors.accentYellow,
@@ -149,19 +153,25 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              Text(
-                badgeName,
-                textAlign: TextAlign.center,
-                style: AppText.h1.copyWith(
-                  color: earned != null
-                      ? AppColors.textYellow
-                      : AppColors.textMuted,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  badgeName,
+                  textAlign: TextAlign.center,
+                  style: AppText.h1.copyWith(
+                    color: earned != null
+                        ? AppColors.textYellow
+                        : AppColors.textMuted,
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Grade $gradeLevel - $diffLabel',
-                style: AppText.caption,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Grade $gradeLevel - $diffLabel',
+                  style: AppText.caption,
+                ),
               ),
               const SizedBox(height: AppSpacing.md),
               if (earned != null) ...[
@@ -201,13 +211,16 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
                         color: AppColors.textMuted,
                       ),
                       SizedBox(width: 6),
-                      Text(
-                        'Not earned yet',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textMuted,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Not earned yet',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ),
                     ],
@@ -254,28 +267,34 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
       );
     }
 
+    final isTablet = Responsive.isTablet(context);
+
+    Widget content = Column(
+      children: [
+        _buildHeader(),
+        Expanded(child: _buildBody()),
+      ],
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: content,
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.studentBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
-            child: Column(
-              children: [
-                _buildHeader(),
-                Expanded(child: _buildBody()),
-              ],
-            ),
-          ),
-        ),
-      ),
+      body: SafeArea(child: content),
     );
   }
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xl,
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
         vertical: AppSpacing.md,
       ),
       child: Row(
@@ -294,10 +313,18 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('My Badges', style: AppText.h2),
-                Text(
-                  '$_totalEarned of 18 unlocked',
-                  style: AppText.caption,
+                const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text('My Badges', style: AppText.h2),
+                ),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '$_totalEarned of 18 unlocked',
+                    style: AppText.caption,
+                  ),
                 ),
               ],
             ),
@@ -348,18 +375,19 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
     final message = hasBadges
         ? 'Look at your collection!'
         : 'Earn your first badge by passing a quiz!';
+    final imgSize = Responsive.imageSize(context, base: 200);
 
     return Column(
       children: [
         Image.asset(
           'assets/images/mascot/yse_gold_book.png',
-          width: 200,
-          height: 200,
-          cacheWidth: 400,
+          width: imgSize,
+          height: imgSize,
+          cacheWidth: (imgSize * 2).toInt(),
           fit: BoxFit.contain,
           errorBuilder: (_, _, _) => Container(
-            width: 200,
-            height: 200,
+            width: imgSize,
+            height: imgSize,
             decoration: BoxDecoration(
               color: AppColors.accentYellow.withValues(alpha: 0.15),
               shape: BoxShape.circle,
@@ -368,23 +396,26 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
                 width: 2,
               ),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.menu_book_rounded,
-              size: 80,
+              size: imgSize * 0.4,
               color: AppColors.accentYellow,
             ),
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
-        Text(
-          message,
-          textAlign: TextAlign.center,
-          style: AppText.caption.copyWith(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: hasBadges
-                ? AppColors.textYellow
-                : AppColors.textMuted,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            message,
+            textAlign: TextAlign.center,
+            style: AppText.caption.copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: hasBadges
+                  ? AppColors.textYellow
+                  : AppColors.textMuted,
+            ),
           ),
         ),
       ],
@@ -393,7 +424,9 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
 
   Widget _buildGrid() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+      ),
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -508,15 +541,18 @@ class _BadgeTile extends StatelessWidget {
                       color: AppColors.surface.withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Text(
-                      'G$gradeLevel',
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 8,
-                        fontWeight: FontWeight.w800,
-                        color: isEarned
-                            ? _ringColor
-                            : AppColors.textMuted,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'G$gradeLevel',
+                        style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontSize: 8,
+                          fontWeight: FontWeight.w800,
+                          color: isEarned
+                              ? _ringColor
+                              : AppColors.textMuted,
+                        ),
                       ),
                     ),
                   ),

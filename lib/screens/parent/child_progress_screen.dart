@@ -40,7 +40,8 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
     if (args is! Map) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil('/parent-dashboard', (route) => false);
+          Navigator.of(context)
+              .pushNamedAndRemoveUntil('/parent-dashboard', (route) => false);
         }
       });
       return;
@@ -114,7 +115,8 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
     if (child == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil('/parent-dashboard', (route) => false);
+          Navigator.of(context)
+              .pushNamedAndRemoveUntil('/parent-dashboard', (route) => false);
         }
       });
       return const Scaffold(
@@ -123,82 +125,95 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.parentBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
-                    vertical: AppSpacing.md,
-                  ),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          SfxService.tap();
-                          Navigator.of(context).pop();
-                        },
-                        icon: const Icon(Icons.arrow_back,
-                            color: AppColors.textPrimary),
-                        padding: EdgeInsets.zero,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          color: AppColors.accentPurple.withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.accentPurple.withValues(alpha: 0.5),
-                            width: 2,
-                          ),
-                        ),
-                        padding: const EdgeInsets.all(2),
-                        child: ClipOval(
-                          child: Image.asset(
-                            avatarAssetPath(child.avatarIndex),
-                            fit: BoxFit.cover,
-                            cacheWidth: 150,
-                            errorBuilder: (_, _, _) => _initialFallback(child),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${child.displayName}\'s Progress',
-                              style: AppText.h2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text('Grade ${child.gradeLevel}',
-                                style: AppText.caption),
-                          ],
-                        ),
-                      ),
-                    ],
+    final isTablet = Responsive.isTablet(context);
+
+    Widget content = Column(
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: Responsive.horizontalPadding(context),
+            vertical: AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: () {
+                  SfxService.tap();
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(Icons.arrow_back,
+                    color: AppColors.textPrimary),
+                padding: EdgeInsets.zero,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: AppColors.accentPurple.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.accentPurple.withValues(alpha: 0.5),
+                    width: 2,
                   ),
                 ),
-                Expanded(
-                  child: _loading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _attempts.isEmpty
-                          ? _buildEmpty()
-                          : _buildContent(),
+                padding: const EdgeInsets.all(2),
+                child: ClipOval(
+                  child: Image.asset(
+                    avatarAssetPath(child.avatarIndex),
+                    fit: BoxFit.cover,
+                    cacheWidth: 150,
+                    errorBuilder: (_, _, _) => _initialFallback(child),
+                  ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${child.displayName}\'s Progress',
+                        style: AppText.h2,
+                      ),
+                    ),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text('Grade ${child.gradeLevel}',
+                          style: AppText.caption),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-      ),
+        Expanded(
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _attempts.isEmpty
+                  ? _buildEmpty()
+                  : _buildContent(),
+        ),
+      ],
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: content,
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.parentBg,
+      body: SafeArea(child: content),
     );
   }
 
@@ -223,6 +238,8 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
   }
 
   Widget _buildEmpty() {
+    final imgSize = Responsive.imageSize(context, base: 140);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
@@ -231,12 +248,12 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
           children: [
             Image.asset(
               'assets/images/mascot/motter_gentle.png',
-              width: 140,
-              height: 140,
-              cacheWidth: 280,
-              errorBuilder: (_, _, _) => const Icon(
+              width: imgSize,
+              height: imgSize,
+              cacheWidth: (imgSize * 2).toInt(),
+              errorBuilder: (_, _, _) => Icon(
                 Icons.family_restroom_rounded,
-                size: 80,
+                size: imgSize * 0.5,
                 color: AppColors.accentPurple,
               ),
             ),
@@ -273,8 +290,12 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
         (_masteryBreakdown['learning'] ?? 0) +
         (_masteryBreakdown['struggling'] ?? 0);
 
+    final imgSize = Responsive.imageSize(context, base: 200);
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -282,13 +303,13 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
 
           Image.asset(
             'assets/images/mascot/motter_presenting.png',
-            width: 200,
-            height: 200,
+            width: imgSize,
+            height: imgSize,
             fit: BoxFit.contain,
-            cacheWidth: 400,
+            cacheWidth: (imgSize * 2).toInt(),
             errorBuilder: (_, _, _) => Container(
-              width: 200,
-              height: 200,
+              width: imgSize,
+              height: imgSize,
               decoration: BoxDecoration(
                 color: AppColors.accentPurple.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
@@ -297,9 +318,9 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
                   width: 2,
                 ),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.family_restroom_rounded,
-                size: 80,
+                size: imgSize * 0.4,
                 color: AppColors.accentPurple,
               ),
             ),
@@ -396,29 +417,40 @@ class _ChildProgressScreenState extends State<ChildProgressScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Grade $grade - $diffLabel',
-                          style: const TextStyle(
-                            fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                            color: AppColors.textPrimary,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Grade $grade - $diffLabel',
+                            style: const TextStyle(
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
                         ),
                         if (theme.isNotEmpty)
-                          Text(theme, style: AppText.caption),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(theme, style: AppText.caption),
+                          ),
                       ],
                     ),
                   ),
-                  Text(
-                    '$score/$total',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                      color: isPassing
-                          ? AppColors.textPurple
-                          : AppColors.textCoral,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      '$score/$total',
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: isPassing
+                            ? AppColors.textPurple
+                            : AppColors.textCoral,
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -506,16 +538,22 @@ class _StatCard extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 22),
             const SizedBox(height: 4),
-            Text(
-              value,
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: color,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
               ),
             ),
-            Text(label, style: AppText.caption),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(label, style: AppText.caption),
+            ),
           ],
         ),
       ),

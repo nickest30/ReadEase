@@ -6,15 +6,12 @@ import '../models/content_models.dart';
 import 'database_service.dart';
 import 'firestore_service.dart';
 
-/// Downloads a student's cloud data into local SQLite
-/// after cross-device login. Idempotent, safe to call repeatedly.
 class CloudSyncService {
   static final CloudSyncService instance = CloudSyncService._internal();
   CloudSyncService._internal();
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  /// Full download: profile + results + badges + mastery + encounters + starred.
   Future<void> downloadStudentData({
     required int localStudentId,
     required String firebaseUid,
@@ -91,14 +88,12 @@ class CloudSyncService {
           .get(const GetOptions(source: Source.server))
           .timeout(const Duration(seconds: 15));
 
-      // Fetch batch mapping once, keyed by remote batchId
       final localBatchIds = await _getLocalBatchIds();
 
       for (final doc in snap.docs) {
         final data = doc.data();
         final remoteBatchId = data['batchId'] as int?;
 
-        // Match by batchId if present, else fallback by grade+difficulty
         int? localBatchId = remoteBatchId != null
             ? localBatchIds[remoteBatchId]
             : null;
@@ -123,7 +118,7 @@ class CloudSyncService {
             batchId: localBatchId,
             score: (data['score'] ?? 0) as int,
             totalQuestions: (data['totalQuestions'] ?? 0) as int,
-            pointsEarned: 0, // delta unknown on download
+            pointsEarned: 0, 
             wrongWordIdsJson: _encodeWrongIds(data['wrongWordIds']),
             completedAt: completedAt,
             syncedToCloud: true,
@@ -144,13 +139,10 @@ class CloudSyncService {
     return null;
   }
 
-  /// Map of {remoteBatchId: localBatchId}.
   Future<Map<int, int>> _getLocalBatchIds() async {
     final db = await DatabaseService.instance.database;
     final rows = await db.query('batches');
-    // Since both local and cloud share the same batchId only if seeded
-    // identically, we map by (grade,difficulty,batch_index) to be safe.
-    // For now, treat the local id as canonical.
+
     return {for (final r in rows) r['id'] as int: r['id'] as int};
   }
 

@@ -18,7 +18,6 @@ class ChangePinScreen extends StatefulWidget {
 }
 
 class _ChangePinScreenState extends State<ChangePinScreen> {
-  // 0 = enter current PIN, 1 = enter new PIN, 2 = confirm new PIN
   int _stage = 0;
   String _oldPin = '';
   String _newPin = '';
@@ -128,12 +127,10 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
   }
 
   Future<void> _validateNewPin() async {
-    // Trivial PINs
     if (_newPin == '0000' || _newPin == '1111' || _newPin == '1234') {
       await _rejectNewPin('That PIN is too easy. Pick another.');
       return;
     }
-    // Same as old
     if (_newPin == _oldPin) {
       await _rejectNewPin('New PIN must be different from old PIN.');
       return;
@@ -242,96 +239,113 @@ class _ChangePinScreenState extends State<ChangePinScreen> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.studentBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
-              child: Column(
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      onPressed: _isSaving
-                          ? null
-                          : () {
-                              SfxService.tap();
-                              Navigator.of(context).pop();
-                            },
-                      icon: const Icon(Icons.arrow_back,
-                          color: AppColors.textPrimary),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-                  const Spacer(),
-                  _StageIndicator(current: _stage),
-                  const SizedBox(height: AppSpacing.lg),
-                  const Icon(
-                    Icons.lock_reset_rounded,
-                    size: 56,
-                    color: AppColors.accentPurple,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    _stageTitle,
-                    style: AppText.h1,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    _stageSubtitle,
-                    style: AppText.caption,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  PinDots(
-                    filledCount: _currentPin.length,
-                    state: _dotState,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  // Reserved height so layout doesn't jump.
-                  SizedBox(
-                    height: 22,
-                    child: _errorMessage != null
-                        ? Text(
-                            _errorMessage!,
-                            style: AppText.caption.copyWith(
-                              color: AppColors.textCoral,
-                              fontWeight: FontWeight.w700,
-                            ),
-                            textAlign: TextAlign.center,
-                          )
-                        : _dotState == PinDotState.success
-                            ? Text(
-                                'Saving...',
-                                style: AppText.caption.copyWith(
-                                  color: kPinSuccessColor,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              )
-                            : const SizedBox.shrink(),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  NumberPad(
-                    enabled: !_isSaving,
-                    onDigit: _onDigitPressed,
-                    onBackspace: _onBackspace,
-                  ),
-                  const Spacer(),
-                ],
-              ),
+    final isTablet = Responsive.isTablet(context);
+    final horizontalPadding = Responsive.horizontalPadding(context);
+
+    Widget content = Padding(
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: Column(
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: IconButton(
+              onPressed: _isSaving
+                  ? null
+                  : () {
+                      SfxService.tap();
+                      Navigator.of(context).pop();
+                    },
+              icon: const Icon(Icons.arrow_back,
+                  color: AppColors.textPrimary),
+              padding: EdgeInsets.zero,
             ),
           ),
-        ),
+          const Spacer(),
+          _StageIndicator(current: _stage),
+          const SizedBox(height: AppSpacing.lg),
+          const Icon(
+            Icons.lock_reset_rounded,
+            size: 56,
+            color: AppColors.accentPurple,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              _stageTitle,
+              style: AppText.h1,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              _stageSubtitle,
+              style: AppText.caption,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          PinDots(
+            filledCount: _currentPin.length,
+            state: _dotState,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          SizedBox(
+            height: 22,
+            child: _errorMessage != null
+                ? FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _errorMessage!,
+                      style: AppText.caption.copyWith(
+                        color: AppColors.textCoral,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                : _dotState == PinDotState.success
+                    ? FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Saving...',
+                          style: AppText.caption.copyWith(
+                            color: kPinSuccessColor,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          NumberPad(
+            enabled: !_isSaving,
+            onDigit: _onDigitPressed,
+            onBackspace: _onBackspace,
+          ),
+          const Spacer(),
+        ],
       ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.studentBg,
+      body: SafeArea(child: content),
     );
   }
 }
 
-// 3-dot stage progress indicator at the top of the screen.
 class _StageIndicator extends StatelessWidget {
   final int current;
 

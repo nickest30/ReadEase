@@ -65,7 +65,8 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
     if (args is! Map) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil('/student-home', (route) => false);
+          Navigator.of(context)
+              .pushNamedAndRemoveUntil('/student-home', (route) => false);
         }
       });
       return;
@@ -85,7 +86,8 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
     }
 
     try {
-      final questions = await DatabaseService.instance.getQuestionsForBatch(batchId);
+      final questions =
+          await DatabaseService.instance.getQuestionsForBatch(batchId);
       if (questions.isEmpty) {
         setState(() {
           _loading = false;
@@ -94,13 +96,15 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
         return;
       }
 
-      final words = await DatabaseService.instance.getSampledWordsForBatch(batchId);
+      final words =
+          await DatabaseService.instance.getSampledWordsForBatch(batchId);
       final wordMap = {for (final w in words) w.id!: w};
 
       if (!mounted) return;
 
       final sampledIds = words.map((w) => w.id).toSet();
-      final sampledQuestions = questions.where((q) => sampledIds.contains(q.wordId)).toList();
+      final sampledQuestions =
+          questions.where((q) => sampledIds.contains(q.wordId)).toList();
 
       setState(() {
         _questions = sampledQuestions;
@@ -188,7 +192,6 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
   }
 
   Future<void> _nextQuestion() async {
-    SfxService.tap();
     if (_currentIndex < _questions.length - 1) {
       setState(() {
         _currentIndex++;
@@ -205,8 +208,12 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
   Future<void> _finishQuiz() async {
     if (_studentId == null || _batchId == null) return;
 
+    int pointsDelta = 0;
+    bool isNewBadge = false;
+    bool localSaveSucceeded = false;
+
     try {
-      final pointsDelta = await DatabaseService.instance.computePointsDeltaForBatch(
+      pointsDelta = await DatabaseService.instance.computePointsDeltaForBatch(
         studentId: _studentId!,
         batchId: _batchId!,
         newScore: _score,
@@ -219,7 +226,9 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
           score: _score,
           totalQuestions: _questions.length,
           pointsEarned: pointsDelta,
-          wrongWordIdsJson: _wrongWordIds.isEmpty ? null : '[${_wrongWordIds.join(',')}]',
+          wrongWordIdsJson: _wrongWordIds.isEmpty
+              ? null
+              : '[${_wrongWordIds.join(',')}]',
           completedAt: DateTime.now().toIso8601String(),
         ),
       );
@@ -236,14 +245,18 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
         );
       }
 
+      final responseCount = _responses.length < _questions.length
+          ? _responses.length
+          : _questions.length;
       for (var i = 0; i < _questions.length; i++) {
         final q = _questions[i];
-        final r = _responses[i];
+        final isCorrectResponse =
+            i < responseCount ? _responses[i].isCorrect : false;
         await DatabaseService.instance.recordWordEncounter(_studentId!, q.wordId);
         await DatabaseService.instance.updateWordMastery(
           studentId: _studentId!,
           wordId: q.wordId,
-          correct: r.isCorrect,
+          correct: isCorrectResponse,
         );
       }
 
@@ -251,8 +264,8 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
         await DatabaseService.instance.addPoints(_studentId!, pointsDelta);
       }
 
-      bool isNewBadge = false;
-      final isPassing = _questions.isNotEmpty && (_score / _questions.length) >= 0.70;
+      final isPassing =
+          _questions.isNotEmpty && (_score / _questions.length) >= 0.70;
       if (isPassing) {
         final badgeName = AchievementBadge.nameFor(_gradeLevel, _difficulty);
         final badge = AchievementBadge(
@@ -266,76 +279,158 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
         isNewBadge = await DatabaseService.instance.awardBadge(badge);
       }
 
-      final updated = await DatabaseService.instance.getStudentById(_studentId!);
-      if (!mounted) return;
-
-      if (updated != null) {
-        context.read<StudentProvider>().setStudent(updated);
-
-        final connectivity = context.read<ConnectivityProvider>();
-        final authProvider = context.read<AuthProvider>();
-
-        unawaited(
-          SyncService.instance.syncAll(
-            student: updated,
-            connectivity: connectivity,
-            authProvider: authProvider,
-          ),
-        );
-
-        if (updated.classFirestoreId != null &&
-            updated.classFirestoreId!.isNotEmpty &&
-            updated.firebaseUid != null) {
-          unawaited(() async {
-            try {
-              final badges = await DatabaseService.instance.getBadgesForStudent(updated.id!);
-              await FirestoreService.instance.updateEnrollmentSnapshot(
-                classId: updated.classFirestoreId!,
-                studentUid: updated.firebaseUid!,
-                totalPoints: updated.totalPoints,
-                badgeCount: badges.length,
-                avatarIndex: updated.avatarIndex,
-              );
-            } catch (e) {
-              debugPrint('Enrollment snapshot update failed: $e');
-            }
-          }());
-        }
-      }
-
-      if (!mounted) return;
-
-      if (isPassing) {
-        SfxService.celebration();
-        await Future.delayed(const Duration(milliseconds: 1500));
-      } else {
-        SfxService.fail();
-        await Future.delayed(const Duration(milliseconds: 1500));
-      }
-
-      if (!mounted) return;
-
-      Navigator.of(context).pushReplacementNamed(
-        '/results',
-        arguments: {
-          'score': _score,
-          'totalQuestions': _questions.length,
-          'pointsDelta': pointsDelta,
-          'gradeLevel': _gradeLevel,
-          'difficulty': _difficulty,
-          'isNewBadge': isNewBadge,
-        },
-      );
+      localSaveSucceeded = true;
     } catch (e) {
-      debugPrint('QuizPlay finish ERROR: $e');
+      debugPrint('QuizPlay local save ERROR: $e');
+    }
+
+    if (!localSaveSucceeded) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not save results. Please try again.'),
-          behavior: SnackBarBehavior.floating,
+      final retry = await _showSaveErrorDialog();
+      if (!mounted) return;
+      if (retry == true) {
+        await _finishQuiz();
+      } else {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/student-home',
+          (route) => false,
+        );
+      }
+      return;
+    }
+
+    final updated = await DatabaseService.instance.getStudentById(_studentId!);
+    if (!mounted) return;
+
+    if (updated != null) {
+      context.read<StudentProvider>().setStudent(updated);
+
+      final connectivity = context.read<ConnectivityProvider>();
+      final authProvider = context.read<AuthProvider>();
+
+      unawaited(
+        SyncService.instance.syncAll(
+          student: updated,
+          connectivity: connectivity,
+          authProvider: authProvider,
         ),
       );
+
+      if (updated.classFirestoreId != null &&
+          updated.classFirestoreId!.isNotEmpty &&
+          updated.firebaseUid != null) {
+        unawaited(() async {
+          try {
+            final badges = await DatabaseService.instance
+                .getBadgesForStudent(updated.id!);
+            await FirestoreService.instance.updateEnrollmentSnapshot(
+              classId: updated.classFirestoreId!,
+              studentUid: updated.firebaseUid!,
+              totalPoints: updated.totalPoints,
+              badgeCount: badges.length,
+              avatarIndex: updated.avatarIndex,
+            );
+          } catch (e) {
+            debugPrint('Enrollment snapshot update failed: $e');
+          }
+        }());
+      }
     }
+
+    if (!mounted) return;
+
+    final isPassing =
+        _questions.isNotEmpty && (_score / _questions.length) >= 0.70;
+    if (isPassing) {
+      SfxService.celebration();
+    } else {
+      SfxService.fail();
+    }
+    await Future.delayed(const Duration(milliseconds: 1500));
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushReplacementNamed(
+      '/results',
+      arguments: {
+        'score': _score,
+        'totalQuestions': _questions.length,
+        'pointsDelta': pointsDelta,
+        'gradeLevel': _gradeLevel,
+        'difficulty': _difficulty,
+        'isNewBadge': isNewBadge,
+      },
+    );
+  }
+
+  Future<bool?> _showSaveErrorDialog() {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
+        backgroundColor: AppColors.surface,
+        title: Row(
+          children: [
+            const Icon(Icons.error_outline_rounded,
+                color: AppColors.accentOrange, size: 26),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                'Could not save your score',
+                style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 17,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Your score was not saved on this device. Would you like to try again?',
+          style: TextStyle(fontFamily: 'Nunito', fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(false);
+            },
+            child: const Text(
+              'Go Home',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              SfxService.tap();
+              Navigator.of(ctx).pop(true);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentTeal,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Try Again',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -359,17 +454,40 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
   Widget _buildError() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        padding: EdgeInsets.all(Responsive.horizontalPadding(context)),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, size: 64, color: AppColors.textMuted),
+            const Icon(Icons.error_outline_rounded,
+                size: 64, color: AppColors.textMuted),
             const SizedBox(height: AppSpacing.lg),
             Text(_error!, textAlign: TextAlign.center, style: AppText.body),
             const SizedBox(height: AppSpacing.xl),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Go Back'),
+            SizedBox(
+              height: Responsive.buttonHeight(context),
+              child: ElevatedButton(
+                onPressed: () {
+                  SfxService.tap();
+                  Navigator.of(context).pop();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentTeal,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.large),
+                  ),
+                ),
+                child: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Go Back',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -382,200 +500,242 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
     final word = _wordsById[q.wordId];
     final choices = _currentChoices;
     final isLast = _currentIndex == _questions.length - 1;
+    final isTablet = Responsive.isTablet(context);
+    final imgSize = Responsive.imageSize(context, base: 140);
+    final buttonHeight = Responsive.buttonHeight(context);
 
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 700),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    Widget content = SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.md),
+
+          Row(
             children: [
-              const SizedBox(height: AppSpacing.md),
-
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      SfxService.tap();
-                      Navigator.of(context).pop();
-                    },
-                    icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-                    padding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Quiz', style: AppText.h2),
-                        const InfoButton(
-                          title: 'How to Play',
-                          description: 'Answer the questions to finish the lesson.',
-                          steps: [
-                            'Read the question and look at the picture.',
-                            'Tap the speaker icon to hear the word.',
-                            'Tap the correct answer.',
-                            'Tap Next Question to continue.',
-                          ],
-                        ),
+              IconButton(
+                onPressed: () {
+                  SfxService.tap();
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(Icons.arrow_back,
+                    color: AppColors.textPrimary),
+                padding: EdgeInsets.zero,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Quiz', style: AppText.h2),
+                    const InfoButton(
+                      title: 'How to Play',
+                      description:
+                          'Answer the questions to finish the lesson.',
+                      steps: [
+                        'Read the question and look at the picture.',
+                        'Tap the speaker icon to hear the word.',
+                        'Tap the correct answer.',
+                        'Tap Next Question to continue.',
                       ],
                     ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: AppSpacing.md),
-
-              Text(
-                'Question ${_currentIndex + 1} of ${_questions.length}',
-                style: AppText.caption,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(AppRadius.small),
-                child: LinearProgressIndicator(
-                  value: (_currentIndex + 1) / _questions.length,
-                  minHeight: 6,
-                  backgroundColor: AppColors.border,
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentTeal),
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.lg),
-
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.xl),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Column(
-                  children: [
-                    if (q.showImage && word != null) ...[
-                      SizedBox(
-                        width: 140,
-                        height: 140,
-                        child: Image.asset(
-                          word.imageAsset,
-                          fit: BoxFit.contain,
-                          cacheWidth: 300,
-                          errorBuilder: (_, _, _) => Container(
-                            width: 140,
-                            height: 140,
-                            decoration: BoxDecoration(
-                              color: AppColors.studentBg.withValues(alpha: 0.6),
-                              borderRadius: BorderRadius.circular(AppRadius.large),
-                            ),
-                            child: const Icon(Icons.image_outlined, size: 44, color: AppColors.textMuted),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-
-                    Text(
-                      q.questionStem,
-                      textAlign: TextAlign.center,
-                      style: AppText.h2.copyWith(fontSize: 18),
-                    ),
-
-                    if (word != null) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      IconButton(
-                        onPressed: () {
-                          SfxService.tap();
-                          _playWordAudio(word);
-                        },
-                        icon: const Icon(Icons.volume_up_rounded),
-                        iconSize: 26,
-                        color: AppColors.accentTeal,
-                        style: IconButton.styleFrom(
-                          backgroundColor: AppColors.accentTeal.withValues(alpha: 0.15),
-                          padding: const EdgeInsets.all(10),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
+            ],
+          ),
 
-              const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
 
-              ...choices.map((choice) {
-                final isCorrect = choice == q.correctAnswer;
-                final isSelected = choice == _selectedAnswer;
+          Text(
+            'Question ${_currentIndex + 1} of ${_questions.length}',
+            style: AppText.caption,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.small),
+            child: LinearProgressIndicator(
+              value: (_currentIndex + 1) / _questions.length,
+              minHeight: 6,
+              backgroundColor: AppColors.border,
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.accentTeal),
+            ),
+          ),
 
-                Color bg = AppColors.surface;
-                Color border = AppColors.border;
-                IconData? icon;
-                Color? iconColor;
+          const SizedBox(height: AppSpacing.lg),
 
-                if (_answered) {
-                  if (isCorrect) {
-                    bg = AppColors.accentTeal.withValues(alpha: 0.15);
-                    border = AppColors.accentTeal;
-                    icon = Icons.check_circle_rounded;
-                    iconColor = AppColors.accentTeal;
-                  } else if (isSelected) {
-                    bg = AppColors.accentCoral.withValues(alpha: 0.15);
-                    border = AppColors.accentCoral;
-                    icon = Icons.cancel_rounded;
-                    iconColor = AppColors.accentCoral;
-                  }
-                }
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: InkWell(
-                    onTap: _answered ? null : () => _selectAnswer(choice),
-                    borderRadius: BorderRadius.circular(AppRadius.medium),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: bg,
-                        borderRadius: BorderRadius.circular(AppRadius.medium),
-                        border: Border.all(color: border, width: 1.5),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(choice, style: AppText.bodyBold.copyWith(fontSize: 16)),
-                          ),
-                          if (icon != null) Icon(icon, color: iconColor),
-                        ],
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              children: [
+                if (q.showImage && word != null) ...[
+                  SizedBox(
+                    width: imgSize,
+                    height: imgSize,
+                    child: Image.asset(
+                      word.imageAsset,
+                      fit: BoxFit.contain,
+                      cacheWidth: (imgSize * 2).toInt(),
+                      errorBuilder: (_, _, _) => Container(
+                        width: imgSize,
+                        height: imgSize,
+                        decoration: BoxDecoration(
+                          color: AppColors.studentBg.withValues(alpha: 0.6),
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.large),
+                        ),
+                        child: Icon(
+                          Icons.image_outlined,
+                          size: imgSize * 0.32,
+                          color: AppColors.textMuted,
+                        ),
                       ),
                     ),
                   ),
-                );
-              }),
+                  const SizedBox(height: AppSpacing.md),
+                ],
 
-              const SizedBox(height: AppSpacing.md),
+                Text(
+                  q.questionStem,
+                  textAlign: TextAlign.center,
+                  style: AppText.h2.copyWith(fontSize: 18),
+                ),
 
-              SizedBox(
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _answered ? _nextQuestion : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isLast ? AppColors.accentYellow : AppColors.accentTeal,
-                    foregroundColor: isLast ? AppColors.textPrimary : Colors.white,
-                    disabledBackgroundColor: AppColors.border,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.large)),
+                if (word != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  IconButton(
+                    onPressed: () {
+                      SfxService.tap();
+                      _playWordAudio(word);
+                    },
+                    icon: const Icon(Icons.volume_up_rounded),
+                    iconSize: 26,
+                    color: AppColors.accentTeal,
+                    style: IconButton.styleFrom(
+                      backgroundColor:
+                          AppColors.accentTeal.withValues(alpha: 0.15),
+                      padding: const EdgeInsets.all(10),
+                    ),
                   ),
-                  child: Text(
-                    isLast ? 'Finish' : 'Next Question',
-                    style: const TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w700),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(height: AppSpacing.lg),
+
+          ...choices.map((choice) {
+            final isCorrect = choice == q.correctAnswer;
+            final isSelected = choice == _selectedAnswer;
+
+            Color bg = AppColors.surface;
+            Color border = AppColors.border;
+            IconData? icon;
+            Color? iconColor;
+
+            if (_answered) {
+              if (isCorrect) {
+                bg = AppColors.accentTeal.withValues(alpha: 0.15);
+                border = AppColors.accentTeal;
+                icon = Icons.check_circle_rounded;
+                iconColor = AppColors.accentTeal;
+              } else if (isSelected) {
+                bg = AppColors.accentCoral.withValues(alpha: 0.15);
+                border = AppColors.accentCoral;
+                icon = Icons.cancel_rounded;
+                iconColor = AppColors.accentCoral;
+              }
+            }
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: InkWell(
+                onTap: _answered ? null : () => _selectAnswer(choice),
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: bg,
+                    borderRadius: BorderRadius.circular(AppRadius.medium),
+                    border: Border.all(color: border, width: 1.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            choice,
+                            style: AppText.bodyBold.copyWith(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                      if (icon != null) Icon(icon, color: iconColor),
+                    ],
                   ),
                 ),
               ),
+            );
+          }),
 
-              const SizedBox(height: AppSpacing.xl),
-            ],
+          const SizedBox(height: AppSpacing.md),
+
+          SizedBox(
+            height: buttonHeight,
+            child: ElevatedButton(
+              onPressed: _answered
+                  ? () {
+                      SfxService.tap();
+                      _nextQuestion();
+                    }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isLast
+                    ? AppColors.accentYellow
+                    : AppColors.accentTeal,
+                foregroundColor: isLast
+                    ? AppColors.textPrimary
+                    : Colors.white,
+                disabledBackgroundColor: AppColors.border,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.large)),
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  isLast ? 'Finish' : 'Next Question',
+                  style: const TextStyle(
+                      fontFamily: 'Nunito', fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
           ),
-        ),
+
+          const SizedBox(height: AppSpacing.xl),
+        ],
       ),
     );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 700),
+          child: content,
+        ),
+      );
+    }
+
+    return content;
   }
 }

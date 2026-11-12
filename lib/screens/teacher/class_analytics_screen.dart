@@ -113,6 +113,7 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
 
     final classGroup = args['classGroup'] as ClassGroup;
     final students = args['students'] as List<Student>;
+    final imgSize = Responsive.imageSize(context, base: 180);
 
     return Scaffold(
       backgroundColor: AppColors.teacherBg,
@@ -123,8 +124,8 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Responsive.horizontalPadding(context),
                     vertical: AppSpacing.md,
                   ),
                   child: Row(
@@ -168,13 +169,13 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
 
                               Image.asset(
                                 'assets/images/mascot/groo_analytics.png',
-                                width: 180,
-                                height: 180,
+                                width: imgSize,
+                                height: imgSize,
                                 fit: BoxFit.contain,
-                                cacheWidth: 360,
+                                cacheWidth: (imgSize * 2).toInt(),
                                 errorBuilder: (_, _, _) => Container(
-                                  width: 180,
-                                  height: 180,
+                                  width: imgSize,
+                                  height: imgSize,
                                   decoration: BoxDecoration(
                                     color: AppColors.accentYellow
                                         .withValues(alpha: 0.15),
@@ -184,9 +185,9 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
                                       width: 2,
                                     ),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.bar_chart_rounded,
-                                    size: 72,
+                                    size: imgSize * 0.4,
                                     color: AppColors.accentYellow,
                                   ),
                                 ),
@@ -195,8 +196,9 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
                               const SizedBox(height: AppSpacing.md),
 
                               Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.xl),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal:
+                                        Responsive.horizontalPadding(context)),
                                 child: Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
@@ -276,21 +278,29 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
                                           child: Row(
                                             children: [
                                               Expanded(
-                                                child: Text(
-                                                  student.displayName,
-                                                  style: const TextStyle(
-                                                    fontFamily: 'Nunito',
-                                                    fontWeight:
-                                                        FontWeight.w700,
-                                                    fontSize: 13,
-                                                    color: AppColors
-                                                        .textPrimary,
+                                                child: FittedBox(
+                                                  fit: BoxFit.scaleDown,
+                                                  alignment:
+                                                      Alignment.centerLeft,
+                                                  child: Text(
+                                                    student.displayName,
+                                                    style: const TextStyle(
+                                                      fontFamily: 'Nunito',
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      fontSize: 13,
+                                                      color: AppColors
+                                                          .textPrimary,
+                                                    ),
                                                   ),
                                                 ),
                                               ),
-                                              Text(
-                                                '${student.totalPoints} pts',
-                                                style: AppText.caption,
+                                              FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: Text(
+                                                  '${student.totalPoints} pts',
+                                                  style: AppText.caption,
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -342,16 +352,22 @@ class _StatCard extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 22),
             const SizedBox(height: 4),
-            Text(
-              value,
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: color,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
               ),
             ),
-            Text(label, style: AppText.caption),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(label, style: AppText.caption),
+            ),
           ],
         ),
       ),

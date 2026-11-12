@@ -13,6 +13,8 @@ import '../../providers/student_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/validators.dart';
 import '../../widgets/app_form.dart';
+import 'student_recovery_screen.dart';
+
 
 class StudentSignInScreen extends StatefulWidget {
   const StudentSignInScreen({super.key});
@@ -47,13 +49,11 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
   Future<void> _handleSignIn() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Capture providers BEFORE any await (fixes use_build_context_synchronously)
     final authProvider = context.read<AuthProvider>();
     final studentProvider = context.read<StudentProvider>();
 
     final identifier = _usernameController.text.trim().toLowerCase();
 
-    // Rate limit gate
     final remaining = await DatabaseService.instance
         .loginRateLimitRemaining(identifier);
     if (remaining != null) {
@@ -75,12 +75,10 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
       final username = _usernameController.text.trim().toLowerCase();
       final password = _passwordController.text;
 
-      // Try local SQLite login first
       Student? localStudent =
           await DatabaseService.instance.getStudentByUsername(username);
 
       if (localStudent != null) {
-        // Verify local password
         final storedHash = localStudent.passwordHash;
         if (storedHash == null || storedHash.isEmpty) {
           await DatabaseService.instance.recordLoginAttempt(
@@ -112,16 +110,13 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
           return;
         }
 
-        // Local login succeeded, try Firebase restore silently
         if (localStudent.firebaseUid != null) {
           try {
             await authProvider.signIn(
               '${localStudent.username}@readease.app',
               password,
             );
-          } catch (_) {
-            // Offline, proceed with local session
-          }
+          } catch (_) {}
         }
 
         await DatabaseService.instance.clearLoginAttempts(identifier);
@@ -132,10 +127,8 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
         return;
       }
 
-      // Not found locally, try cloud login
       debugPrint('Local miss, trying cloud for "$username"');
 
-      // Firebase Auth with synthetic email
       final syntheticEmail = '$username@readease.app';
       final firebaseOk = await authProvider.signIn(syntheticEmail, password);
 
@@ -153,7 +146,6 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
         return;
       }
 
-      // Fetch profile by UID
       final uid = authProvider.uid;
       if (uid == null) {
         await DatabaseService.instance.recordLoginAttempt(
@@ -185,7 +177,6 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
         return;
       }
 
-      // Save to local SQLite
       final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
 
       final newLocalStudent = Student(
@@ -218,10 +209,10 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
         return;
       }
 
-      debugPrint('Cloud login succeeded, local profile created ($newLocalId)');
+      debugPrint(
+        'Cloud login succeeded, local profile created ($newLocalId)',
+      );
 
-      // Hydrate cloud data (results, badges, mastery, encounters, starred)
-      // Fire-and-forget to keep navigation instant.
       unawaited(
         CloudSyncService.instance.downloadStudentData(
           localStudentId: createdLocal.id!,
@@ -244,7 +235,6 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
     }
   }
 
-  /// After successful login, decide whether to send to Set PIN or Home.
   void _navigateAfterLogin(Student student) {
     if (student.pinHash == null || student.pinHash!.isEmpty) {
       Navigator.of(context).pushReplacementNamed(
@@ -258,108 +248,148 @@ class _StudentSignInScreenState extends State<StudentSignInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.studentBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        SfxService.tap();
-                        Navigator.of(context).pop();
-                      },
-                      icon: const Icon(Icons.arrow_back,
-                          color: AppColors.textPrimary),
-                      alignment: Alignment.centerLeft,
-                      padding: EdgeInsets.zero,
+    final isTablet = Responsive.isTablet(context);
+
+    Widget content = SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+        vertical: 20,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            IconButton(
+              onPressed: () {
+                SfxService.tap();
+                Navigator.of(context).pop();
+              },
+              icon: const Icon(Icons.arrow_back,
+                  color: AppColors.textPrimary),
+              alignment: Alignment.centerLeft,
+              padding: EdgeInsets.zero,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const Text('Sign In', style: AppText.h1),
+            const Text(
+              'Log in with your credentials',
+              style: AppText.caption,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+
+            const FieldLabel('Username'),
+            TextFormField(
+              controller: _usernameController,
+              textInputAction: TextInputAction.next,
+              validator: Validators.username,
+              decoration: buildInputDecoration(
+                hint: 'Enter your username',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+
+            const FieldLabel('Password'),
+            PasswordField(
+              controller: _passwordController,
+              hintText: 'Enter your password',
+              textInputAction: TextInputAction.done,
+              validator: (v) => (v == null || v.isEmpty)
+                  ? 'Please enter your password'
+                  : null,
+            ),
+
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () {
+                  SfxService.tap();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const StudentRecoveryScreen(),
                     ),
-                    const SizedBox(height: 16),
-                    const Text('Sign In', style: AppText.h1),
-                    const Text(
-                      'Log in with your credentials',
-                      style: AppText.caption,
-                    ),
-                    const SizedBox(height: 28),
-                    const FieldLabel('Username'),
-                    TextFormField(
-                      controller: _usernameController,
-                      textInputAction: TextInputAction.next,
-                      validator: Validators.username,
-                      decoration: buildInputDecoration(
-                        hint: 'Enter your username',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const FieldLabel('Password'),
-                    PasswordField(
-                      controller: _passwordController,
-                      hintText: 'Enter your password',
-                      textInputAction: TextInputAction.done,
-                      validator: (v) => (v == null || v.isEmpty)
-                          ? 'Please enter your password'
-                          : null,
-                    ),
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: 14),
-                      Text(
-                        _errorMessage!,
-                        style: const TextStyle(
-                          color: AppColors.textCoral,
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 28),
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _isSubmitting
-                            ? null
-                            : () {
-                                SfxService.tap();
-                                _handleSignIn();
-                              },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentTeal,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2.5,
-                                ),
-                              )
-                            : const Text(
-                                'LOGIN',
-                                style: TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ],
+                  );
+                },
+                child: const Text(
+                  'Forgot your password?',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: AppColors.accentTeal,
+                  ),
                 ),
               ),
             ),
-          ),
+
+            if (_errorMessage != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                _errorMessage!,
+                style: const TextStyle(
+                  color: AppColors.textCoral,
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+
+            const SizedBox(height: AppSpacing.xl),
+
+            SizedBox(
+              height: Responsive.buttonHeight(context),
+              child: ElevatedButton(
+                onPressed: _isSubmitting
+                    ? null
+                    : () {
+                        SfxService.tap();
+                        _handleSignIn();
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentTeal,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.large),
+                  ),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'LOGIN',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+          ],
         ),
       ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.studentBg,
+      body: SafeArea(child: content),
     );
   }
 }

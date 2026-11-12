@@ -50,7 +50,6 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
-    SfxService.tap();
 
     final authProvider = context.read<AuthProvider>();
     final parentProvider = context.read<ParentProvider>();
@@ -90,34 +89,62 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
         return;
       }
 
+      // ── Username path ──
       final localParent = await DatabaseService.instance
           .getParentByUsername(input.toLowerCase());
 
       if (localParent != null) {
-        final isCorrect =
-            BCrypt.checkpw(password, localParent.passwordHash);
+        final isCorrect = BCrypt.checkpw(password, localParent.passwordHash);
 
-        if (!isCorrect) {
-          await DatabaseService.instance.recordLoginAttempt(
-            identifier: identifier,
-            success: false,
-          );
+        if (isCorrect) {
+          // Local password matches — try Firebase silently (allow offline)
+          try {
+            await authProvider.signIn(localParent.email, password);
+          } catch (_) {}
+
+          await DatabaseService.instance.clearLoginAttempts(identifier);
           if (!mounted) return;
-          setState(() {
-            _errorMessage = 'Incorrect password.';
-            _isSubmitting = false;
-          });
+          parentProvider.setParent(localParent);
+          Navigator.of(context).pushReplacementNamed('/parent-dashboard');
           return;
         }
 
-        try {
-          await authProvider.signIn(localParent.email, password);
-        } catch (_) {}
+        debugPrint('Local hash mismatch — trying Firebase for ${localParent.email}');
+        final firebaseOk = await authProvider.signIn(
+          localParent.email,
+          password,
+        );
 
-        await DatabaseService.instance.clearLoginAttempts(identifier);
         if (!mounted) return;
-        parentProvider.setParent(localParent);
-        Navigator.of(context).pushReplacementNamed('/parent-dashboard');
+
+        if (firebaseOk) {
+          // Password was reset via Firebase. Sync local hash.
+          final freshHash = BCrypt.hashpw(password, BCrypt.gensalt());
+          try {
+            await DatabaseService.instance
+                .updateParentPasswordHash(localParent.id!, freshHash);
+          } catch (e) {
+            debugPrint('Hash sync failed (continuing): $e');
+          }
+
+          await DatabaseService.instance.clearLoginAttempts(identifier);
+          if (!mounted) return;
+          parentProvider.setParent(localParent);
+          Navigator.of(context).pushReplacementNamed('/parent-dashboard');
+          return;
+        }
+
+        await DatabaseService.instance.recordLoginAttempt(
+          identifier: identifier,
+          success: false,
+        );
+        if (!mounted) return;
+        setState(() {
+          _errorMessage =
+              'Incorrect password. If you recently reset it via email, '
+              'try logging in with your email address.';
+          _isSubmitting = false;
+        });
         return;
       }
 
@@ -165,6 +192,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       return;
     }
 
+    // Find local parent
     Parent? localParent;
     final allParents = await DatabaseService.instance.getAllParents();
     for (final p in allParents) {
@@ -188,6 +216,18 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       return;
     }
 
+    if (localParent != null) {
+      try {
+        final freshHash = BCrypt.hashpw(password, BCrypt.gensalt());
+        await DatabaseService.instance
+            .updateParentPasswordHash(localParent.id!, freshHash);
+        debugPrint('Synced local passwordHash for ${localParent.username}');
+      } catch (e) {
+        debugPrint('Local hash sync failed (continuing): $e');
+      }
+    }
+
+    // 2FA check
     final cloudDoc = await FirestoreService.instance.getParentByUidFull(uid);
 
     final phoneVerified = cloudDoc?['phoneVerified'] == true;
@@ -246,6 +286,7 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       return;
     }
 
+    // New device — recreate local profile
     final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
 
     final newLocalParent = Parent(
@@ -260,12 +301,10 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
       createdAt: DateTime.now().toIso8601String(),
     );
 
-    final newId =
-        await DatabaseService.instance.insertParent(newLocalParent);
+    final newId = await DatabaseService.instance.insertParent(newLocalParent);
     if (!mounted) return;
 
-    final created =
-        await DatabaseService.instance.getParentById(newId);
+    final created = await DatabaseService.instance.getParentById(newId);
 
     if (created == null) {
       setState(() {
@@ -425,142 +464,157 @@ class _ParentLoginScreenState extends State<ParentLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.parentBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: AppSpacing.md),
+    final isTablet = Responsive.isTablet(context);
 
-                    IconButton(
-                      onPressed: () {
-                        SfxService.tap();
-                        Navigator.of(context).pop();
-                      },
-                      icon: const Icon(Icons.arrow_back,
-                          color: AppColors.textPrimary),
-                      alignment: Alignment.centerLeft,
-                      padding: EdgeInsets.zero,
-                    ),
+    Widget content = SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+        vertical: 20,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: AppSpacing.md),
 
-                    const SizedBox(height: AppSpacing.sm),
+            IconButton(
+              onPressed: () {
+                SfxService.tap();
+                Navigator.of(context).pop();
+              },
+              icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+              alignment: Alignment.centerLeft,
+              padding: EdgeInsets.zero,
+            ),
 
-                    const Text('Welcome Back!', style: AppText.h1),
-                    const SizedBox(height: 2),
-                    const Text('Sign in to continue', style: AppText.caption),
+            const SizedBox(height: AppSpacing.sm),
 
-                    const SizedBox(height: AppSpacing.xl),
+            const Text('Welcome Back!', style: AppText.h1),
+            const SizedBox(height: 2),
+            const Text('Sign in to continue', style: AppText.caption),
 
-                    const FieldLabel('Username or Email'),
-                    TextFormField(
-                      controller: _identifierController,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      validator: Validators.usernameOrEmail,
-                      decoration: buildInputDecoration(
-                        hint: 'Enter username or email',
-                        focusColor: AppColors.accentPurple,
+            const SizedBox(height: AppSpacing.xl),
+
+            const FieldLabel('Username or Email'),
+            TextFormField(
+              controller: _identifierController,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              validator: Validators.usernameOrEmail,
+              decoration: buildInputDecoration(
+                hint: 'Enter username or email',
+                focusColor: AppColors.accentPurple,
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.lg),
+
+            const FieldLabel('Password'),
+            PasswordField(
+              controller: _passwordController,
+              hintText: 'Enter your password',
+              textInputAction: TextInputAction.done,
+              focusColor: AppColors.accentPurple,
+              validator: (v) =>
+                  (v == null || v.isEmpty) ? 'Please enter your password' : null,
+            ),
+
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () {
+                  SfxService.tap();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ForgotPasswordScreen(
+                        role: ForgotPasswordRole.parent,
                       ),
                     ),
-
-                    const SizedBox(height: AppSpacing.lg),
-
-                    const FieldLabel('Password'),
-                    PasswordField(
-                      controller: _passwordController,
-                      hintText: 'Enter your password',
-                      textInputAction: TextInputAction.done,
-                      focusColor: AppColors.accentPurple,
-                      validator: (v) => (v == null || v.isEmpty)
-                          ? 'Please enter your password'
-                          : null,
-                    ),
-
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          SfxService.tap();
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ForgotPasswordScreen(
-                                role: ForgotPasswordRole.parent,
-                              ),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          'Forgot password?',
-                          style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: AppColors.accentPurple,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        _errorMessage!,
-                        style: const TextStyle(
-                          color: AppColors.textCoral,
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: AppSpacing.xl),
-
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _isSubmitting ? null : _handleLogin,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentPurple,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.large),
-                          ),
-                        ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2.5,
-                                ),
-                              )
-                            : const Text(
-                                'LOGIN',
-                                style: TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
+                  );
+                },
+                child: const Text(
+                  'Forgot password?',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: AppColors.accentPurple,
+                  ),
                 ),
               ),
             ),
-          ),
+
+            if (_errorMessage != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                _errorMessage!,
+                style: const TextStyle(
+                  color: AppColors.textCoral,
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+
+            const SizedBox(height: AppSpacing.xl),
+
+            SizedBox(
+              height: Responsive.buttonHeight(context),
+              child: ElevatedButton(
+                onPressed: _isSubmitting
+                    ? null
+                    : () {
+                        SfxService.tap();
+                        _handleLogin();
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentPurple,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.large),
+                  ),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'LOGIN',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.xl),
+          ],
         ),
       ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.parentBg,
+      body: SafeArea(child: content),
     );
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 
 import 'firebase_options.dart';
 import 'utils/app_theme.dart';
@@ -80,6 +82,11 @@ import 'screens/games/category_sort_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   PaintingBinding.instance.imageCache.maximumSizeBytes = 150 * 1024 * 1024;
   PaintingBinding.instance.imageCache.maximumSize = 1000;
 
@@ -87,19 +94,21 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  await ContentImporter.instance.importAllGrades();
-
-  try {
-    await DatabaseService.instance.pruneOldAttempts();
-  } catch (e) {
-    debugPrint('pruneOldAttempts failed: $e');
-  }
-
   final settingsProvider = SettingsProvider();
   await settingsProvider.load();
-  
+
   SfxService.init(settingsProvider);
   BgmService.init(settingsProvider);
+
+  unawaited(() async {
+    try {
+      await ContentImporter.instance.importAllGrades();
+      await DatabaseService.instance.pruneOldAttempts();
+      debugPrint('Content import finished');
+    } catch (e) {
+      debugPrint('Background content import failed: $e');
+    }
+  }());
 
   runApp(
     MultiProvider(
@@ -155,7 +164,8 @@ class _ReadEaseAppState extends State<ReadEaseApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       _checkSessionOnResume();
       BgmService.resumeFromLifecycle();
-    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       BgmService.pauseForLifecycle();
     }
   }
@@ -208,7 +218,8 @@ class _ReadEaseAppState extends State<ReadEaseApp> with WidgetsBindingObserver {
             '/pin-entry': (context) => const PinEntryScreen(),
             '/student-home': (context) => const StudentHomeScreen(),
             '/grade-selection': (context) => const GradeSelectionScreen(),
-            '/difficulty-selection': (context) => const DifficultySelectionScreen(),
+            '/difficulty-selection': (context) =>
+                const DifficultySelectionScreen(),
             '/results': (context) => const ResultsScreen(),
             '/progress': (context) => const ProgressDashboardScreen(),
             '/badges': (context) => const BadgeCollectionScreen(),
@@ -226,7 +237,8 @@ class _ReadEaseAppState extends State<ReadEaseApp> with WidgetsBindingObserver {
             '/teacher-dashboard': (context) => const TeacherDashboardScreen(),
             '/create-class': (context) => const CreateClassScreen(),
             '/class-overview': (context) => const ClassOverviewScreen(),
-            '/teacher-student-progress': (context) => const TeacherStudentProgressScreen(),
+            '/teacher-student-progress': (context) =>
+                const TeacherStudentProgressScreen(),
             '/class-analytics': (context) => const ClassAnalyticsScreen(),
             '/class-leaderboard': (context) => const ClassLeaderboardScreen(),
             '/student-signin': (context) => const StudentSignInScreen(),

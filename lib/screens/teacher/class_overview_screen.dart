@@ -98,6 +98,7 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
     }
 
     final classGroup = args['classGroup'] as ClassGroup;
+    final imgSize = Responsive.imageSize(context, base: 180);
 
     return Scaffold(
       backgroundColor: AppColors.teacherBg,
@@ -108,8 +109,8 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Responsive.horizontalPadding(context),
                     vertical: AppSpacing.md,
                   ),
                   child: Row(
@@ -157,13 +158,13 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
 
                                 Image.asset(
                                   'assets/images/mascot/groo_teaching.png',
-                                  width: 180,
-                                  height: 180,
+                                  width: imgSize,
+                                  height: imgSize,
                                   fit: BoxFit.contain,
-                                  cacheWidth: 360,
+                                  cacheWidth: (imgSize * 2).toInt(),
                                   errorBuilder: (_, _, _) => Container(
-                                    width: 180,
-                                    height: 180,
+                                    width: imgSize,
+                                    height: imgSize,
                                     decoration: BoxDecoration(
                                       color: AppColors.accentYellow
                                           .withValues(alpha: 0.15),
@@ -173,9 +174,9 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
                                         width: 2,
                                       ),
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.class_rounded,
-                                      size: 72,
+                                      size: imgSize * 0.4,
                                       color: AppColors.accentYellow,
                                     ),
                                   ),
@@ -184,16 +185,20 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
                                 const SizedBox(height: AppSpacing.md),
 
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.xl),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal:
+                                          Responsive.horizontalPadding(
+                                              context)),
                                   child: _buildClassInfoCard(classGroup),
                                 ),
 
                                 const SizedBox(height: AppSpacing.md),
 
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.xl),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal:
+                                          Responsive.horizontalPadding(
+                                              context)),
                                   child: Row(
                                     children: [
                                       Expanded(
@@ -236,8 +241,10 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
                                 const SizedBox(height: AppSpacing.lg),
 
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.xl),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal:
+                                          Responsive.horizontalPadding(
+                                              context)),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.stretch,
@@ -299,20 +306,26 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
       ),
       child: Column(
         children: [
-          Text(
-            classGroup.className,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'Nunito',
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              classGroup.className,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            'Grade ${classGroup.gradeLevel}',
-            style: AppText.caption,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              'Grade ${classGroup.gradeLevel}',
+              style: AppText.caption,
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           Container(
@@ -337,14 +350,17 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  classGroup.joinCode,
-                  style: const TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textYellow,
-                    letterSpacing: 4,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    classGroup.joinCode,
+                    style: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textYellow,
+                      letterSpacing: 4,
+                    ),
                   ),
                 ),
               ],
@@ -390,6 +406,8 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
   }
 
   Widget _buildEmpty() {
+    final imgSize = Responsive.imageSize(context, base: 100);
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
@@ -401,13 +419,13 @@ class _ClassOverviewScreenState extends State<ClassOverviewScreen> {
         children: [
           Image.asset(
             'assets/images/mascot/groo_gentle.png',
-            width: 100,
-            height: 100,
+            width: imgSize,
+            height: imgSize,
             fit: BoxFit.contain,
-            cacheWidth: 200,
-            errorBuilder: (_, _, _) => const Icon(
+            cacheWidth: (imgSize * 2).toInt(),
+            errorBuilder: (_, _, _) => Icon(
               Icons.people_outline_rounded,
-              size: 48,
+              size: imgSize * 0.48,
               color: AppColors.textMuted,
             ),
           ),
@@ -462,13 +480,19 @@ class _ActionButton extends StatelessWidget {
           children: [
             Icon(icon, color: AppColors.accentYellow, size: 26),
             const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                fontFamily: 'Nunito',
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-                color: AppColors.textPrimary,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
               ),
             ),
           ],
@@ -532,27 +556,38 @@ class _StudentRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    name,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color: AppColors.textPrimary,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      name,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
-                  Text('Grade $grade', style: AppText.caption),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text('Grade $grade', style: AppText.caption),
+                  ),
                 ],
               ),
             ),
-            Text(
-              '$points pts',
-              style: const TextStyle(
-                fontFamily: 'Nunito',
-                fontWeight: FontWeight.w800,
-                fontSize: 12,
-                color: AppColors.textYellow,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '$points pts',
+                style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                  color: AppColors.textYellow,
+                ),
               ),
             ),
             const SizedBox(width: 4),

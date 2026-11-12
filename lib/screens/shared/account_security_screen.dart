@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:provider/provider.dart';
 
-import '../../providers/auth_provider.dart';
 import '../../providers/parent_provider.dart';
 import '../../providers/teacher_provider.dart';
 import '../../services/database_service.dart';
@@ -11,13 +11,11 @@ import '../../services/firestore_service.dart';
 import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
 import '../../utils/backup_code.dart';
+import '../../utils/formatting.dart';
 import '../shared/backup_code_screen.dart';
-import '../shared/otp_verification_screen.dart';
 
-/// Shared account security settings for parent + teacher.
-/// Lets them view email, change phone, and regenerate backup codes.
 class AccountSecurityScreen extends StatefulWidget {
-  final String role; // 'parent' | 'teacher'
+  final String role;
 
   const AccountSecurityScreen({super.key, required this.role});
 
@@ -31,13 +29,23 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
 
   bool get _isParent => widget.role == 'parent';
 
-  Color get _accent =>
+  /// Ash text — used on top of yellow backgrounds for contrast
+  static const Color _ashText = Color(0xFF2C2C2C);
+
+  /// Signature color for BACKGROUNDS (yellow for teacher — on-brand)
+  Color get _signatureBg =>
       _isParent ? AppColors.accentPurple : AppColors.accentYellow;
 
-  Color get _bg =>
-      _isParent ? AppColors.parentBg : AppColors.teacherBg;
+  /// Foreground color used ON signature backgrounds (white on purple, ash on yellow)
+  Color get _signatureFg => _isParent ? Colors.white : _ashText;
 
-  // Normalize PH phone to E.164 format
+  /// Action color for ICONS and TEXT buttons (must be visible on light bg)
+  /// Parent: purple is fine. Teacher: yellow is invisible → use teal.
+  Color get _actionColor =>
+      _isParent ? AppColors.accentPurple : AppColors.accentTeal;
+
+  Color get _bg => _isParent ? AppColors.parentBg : AppColors.teacherBg;
+
   String? _normalizePhone(String raw) {
     final digits = raw.replaceAll(RegExp(r'\D'), '');
     if (digits.isEmpty) return null;
@@ -49,7 +57,6 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     return null;
   }
 
-  // Masked display: "+63 *** 6789"
   String _maskPhone(String phone) {
     if (phone.length <= 4) return phone;
     final ccEnd = phone.startsWith('+63')
@@ -60,12 +67,18 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     return '$cc *** $last4';
   }
 
+  /// Add/change phone — NO OTP, saves with phoneVerified: false.
+  /// SMS OTP is planned for a future version.
   Future<void> _changePhone() async {
-    // Capture providers BEFORE any await
-    final authProvider = context.read<AuthProvider>();
-    final uid = _isParent
-        ? context.read<ParentProvider>().currentParent?.firebaseUid
-        : context.read<TeacherProvider>().currentTeacher?.firebaseUid;
+    final parent = context.read<ParentProvider>().currentParent;
+    final teacher = context.read<TeacherProvider>().currentTeacher;
+    final uid = _isParent ? parent?.firebaseUid : teacher?.firebaseUid;
+    final id = _isParent ? parent?.id : teacher?.id;
+
+    if (id == null) {
+      setState(() => _errorMessage = 'Session expired. Please log in again.');
+      return;
+    }
 
     final controller = TextEditingController();
 
@@ -77,7 +90,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
           borderRadius: BorderRadius.circular(AppRadius.xl),
         ),
         title: Text(
-          'Change Phone Number',
+          'Add Phone Number',
           style: AppText.h2.copyWith(fontSize: 18),
         ),
         content: Column(
@@ -85,8 +98,8 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Enter the new phone number. We\'ll send a code to '
-              'confirm it before updating your account.',
+              'Enter your PH phone number. SMS verification is not '
+              'available yet — we\'ll save this number for future use.',
               style: AppText.caption,
             ),
             const SizedBox(height: AppSpacing.md),
@@ -94,10 +107,30 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
               controller: controller,
               keyboardType: TextInputType.phone,
               autofocus: true,
+              maxLength: 10,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
               decoration: InputDecoration(
-                hintText: '912 345 6789',
+                hintText: '9123456789',
+                prefixIcon: const Padding(
+                  padding: EdgeInsets.only(left: 14, right: 6),
+                  child: Text(
+                    '+63',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                prefixIconConstraints:
+                    const BoxConstraints(minWidth: 0, minHeight: 0),
                 filled: true,
                 fillColor: AppColors.studentBg,
+                counterText: '',
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 14,
@@ -112,7 +145,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppRadius.medium),
-                  borderSide: BorderSide(color: _accent, width: 2),
+                  borderSide: BorderSide(color: _actionColor, width: 2),
                 ),
               ),
             ),
@@ -138,18 +171,18 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
               Navigator.of(ctx).pop(controller.text.trim());
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: _accent,
-              foregroundColor:
-                  _isParent ? Colors.white : AppColors.textPrimary,
+              // Signature yellow + ash text = readable
+              backgroundColor: _signatureBg,
+              foregroundColor: _signatureFg,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
             child: const Text(
-              'Continue',
+              'Save',
               style: TextStyle(
                 fontFamily: 'Nunito',
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
@@ -162,162 +195,75 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     final normalized = _normalizePhone(input);
     if (normalized == null) {
       setState(() => _errorMessage =
-          'Invalid number. Use format like 9123456789 or +639123456789.');
+          'Invalid number. Use format like 9123456789.');
       return;
     }
 
-    await _runPhoneLinkFlow(
-      normalizedPhone: normalized,
-      authProvider: authProvider,
-      uid: uid,
-    );
-  }
-
-  Future<void> _runPhoneLinkFlow({
-    required String normalizedPhone,
-    required AuthProvider authProvider,
-    required String? uid,
-  }) async {
-    if (!mounted) return;
     setState(() {
       _busy = true;
       _errorMessage = null;
     });
 
-    // Trigger OTP to the new number
-    final completer = Completer<bool>();
-    bool codeSent = false;
-
-    await authProvider.startPhoneVerification(
-      phoneNumber: normalizedPhone,
-      onCodeSent: () {
-        codeSent = true;
-        if (!completer.isCompleted) completer.complete(true);
-      },
-      onAutoVerified: () {
-        if (!completer.isCompleted) completer.complete(true);
-      },
-      onError: (msg) {
-        debugPrint('OTP send failed: $msg');
-        if (!completer.isCompleted) completer.complete(false);
-      },
-    );
-
-    final sent = await completer.future;
-    if (!sent || !mounted || !codeSent) {
-      if (mounted) {
-        setState(() {
-          _busy = false;
-          _errorMessage = 'Phone verification is currently unavailable. '
-              'Please try again later.';
-        });
-      }
-      return;
-    }
-
-    // Show OTP screen
-    final verified = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => OtpVerificationScreen(
-          phoneNumber: normalizedPhone,
-          accentColor: _accent,
-          backgroundColor: _bg,
-          isSignup: false,
-          onVerified: () => Navigator.of(context).pop(true),
-        ),
-      ),
-    );
-
-    if (verified != true || !mounted) {
-      if (mounted) setState(() => _busy = false);
-      return;
-    }
-
-    if (uid == null) {
-      if (mounted) {
-        setState(() {
-          _busy = false;
-          _errorMessage = 'Session expired. Please log in again.';
-        });
-      }
-      return;
-    }
-
-    // Persist change to cloud
     try {
-      await FirestoreService.instance.updatePhoneNumber(
-        uid: uid,
-        role: widget.role,
-        phoneNumber: normalizedPhone,
-        verified: true,
-      );
-    } catch (e) {
-      debugPrint('Cloud phone update failed: $e');
-      if (mounted) {
-        setState(() {
-          _busy = false;
-          _errorMessage = 'Could not save to cloud. Check your connection.';
-        });
+      // Best-effort cloud save (unverified — SMS OTP is future work)
+      if (uid != null) {
+        try {
+          await FirestoreService.instance
+              .updatePhoneNumber(
+                uid: uid,
+                role: widget.role,
+                phoneNumber: normalized,
+                verified: false,
+              )
+              .timeout(const Duration(seconds: 8));
+        } catch (e) {
+          debugPrint('Cloud phone save failed (continuing): $e');
+        }
       }
-      return;
-    }
 
-    // Persist locally, capture providers again after the await
-    if (!mounted) return;
-    if (_isParent) {
-      final parent = context.read<ParentProvider>().currentParent;
-      if (parent?.id != null) {
-        await DatabaseService.instance.updateParentPhone(
-          parent!.id!,
-          normalizedPhone,
-          true,
-        );
+      // Local save
+      if (_isParent) {
+        await DatabaseService.instance
+            .updateParentPhone(id, normalized, false);
         final updated =
-            await DatabaseService.instance.getParentById(parent.id!);
+            await DatabaseService.instance.getParentById(id);
         if (updated != null && mounted) {
           context.read<ParentProvider>().setParent(updated);
         }
-      }
-    } else {
-      final teacher = context.read<TeacherProvider>().currentTeacher;
-      if (teacher?.id != null) {
-        await DatabaseService.instance.updateTeacherPhone(
-          teacher!.id!,
-          normalizedPhone,
-          true,
-        );
+      } else {
+        await DatabaseService.instance
+            .updateTeacherPhone(id, normalized, false);
         final updated =
-            await DatabaseService.instance.getTeacherById(teacher.id!);
+            await DatabaseService.instance.getTeacherById(id);
         if (updated != null && mounted) {
           context.read<TeacherProvider>().setTeacher(updated);
         }
       }
-    }
 
-    if (!mounted) return;
-    setState(() => _busy = false);
+      if (!mounted) return;
+      setState(() => _busy = false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Phone number updated',
-          style: TextStyle(fontFamily: 'Nunito'),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Phone number saved. SMS verification coming soon.',
+            style: TextStyle(fontFamily: 'Nunito'),
+          ),
+          behavior: SnackBarBehavior.floating,
         ),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+      );
+    } catch (e) {
+      debugPrint('Save phone error: $e');
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _errorMessage = 'Could not save phone number. Try again.';
+      });
+    }
   }
 
+  /// Regenerate backup code — NO phone required, NO OTP.
   Future<void> _regenerateBackupCode() async {
-    // Capture everything BEFORE any await
-    final authProvider = context.read<AuthProvider>();
-    final phone = _isParent
-        ? context.read<ParentProvider>().currentParent?.phoneNumber
-        : context.read<TeacherProvider>().currentTeacher?.phoneNumber;
-    final uid = _isParent
-        ? context.read<ParentProvider>().currentParent?.firebaseUid
-        : context.read<TeacherProvider>().currentTeacher?.firebaseUid;
-
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -326,12 +272,12 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
           borderRadius: BorderRadius.circular(AppRadius.xl),
         ),
         title: Text(
-          'Regenerate Backup Code?',
+          'Generate New Backup Code?',
           style: AppText.h2.copyWith(fontSize: 18),
         ),
         content: const Text(
-          'Your current backup code will stop working. '
-          'We\'ll verify your phone number first.',
+          'Your current backup code will stop working. A new one will '
+          'be generated and shown only once.',
           style: AppText.caption,
         ),
         actions: [
@@ -354,18 +300,17 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
               Navigator.of(ctx).pop(true);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: _accent,
-              foregroundColor:
-                  _isParent ? Colors.white : AppColors.textPrimary,
+              backgroundColor: _signatureBg,
+              foregroundColor: _signatureFg,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
             child: const Text(
-              'Continue',
+              'Generate',
               style: TextStyle(
                 fontFamily: 'Nunito',
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
@@ -375,103 +320,51 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    if (phone == null || phone.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Add a phone number first.',
-            style: TextStyle(fontFamily: 'Nunito'),
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
+    final parent = context.read<ParentProvider>().currentParent;
+    final teacher = context.read<TeacherProvider>().currentTeacher;
+    final uid = _isParent ? parent?.firebaseUid : teacher?.firebaseUid;
+    final id = _isParent ? parent?.id : teacher?.id;
 
-    // Verify via OTP first
-    final completer = Completer<bool>();
-    bool codeSent = false;
+    if (id == null) return;
 
-    await authProvider.startPhoneVerification(
-      phoneNumber: phone,
-      onCodeSent: () {
-        codeSent = true;
-        if (!completer.isCompleted) completer.complete(true);
-      },
-      onAutoVerified: () {
-        if (!completer.isCompleted) completer.complete(true);
-      },
-      onError: (msg) {
-        debugPrint('OTP send failed: $msg');
-        if (!completer.isCompleted) completer.complete(false);
-      },
-    );
+    setState(() => _busy = true);
 
-    final sent = await completer.future;
-    if (!sent || !mounted || !codeSent) return;
-
-    final verified = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => OtpVerificationScreen(
-          phoneNumber: phone,
-          accentColor: _accent,
-          backgroundColor: _bg,
-          isSignup: false,
-          onVerified: () => Navigator.of(context).pop(true),
-        ),
-      ),
-    );
-
-    if (verified != true || !mounted) return;
-
-    // Generate new backup code
     final newCode = BackupCode.generate();
     final newHash = BCrypt.hashpw(newCode, BCrypt.gensalt());
 
-    if (uid == null) return;
+    // Save to cloud (best-effort)
+    if (uid != null) {
+      try {
+        await FirestoreService.instance
+            .rotateBackupCode(uid, widget.role, newHash)
+            .timeout(const Duration(seconds: 8));
+      } catch (e) {
+        debugPrint('Cloud backup code rotation failed (continuing): $e');
+      }
+    }
 
+    // Save locally
     try {
-      await FirestoreService.instance
-          .rotateBackupCode(uid, widget.role, newHash);
+      if (_isParent) {
+        await DatabaseService.instance
+            .updateParentBackupCodeHash(id, newHash);
+      } else {
+        await DatabaseService.instance
+            .updateTeacherBackupCodeHash(id, newHash);
+      }
     } catch (e) {
-      debugPrint('Cloud backup code rotation failed: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Could not update backup code. Check your internet.',
-              style: TextStyle(fontFamily: 'Nunito'),
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-      return;
-    }
-
-    // Update local DB, capture provider again after await
-    if (!mounted) return;
-    if (_isParent) {
-      final parent = context.read<ParentProvider>().currentParent;
-      if (parent?.id != null) {
-        await DatabaseService.instance
-            .updateParentBackupCodeHash(parent!.id!, newHash);
-      }
-    } else {
-      final teacher = context.read<TeacherProvider>().currentTeacher;
-      if (teacher?.id != null) {
-        await DatabaseService.instance
-            .updateTeacherBackupCodeHash(teacher!.id!, newHash);
-      }
+      debugPrint('Local backup code save failed: $e');
     }
 
     if (!mounted) return;
+    setState(() => _busy = false);
 
+    // Show the new code
     await BackupCodeDialog.show(
       context,
       code: newCode,
-      accentColor: _accent,
+      // Teal for teacher so code text/icons are visible in the dialog
+      accentColor: _actionColor,
     );
   }
 
@@ -497,151 +390,163 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
         : (context.watch<TeacherProvider>().currentTeacher?.phoneVerified ??
             false);
 
-    return Scaffold(
-      backgroundColor: _bg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+    final isTablet = Responsive.isTablet(context);
+
+    Widget content = SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+        vertical: 20,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              IconButton(
+                onPressed: () {
+                  SfxService.tap();
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(Icons.arrow_back,
+                    color: AppColors.textPrimary),
+                padding: EdgeInsets.zero,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              const Expanded(
+                child: Text('Account & Security', style: AppText.h2),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          if (_errorMessage != null) ...[
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.accentCoral.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+                border: Border.all(
+                  color: AppColors.accentCoral.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Row(
                 children: [
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          SfxService.tap();
-                          Navigator.of(context).pop();
-                        },
-                        icon: const Icon(Icons.arrow_back,
-                            color: AppColors.textPrimary),
-                        padding: EdgeInsets.zero,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      const Expanded(
-                        child: Text('Account & Security', style: AppText.h2),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  if (_errorMessage != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      decoration: BoxDecoration(
-                        color: AppColors.accentCoral.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(AppRadius.medium),
-                        border: Border.all(
-                          color: AppColors.accentCoral.withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline_rounded,
-                              color: AppColors.accentCoral, size: 20),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: AppText.caption.copyWith(
-                                color: AppColors.textCoral,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
-                  _SectionCard(
-                    icon: Icons.alternate_email_rounded,
-                    iconColor: _accent,
-                    title: 'Email',
-                    subtitle: email,
-                    trailing: emailVerified
-                        ? const _VerifiedBadge()
-                        : const _UnverifiedBadge(),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  _SectionCard(
-                    icon: Icons.phone_rounded,
-                    iconColor: _accent,
-                    title: 'Phone Number',
-                    subtitle: phone == null || phone.isEmpty
-                        ? 'Not set'
-                        : _maskPhone(phone),
-                    trailing: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        if (phone != null && phone.isNotEmpty)
-                          phoneVerified
-                              ? const _VerifiedBadge()
-                              : const _UnverifiedBadge(),
-                        const SizedBox(height: 4),
-                        TextButton(
-                          onPressed: _busy
-                              ? null
-                              : () {
-                                  SfxService.tap();
-                                  _changePhone();
-                                },
-                          style: TextButton.styleFrom(
-                            foregroundColor: _accent,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            minimumSize: const Size(0, 32),
-                          ),
-                          child: Text(
-                            phone == null || phone.isEmpty ? 'Add' : 'Change',
-                            style: const TextStyle(
-                              fontFamily: 'Nunito',
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  _SectionCard(
-                    icon: Icons.key_rounded,
-                    iconColor: _accent,
-                    title: 'Backup Code',
-                    subtitle:
-                        'Used to log in if you lose access to your phone.',
-                    trailing: TextButton(
-                      onPressed: _busy
-                          ? null
-                          : () {
-                              SfxService.tap();
-                              _regenerateBackupCode();
-                            },
-                      style: TextButton.styleFrom(
-                        foregroundColor: _accent,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        minimumSize: const Size(0, 32),
-                      ),
-                      child: const Text(
-                        'Regenerate',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                        ),
+                  const Icon(Icons.error_outline_rounded,
+                      color: AppColors.accentCoral, size: 20),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      _errorMessage!,
+                      style: AppText.caption.copyWith(
+                        color: AppColors.textCoral,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xl),
                 ],
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+
+          _SectionCard(
+            icon: Icons.alternate_email_rounded,
+            iconColor: _actionColor,
+            title: 'Email',
+            subtitle: email.isEmpty ? 'Not set' : maskEmail(email),
+            trailing: emailVerified
+                ? const _VerifiedBadge()
+                : const _UnverifiedBadge(),
           ),
-        ),
+          const SizedBox(height: AppSpacing.md),
+
+          _SectionCard(
+            icon: Icons.phone_rounded,
+            iconColor: _actionColor,
+            title: 'Phone Number',
+            subtitle: phone == null || phone.isEmpty
+                ? 'Not set'
+                : _maskPhone(phone),
+            trailing: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (phone != null && phone.isNotEmpty)
+                  phoneVerified
+                      ? const _VerifiedBadge()
+                      : const _UnverifiedBadge(),
+                const SizedBox(height: 4),
+                TextButton(
+                  onPressed: _busy
+                      ? null
+                      : () {
+                          SfxService.tap();
+                          _changePhone();
+                        },
+                  style: TextButton.styleFrom(
+                    foregroundColor: _actionColor,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: const Size(0, 32),
+                  ),
+                  child: Text(
+                    phone == null || phone.isEmpty ? 'Add' : 'Change',
+                    style: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          _SectionCard(
+            icon: Icons.key_rounded,
+            iconColor: _actionColor,
+            title: 'Backup Code',
+            subtitle:
+                'Used to log in if you lose access to your device.',
+            trailing: TextButton(
+              onPressed: _busy
+                  ? null
+                  : () {
+                      SfxService.tap();
+                      _regenerateBackupCode();
+                    },
+              style: TextButton.styleFrom(
+                foregroundColor: _actionColor,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 32),
+              ),
+              child: const Text(
+                'Regenerate',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+        ],
       ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: _bg,
+      body: SafeArea(child: content),
     );
   }
 }
@@ -687,19 +592,24 @@ class _SectionCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: AppText.caption,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(subtitle, style: AppText.caption),
                 ),
               ],
             ),
@@ -710,7 +620,6 @@ class _SectionCard extends StatelessWidget {
     );
   }
 }
-
 class _VerifiedBadge extends StatelessWidget {
   const _VerifiedBadge();
 

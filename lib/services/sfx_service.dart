@@ -8,22 +8,21 @@ class SfxService {
 
   static void init(SettingsProvider provider) {
     _settings = provider;
+    _player.setVolume(provider.sfxVolume);
+    _settings?.addListener(_onVolumeChanged);
+  }
+
+  static void _onVolumeChanged() {
+    _player.setVolume(_settings?.sfxVolume ?? 1.0);
   }
 
   static Future<void> _play(String file) async {
     try {
-      if (_settings != null && _settings!.sfxVolume <= 0) {
-        return;
-      }
+      if (_settings != null && _settings!.sfxVolume <= 0) return;
 
-      // Do NOT call _player.stop() here. audioplayers automatically
-      // interrupts the current sound when play() is called, so calling
-      // stop() first just adds latency without changing the result.
-
-      if (_settings != null) {
-        await _player.setVolume(_settings!.sfxVolume);
-      }
-
+      // No setVolume() here — set once in init + listener.
+      // audioplayers automatically interrupts the current sound
+      // when play() is called, so rapid taps never queue.
       await _player.play(AssetSource('audio/sfx/$file'));
     } catch (e) {
       debugPrint('SFX failed ($file): $e');
@@ -37,8 +36,4 @@ class SfxService {
   static Future<void> celebration() => _play('sfx_celebration.mp3');
   static Future<void> transition() => _play('sfx_transition.mp3');
   static Future<void> unlock() => _play('sfx_unlock.mp3');
-
-  static Future<void> dispose() async {
-    await _player.dispose();
-  }
 }

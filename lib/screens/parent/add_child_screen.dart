@@ -12,6 +12,8 @@ import '../../services/database_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/sfx_service.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/validators.dart';
+import '../../widgets/app_form.dart';
 
 class AddChildScreen extends StatefulWidget {
   const AddChildScreen({super.key});
@@ -25,6 +27,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
   final _displayNameController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _pinController = TextEditingController();
   int _selectedGrade = 1;
   bool _isSubmitting = false;
@@ -35,11 +38,13 @@ class _AddChildScreenState extends State<AddChildScreen> {
     _displayNameController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _pinController.dispose();
     super.dispose();
   }
 
   Future<void> _handleAddChild() async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
     if (_pinController.text.length != 4) {
       setState(() => _errorMessage = 'PIN must be exactly 4 digits.');
@@ -57,6 +62,11 @@ class _AddChildScreenState extends State<AddChildScreen> {
       return;
     }
 
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+
     Map<String, String>? parentCreds =
         await CredentialStorage.instance.read(parentUid);
 
@@ -64,7 +74,10 @@ class _AddChildScreenState extends State<AddChildScreen> {
       if (!mounted) return;
 
       final password = await _promptForPassword(parent.fullName, parent.email);
-      if (password == null || !mounted) return;
+      if (password == null || !mounted) {
+        if (mounted) setState(() => _isSubmitting = false);
+        return;
+      }
 
       await authProvider.saveCredentials(
         uid: parentUid,
@@ -77,15 +90,11 @@ class _AddChildScreenState extends State<AddChildScreen> {
         if (!mounted) return;
         setState(() {
           _errorMessage = 'Could not verify. Please try again.';
+          _isSubmitting = false;
         });
         return;
       }
     }
-
-    setState(() {
-      _isSubmitting = true;
-      _errorMessage = null;
-    });
 
     final childUsername = _usernameController.text.trim().toLowerCase();
     final childPassword = _passwordController.text;
@@ -264,6 +273,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
           ElevatedButton(
             onPressed: () {
               if (controller.text.isEmpty) return;
+              SfxService.tap();
               Navigator.of(ctx).pop(controller.text);
             },
             style: ElevatedButton.styleFrom(
@@ -290,245 +300,277 @@ class _AddChildScreenState extends State<AddChildScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.parentBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: AppSpacing.md),
+    final isTablet = Responsive.isTablet(context);
+    final imgSize = Responsive.imageSize(context, base: 90);
 
-                    IconButton(
-                      onPressed: () {
-                        SfxService.tap();
-                        Navigator.of(context).pop();
-                      },
-                      icon: const Icon(Icons.arrow_back,
-                          color: AppColors.textPrimary),
-                      alignment: Alignment.centerLeft,
-                      padding: EdgeInsets.zero,
-                    ),
+    Widget content = SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
+        vertical: 20,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: AppSpacing.md),
 
-                    const SizedBox(height: AppSpacing.sm),
+            IconButton(
+              onPressed: () {
+                SfxService.tap();
+                Navigator.of(context).pop();
+              },
+              icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+              alignment: Alignment.centerLeft,
+              padding: EdgeInsets.zero,
+            ),
 
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Add Child Profile', style: AppText.h1),
-                              SizedBox(height: 2),
-                              Text(
-                                'Create an account for your child',
-                                style: AppText.caption,
-                              ),
-                            ],
-                          ),
-                        ),
-                        Image.asset(
-                          'assets/images/mascot/motter_caring.png',
-                          width: 90,
-                          height: 90,
-                          fit: BoxFit.contain,
-                          cacheWidth: 180,
-                          errorBuilder: (_, _, _) => Container(
-                            width: 90,
-                            height: 90,
-                            decoration: BoxDecoration(
-                              color:
-                                  AppColors.accentPurple.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.accentPurple,
-                                width: 2,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.child_care_rounded,
-                              color: AppColors.accentPurple,
-                              size: 42,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+            const SizedBox(height: AppSpacing.sm),
 
-                    const SizedBox(height: AppSpacing.xl),
-
-                    _FieldLabel('Display Name'),
-                    TextFormField(
-                      controller: _displayNameController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: _inputDecoration('Child\'s name'),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Required';
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    _FieldLabel('Username'),
-                    TextFormField(
-                      controller: _usernameController,
-                      decoration: _inputDecoration('Username for login'),
-                      validator: (v) {
-                        if (v == null || v.trim().length < 3) {
-                          return 'At least 3 characters';
-                        }
-                        if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(v.trim())) {
-                          return 'Only letters, numbers, underscores';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    _FieldLabel('Grade Level'),
-                    GridView.count(
-                      crossAxisCount: 3,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 8,
-                      crossAxisSpacing: 8,
-                      childAspectRatio: 2.4,
-                      children: List.generate(6, (index) {
-                        final grade = index + 1;
-                        final isSelected = _selectedGrade == grade;
-                        return GestureDetector(
-                          onTap: () {
-                            SfxService.tap();
-                            setState(() => _selectedGrade = grade);
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? AppColors.accentPurple
-                                  : AppColors.surface,
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.medium),
-                              border: Border.all(
-                                color: isSelected
-                                    ? AppColors.accentPurple
-                                    : AppColors.border,
-                                width: isSelected ? 2 : 1,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                'Grade $grade',
-                                style: TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 13,
-                                  color: isSelected
-                                      ? Colors.white
-                                      : AppColors.textPrimary,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    _FieldLabel('Password'),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      decoration: _inputDecoration('At least 6 characters'),
-                      validator: (v) {
-                        if (v == null || v.length < 6) {
-                          return 'At least 6 characters';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    _FieldLabel('4-digit PIN'),
-                    TextFormField(
-                      controller: _pinController,
-                      obscureText: true,
-                      maxLength: 4,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      decoration: _inputDecoration('4-digit PIN'),
-                      validator: (v) {
-                        if (v == null || v.length != 4) {
-                          return 'PIN must be exactly 4 digits';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: AppSpacing.sm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Add Child Profile', style: AppText.h1),
+                      SizedBox(height: 2),
                       Text(
-                        _errorMessage!,
-                        style: const TextStyle(
-                          color: AppColors.textCoral,
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w600,
-                        ),
+                        'Create an account for your child',
+                        style: AppText.caption,
                       ),
                     ],
-
-                    const SizedBox(height: AppSpacing.xl),
-
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _isSubmitting ? null : _handleAddChild,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentPurple,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.large),
-                          ),
-                        ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2.5,
-                                ),
-                              )
-                            : const Text(
-                                'ADD CHILD',
-                                style: TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
+                  ),
+                ),
+                Image.asset(
+                  'assets/images/mascot/motter_caring.png',
+                  width: imgSize,
+                  height: imgSize,
+                  fit: BoxFit.contain,
+                  cacheWidth: (imgSize * 2).toInt(),
+                  errorBuilder: (_, _, _) => Container(
+                    width: imgSize,
+                    height: imgSize,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentPurple.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.accentPurple,
+                        width: 2,
                       ),
                     ),
+                    child: Icon(
+                      Icons.child_care_rounded,
+                      color: AppColors.accentPurple,
+                      size: imgSize * 0.45,
+                    ),
+                  ),
+                ),
+              ],
+            ),
 
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
+            const SizedBox(height: AppSpacing.xl),
+
+            _FieldLabel('Display Name'),
+            TextFormField(
+              controller: _displayNameController,
+              textCapitalization: TextCapitalization.words,
+              decoration: _inputDecoration('Child\'s name'),
+              validator: Validators.displayName,
+            ),
+
+            const SizedBox(height: AppSpacing.md),
+
+            _FieldLabel('Username'),
+            TextFormField(
+              controller: _usernameController,
+              decoration: _inputDecoration('Username for login'),
+              validator: Validators.username,
+            ),
+
+            const SizedBox(height: AppSpacing.md),
+
+            _FieldLabel('Grade Level'),
+            GridView.count(
+              crossAxisCount: 3,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 2.4,
+              children: List.generate(6, (index) {
+                final grade = index + 1;
+                final isSelected = _selectedGrade == grade;
+                return GestureDetector(
+                  onTap: () {
+                    SfxService.tap();
+                    setState(() => _selectedGrade = grade);
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected ? AppColors.accentPurple : AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.medium),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppColors.accentPurple
+                            : AppColors.border,
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            'Grade $grade',
+                            style: TextStyle(
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: isSelected
+                                  ? Colors.white
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+
+            const SizedBox(height: AppSpacing.md),
+
+            const FieldLabel('Password'),
+            PasswordField(
+              controller: _passwordController,
+              hintText: 'Enter your password',
+              textInputAction: TextInputAction.next,
+              focusColor: AppColors.accentPurple,
+              validator: (v) => Validators.password(v),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(top: 6, left: 4),
+              child: Text(
+                'At least 8 characters with uppercase, lowercase, number, and symbol.',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                  height: 1.4,
                 ),
               ),
             ),
-          ),
+
+            const SizedBox(height: AppSpacing.md),
+
+            const FieldLabel('Confirm Password'),
+            PasswordField(
+              controller: _confirmPasswordController,
+              hintText: 'Re-enter your password',
+              textInputAction: TextInputAction.next,
+              focusColor: AppColors.accentPurple,
+              validator: (v) => Validators.confirmPassword(
+                v,
+                _passwordController.text,
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.md),
+
+            _FieldLabel('4-digit PIN'),
+            TextFormField(
+              controller: _pinController,
+              obscureText: true,
+              maxLength: 4,
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+              ],
+              decoration: _inputDecoration('4-digit PIN')
+                  .copyWith(counterText: ''),
+              validator: (v) {
+                if (v == null || v.length != 4) {
+                  return 'PIN must be exactly 4 digits';
+                }
+                return null;
+              },
+            ),
+
+            if (_errorMessage != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                _errorMessage!,
+                style: const TextStyle(
+                  color: AppColors.textCoral,
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+
+            const SizedBox(height: AppSpacing.xl),
+
+            SizedBox(
+              height: Responsive.buttonHeight(context),
+              child: ElevatedButton(
+                onPressed: _isSubmitting
+                    ? null
+                    : () {
+                        SfxService.tap();
+                        _handleAddChild();
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentPurple,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.large),
+                  ),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'ADD CHILD',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.xl),
+          ],
         ),
       ),
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.parentBg,
+      body: SafeArea(child: content),
     );
   }
 

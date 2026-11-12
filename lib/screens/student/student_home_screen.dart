@@ -36,7 +36,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Retry any pending cloud syncs on app open
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _retrySyncs();
     });
@@ -50,7 +49,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     final connectivity = context.read<ConnectivityProvider>();
     if (student == null) return;
 
-    // Fire-and-forget cloud sync to prevent UI freezes if offline.
     unawaited(() async {
       try {
         await SyncService.instance.syncAll(
@@ -63,7 +61,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       }
     }());
 
-    // Load Word of the Day
     await _loadWordOfDay();
   }
 
@@ -179,10 +176,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
     if (confirmed != true || !context.mounted) return;
 
-    // Clear the session
     studentProvider.logout();
 
-    // Return to profile list, preserving role-selection in the stack
     Navigator.of(context).pushNamedAndRemoveUntil(
       '/student-profile-list',
       ModalRoute.withName('/role-selection'),
@@ -193,7 +188,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   Widget build(BuildContext context) {
     final student = context.watch<StudentProvider>().currentStudent;
 
-    // Guard: no session → redirect to profile list safely.
     if (student == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) {
@@ -221,8 +215,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   child: ConstrainedBox(
                     constraints: BoxConstraints(minHeight: constraints.maxHeight),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: Responsive.horizontalPadding(context),
                         vertical: 16,
                       ),
                       child: Column(
@@ -302,7 +296,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                           const SizedBox(height: 24),
 
                           SizedBox(
-                            height: 56,
+                            height: Responsive.buttonHeight(context),
                             child: ElevatedButton(
                               onPressed: () {
                                 SfxService.tap();
@@ -315,12 +309,15 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                               ),
-                              child: const Text(
-                                'Save & Exit',
-                                style: TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15,
+                              child: const FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'Save & Exit',
+                                  style: TextStyle(
+                                    fontFamily: 'Nunito',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                  ),
                                 ),
                               ),
                             ),
@@ -381,21 +378,29 @@ class _Header extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Hello, ${student.displayName}!',
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Hello, ${student.displayName}!',
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
-                  Text(
-                    '${student.totalPoints} points earned',
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 12,
-                      color: AppColors.textMuted,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '${student.totalPoints} points earned',
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ),
                 ],
@@ -424,25 +429,37 @@ class _Header extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  isOnline
-                      ? Icons.cloud_done_rounded
-                      : Icons.cloud_off_rounded,
-                  size: 14,
-                  color: isOnline
-                      ? AppColors.textTeal
-                      : AppColors.textMuted,
-                ),
+                if (isOnline)
+                  const Icon(
+                    Icons.cloud_done_rounded,
+                    size: 14,
+                    color: AppColors.textTeal,
+                  )
+                else
+                  Image.asset(
+                    'assets/images/mascot/yse_tinkering.png',
+                    width: 16,
+                    height: 16,
+                    cacheWidth: 32,
+                    errorBuilder: (_, _, _) => const Icon(
+                      Icons.cloud_off_rounded,
+                      size: 14,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
                 const SizedBox(width: 6),
-                Text(
-                  isOnline ? 'Online, all features' : 'Offline, practice only',
-                  style: TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: isOnline
-                        ? AppColors.textTeal
-                        : AppColors.textMuted,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    isOnline ? 'Online, all features' : 'Offline, practice only',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: isOnline
+                          ? AppColors.textTeal
+                          : AppColors.textMuted,
+                    ),
                   ),
                 ),
               ],
@@ -500,21 +517,29 @@ class _HomeCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: AppColors.textPrimary,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
-                  Text(
-                    sublabel,
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 12,
-                      color: AppColors.textMuted,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      sublabel,
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ),
                 ],
@@ -610,16 +635,24 @@ class _WordOfDayCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    word.text,
-                    style: AppText.h1.copyWith(fontSize: 24),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      word.text,
+                      style: AppText.h1.copyWith(fontSize: 24),
+                    ),
                   ),
                   if (word.definition.isNotEmpty)
-                    Text(
-                      word.definition,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.caption,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        word.definition,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.caption,
+                      ),
                     ),
                 ],
               ),
@@ -676,9 +709,12 @@ class _WordOfDaySheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text(
-            word.text,
-            style: AppText.display.copyWith(fontSize: 36),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              word.text,
+              style: AppText.display.copyWith(fontSize: 36),
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Container(
@@ -723,18 +759,21 @@ class _WordOfDaySheet extends StatelessWidget {
           ],
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: Responsive.buttonHeight(context),
             child: ElevatedButton.icon(
               onPressed: () {
                 SfxService.tap();
                 onPlayAudio();
               },
               icon: const Icon(Icons.volume_up_rounded),
-              label: const Text(
-                'LISTEN',
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w700,
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'LISTEN',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               style: ElevatedButton.styleFrom(

@@ -28,7 +28,6 @@ class CredentialStorage {
     );
   }
 
-  /// Read credentials for a specific UID.
   Future<Map<String, String>?> read(String uid) async {
     final map = await _loadAll();
     if (!map.containsKey(uid)) return null;
@@ -43,7 +42,6 @@ class CredentialStorage {
     }
   }
 
-  /// Clear credentials for a specific UID.
   Future<void> clear(String uid) async {
     final map = await _loadAll();
     map.remove(uid);
@@ -53,7 +51,6 @@ class CredentialStorage {
     );
   }
 
-  /// Clear all saved credentials (factory reset).
   Future<void> clearAll() async {
     await _storage.delete(key: _keyCredentialsMap);
   }

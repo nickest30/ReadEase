@@ -1,0 +1,59 @@
+# ReadEase Capstone 2 — Submission Index
+
+**Master reference for all documentation files.**
+**Last updated:** October 2026
+
+This submission contains multiple source documents. This index maps each manuscript section to its authoritative source file.
+
+## Chapter 2 — Project Description
+
+| Section | Content | Source File |
+|---------|---------|-------------|
+| 2.1 | Project context & overview | Capstone 2 Documentation Package, §3 |
+| 2.2 | New features added | Capstone 2 Documentation Package, §3 |
+| 2.3 | Functional Requirements (FR-01 to FR-47) | Capstone 2 Documentation Package, §4 |
+| 2.4 | Non-Functional Requirements (NFR-01 to NFR-31) | Capstone 2 Documentation Package, §5 |
+
+## Chapter 3 — Technical Design
+
+| Section | Content | Source File |
+|---------|---------|-------------|
+| 3.1 | ERD (Entity Relationship Diagram) | Schema v2.0, §2–§3 |
+| 3.2 | Database design decisions | Schema v2.0, §8 |
+| 3.3 | Data Flow Diagram (DFD) | Schema v2.0, §5 + §7 |
+| 3.4 | Context Flow Diagram (CFD) | Schema v2.0, §5 |
+
+## Chapter 4 — Results
+
+| Section | Content | Source File |
+|---------|---------|-------------|
+| 4.1 | Bug resolution summary | Capstone 2 Documentation Package, §10 |
+| 4.2 | ISO 25010 evaluation instrument | Capstone 2 Documentation Package, §16 |
+| 4.3 | ISO 25010 results (after rollout) | TBD |
+
+## Chapter 5 — Conclusions
+
+| Section | Content | Source File |
+|---------|---------|-------------|
+| 5.1 | Limitations (L1–L11) | Capstone 2 Documentation Package, §20 |
+| 5.2 | Future work (F1–F9) | Capstone 2 Documentation Package, §20 |
+| 5.3 | Recommendations | Capstone 2 Documentation Package, §20 |
+
+## Appendices
+
+| Appendix | Content | Source File |
+|----------|---------|-------------|
+| A | Full Firestore + SQLite schema | Schema v2.0, §2–§3 |
+| B | SQLite version history (v2–v23) | Schema v2.0, §6 |
+| C | Firestore security rules | `firestore.rules` (project root) |
+| D | ISO 25010 IT Expert Survey (printed form) | Capstone 2 Documentation Package, §16 |
+
+## Document Authority Rules
+
+1. **`ReadEase Database Schema — v2.0.txt`** is the single source of truth for database structure, ERD, DFD, and design rationale. Any conflicting information in other files is superseded by v2.0.
+
+2. **`ReadEase Capstone 2 Documentation Package.docx`** is the authoritative source for requirements (FRs, NFRs), bug inventory, ISO 25010 instrument, and limitations.
+
+3. **The `.docx` file version of the schema is deprecated** — it has rendering issues and should not be distributed. Use the `.txt` version.
+
+4. **This index is authoritative for section-to-file mapping.** If in doubt, look here first.

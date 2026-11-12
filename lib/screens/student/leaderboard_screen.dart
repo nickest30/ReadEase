@@ -61,7 +61,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           'isCurrentUser': false,
         };
       }).toList()
-        ..sort((a, b) => (b['totalPoints'] as int).compareTo(a['totalPoints'] as int));
+        ..sort((a, b) =>
+            (b['totalPoints'] as int).compareTo(a['totalPoints'] as int));
 
       setState(() {
         _localEntries = entries;
@@ -83,7 +84,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final student = context.read<StudentProvider>().currentStudent;
     if (student == null) return;
 
-    if (student.classFirestoreId == null || student.classFirestoreId!.isEmpty) {
+    if (student.classFirestoreId == null ||
+        student.classFirestoreId!.isEmpty) {
       if (!mounted) return;
       setState(() {
         _classEntries = [];
@@ -176,7 +178,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     if (student == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil('/student-profile-list', (route) => false);
+          Navigator.of(context).pushNamedAndRemoveUntil(
+              '/student-profile-list', (route) => false);
         }
       });
       return const Scaffold(
@@ -185,36 +188,42 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       );
     }
 
+    final isTablet = Responsive.isTablet(context);
+
+    Widget content = Column(
+      children: [
+        _buildHeader(),
+        _buildTabs(),
+        const SizedBox(height: AppSpacing.sm),
+        Expanded(
+          child: _selectedTab == 0
+              ? _buildLocalTab(student)
+              : _selectedTab == 1
+                  ? _buildClassTab(student)
+                  : _buildGlobalTab(student),
+        ),
+      ],
+    );
+
+    if (isTablet) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 700),
+          child: content,
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.studentBg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 700),
-            child: Column(
-              children: [
-                _buildHeader(),
-                _buildTabs(),
-                const SizedBox(height: AppSpacing.sm),
-                Expanded(
-                  child: _selectedTab == 0
-                      ? _buildLocalTab(student)
-                      : _selectedTab == 1
-                          ? _buildClassTab(student)
-                          : _buildGlobalTab(student),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      body: SafeArea(child: content),
     );
   }
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xl,
+      padding: EdgeInsets.symmetric(
+        horizontal: Responsive.horizontalPadding(context),
         vertical: AppSpacing.md,
       ),
       child: Row(
@@ -245,7 +254,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   Widget _buildTabs() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      padding: EdgeInsets.symmetric(
+          horizontal: Responsive.horizontalPadding(context)),
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
@@ -254,9 +264,18 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         ),
         child: Row(
           children: [
-            _TabButton(label: 'Local', selected: _selectedTab == 0, onTap: () => _onTabSelected(0)),
-            _TabButton(label: 'Class', selected: _selectedTab == 1, onTap: () => _onTabSelected(1)),
-            _TabButton(label: 'Global', selected: _selectedTab == 2, onTap: () => _onTabSelected(2)),
+            _TabButton(
+                label: 'Local',
+                selected: _selectedTab == 0,
+                onTap: () => _onTabSelected(0)),
+            _TabButton(
+                label: 'Class',
+                selected: _selectedTab == 1,
+                onTap: () => _onTabSelected(1)),
+            _TabButton(
+                label: 'Global',
+                selected: _selectedTab == 2,
+                onTap: () => _onTabSelected(2)),
           ],
         ),
       ),
@@ -265,13 +284,17 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   Widget _buildLocalTab(Student currentStudent) {
     if (_loadingLocal) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.accentTeal));
+      return const Center(
+          child: CircularProgressIndicator(color: AppColors.accentTeal));
     }
 
     if (_localError != null) {
       return SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: ErrorState(title: 'Can\'t load rankings', message: _localError, onRetry: _loadLocal),
+        child: ErrorState(
+            title: 'Can\'t load rankings',
+            message: _localError,
+            onRetry: _loadLocal),
       );
     }
 
@@ -287,7 +310,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     }
 
     final entries = _localEntries.map((e) {
-      final isMe = e['uid'] == (currentStudent.firebaseUid ?? 'local-${currentStudent.id}');
+      final isMe = e['uid'] ==
+          (currentStudent.firebaseUid ?? 'local-${currentStudent.id}');
       e['isCurrentUser'] = isMe;
       return e;
     }).toList();
@@ -300,7 +324,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   Widget _buildClassTab(Student currentStudent) {
-    final hasClass = currentStudent.classFirestoreId != null && currentStudent.classFirestoreId!.isNotEmpty;
+    final hasClass = currentStudent.classFirestoreId != null &&
+        currentStudent.classFirestoreId!.isNotEmpty;
 
     if (!hasClass) {
       return _buildJoinClassPrompt();
@@ -316,24 +341,47 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   Widget _buildClassBanner(Student currentStudent) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.sm),
+      padding: EdgeInsets.symmetric(
+          horizontal: Responsive.horizontalPadding(context),
+          vertical: AppSpacing.sm),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
         decoration: BoxDecoration(
           color: AppColors.accentPurple.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(AppRadius.medium),
-          border: Border.all(color: AppColors.accentPurple.withValues(alpha: 0.4)),
+          border:
+              Border.all(color: AppColors.accentPurple.withValues(alpha: 0.4)),
         ),
         child: Row(
           children: [
-            const Icon(Icons.class_rounded, color: AppColors.accentPurple, size: 20),
+            const Icon(Icons.class_rounded,
+                color: AppColors.accentPurple, size: 20),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('YOUR CLASS', style: TextStyle(fontFamily: 'Nunito', fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: AppColors.textPurple)),
-                  Text(currentStudent.className ?? 'Class', overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: 'Nunito', fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textPurple)),
+                  const Text('YOUR CLASS',
+                      style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
+                          color: AppColors.textPurple)),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      currentStudent.className ?? 'Class',
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontFamily: 'Nunito',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPurple),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -345,13 +393,17 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   Widget _buildClassContent(Student currentStudent) {
     if (_loadingClass) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.accentTeal));
+      return const Center(
+          child: CircularProgressIndicator(color: AppColors.accentTeal));
     }
 
     if (_classError != null) {
       return SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: ErrorState(title: 'Can\'t load class rankings', message: _classError, onRetry: _loadClass),
+        child: ErrorState(
+            title: 'Can\'t load class rankings',
+            message: _classError,
+            onRetry: _loadClass),
       );
     }
 
@@ -375,7 +427,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         color: AppColors.accentTeal,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: const EmptyState(icon: Icons.emoji_events_outlined, title: 'No rankings yet', subtitle: 'Take a quiz to appear on the board!'),
+          child: const EmptyState(
+              icon: Icons.emoji_events_outlined,
+              title: 'No rankings yet',
+              subtitle: 'Take a quiz to appear on the board!'),
         ),
       );
     }
@@ -398,27 +453,38 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   Widget _buildJoinClassPrompt() {
+    final imgSize = Responsive.imageSize(context, base: 160);
+
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       child: Column(
         children: [
           Image.asset(
             'assets/images/mascot/yse_thinking.png',
-            width: 160,
-            height: 160,
-            cacheWidth: 300,
-            errorBuilder: (_, _, _) => const SizedBox(height: 160, child: Center(child: Icon(Icons.class_rounded, size: 80, color: AppColors.accentPurple))),
+            width: imgSize,
+            height: imgSize,
+            cacheWidth: (imgSize * 2).toInt(),
+            errorBuilder: (_, _, _) => SizedBox(
+                height: imgSize,
+                child: Center(
+                    child: Icon(Icons.class_rounded,
+                        size: imgSize * 0.5,
+                        color: AppColors.accentPurple))),
           ),
           const SizedBox(height: AppSpacing.sm),
-          const Text('No class yet', style: AppText.h2, textAlign: TextAlign.center),
+          const Text('No class yet',
+              style: AppText.h2, textAlign: TextAlign.center),
           const SizedBox(height: AppSpacing.xs),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-            child: Text('Join a class with your teacher\'s code to see how you rank with classmates.', textAlign: TextAlign.center, style: AppText.caption),
+            child: Text(
+                'Join a class with your teacher\'s code to see how you rank with classmates.',
+                textAlign: TextAlign.center,
+                style: AppText.caption),
           ),
           const SizedBox(height: AppSpacing.xl),
           SizedBox(
-            height: 52,
+            height: Responsive.buttonHeight(context),
             child: ElevatedButton.icon(
               onPressed: () async {
                 SfxService.tap();
@@ -432,12 +498,20 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 }
               },
               icon: const Icon(Icons.group_add_rounded, size: 20),
-              label: const Text('Join a Class', style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w700, fontSize: 15)),
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('Join a Class',
+                    style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15)),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentPurple,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.large)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.large)),
               ),
             ),
           ),
@@ -448,13 +522,17 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   Widget _buildGlobalTab(Student currentStudent) {
     if (_loadingGlobal) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.accentTeal));
+      return const Center(
+          child: CircularProgressIndicator(color: AppColors.accentTeal));
     }
 
     if (_globalError != null) {
       return SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: ErrorState(title: 'Can\'t load global rankings', message: _globalError, onRetry: _loadGlobal),
+        child: ErrorState(
+            title: 'Can\'t load global rankings',
+            message: _globalError,
+            onRetry: _loadGlobal),
       );
     }
 
@@ -464,8 +542,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       return SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: isOnline
-            ? const EmptyState(icon: Icons.emoji_events_outlined, title: 'No global rankings yet', subtitle: 'Be the first to make it to the top!')
-            : EmptyState(icon: Icons.cloud_off_rounded, title: 'You\'re offline', subtitle: 'Connect to see the global leaderboard.', actionLabel: 'Try Again', onAction: _loadGlobal),
+            ? const EmptyState(
+                icon: Icons.emoji_events_outlined,
+                title: 'No global rankings yet',
+                subtitle: 'Be the first to make it to the top!')
+            : EmptyState(
+                icon: Icons.cloud_off_rounded,
+                title: 'You\'re offline',
+                subtitle: 'Connect to see the global leaderboard.',
+                actionLabel: 'Try Again',
+                onAction: _loadGlobal),
       );
     }
 
@@ -486,25 +572,34 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     );
   }
 
-  Widget _buildRankedContent(List<Map<String, dynamic>> entries, {bool showHero = false}) {
+  Widget _buildRankedContent(List<Map<String, dynamic>> entries,
+      {bool showHero = false}) {
+    final imgSize = Responsive.imageSize(context, base: 160);
+
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      padding: EdgeInsets.symmetric(
+          horizontal: Responsive.horizontalPadding(context)),
       child: Column(
         children: [
           if (showHero) ...[
             const SizedBox(height: AppSpacing.sm),
             Image.asset(
               'assets/images/mascot/yse_victory.png',
-              width: 160,
-              height: 160,
+              width: imgSize,
+              height: imgSize,
               fit: BoxFit.contain,
-              cacheWidth: 300,
+              cacheWidth: (imgSize * 2).toInt(),
               errorBuilder: (_, _, _) => Container(
-                width: 160,
-                height: 160,
-                decoration: BoxDecoration(color: AppColors.accentYellow.withValues(alpha: 0.15), shape: BoxShape.circle, border: Border.all(color: AppColors.accentYellow, width: 2)),
-                child: const Icon(Icons.emoji_events_rounded, size: 72, color: AppColors.accentYellow),
+                width: imgSize,
+                height: imgSize,
+                decoration: BoxDecoration(
+                    color: AppColors.accentYellow.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                    border:
+                        Border.all(color: AppColors.accentYellow, width: 2)),
+                child: Icon(Icons.emoji_events_rounded,
+                    size: imgSize * 0.45, color: AppColors.accentYellow),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -526,15 +621,34 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final third = entries.length > 2 ? entries[2] : null;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.lg),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(AppRadius.xl), border: Border.all(color: AppColors.border)),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.lg),
+      decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          border: Border.all(color: AppColors.border)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          if (second != null) _PodiumEntry(rank: 2, data: second, height: 90, color: const Color(0xFF9E9E9E)),
-          if (first != null) _PodiumEntry(rank: 1, data: first, height: 120, color: AppColors.accentYellow),
-          if (third != null) _PodiumEntry(rank: 3, data: third, height: 70, color: const Color(0xFFCD7F32)),
+          if (second != null)
+            _PodiumEntry(
+                rank: 2,
+                data: second,
+                height: 90,
+                color: const Color(0xFF9E9E9E)),
+          if (first != null)
+            _PodiumEntry(
+                rank: 1,
+                data: first,
+                height: 120,
+                color: AppColors.accentYellow),
+          if (third != null)
+            _PodiumEntry(
+                rank: 3,
+                data: third,
+                height: 70,
+                color: const Color(0xFFCD7F32)),
         ],
       ),
     );
@@ -552,20 +666,26 @@ class _PodiumEntry extends StatelessWidget {
   final double height;
   final Color color;
 
-  const _PodiumEntry({required this.rank, required this.data, required this.height, required this.color});
+  const _PodiumEntry(
+      {required this.rank,
+      required this.data,
+      required this.height,
+      required this.color});
 
   @override
   Widget build(BuildContext context) {
     final name = (data['displayName'] as String?) ?? 'Unknown';
     final points = data['totalPoints'] ?? 0;
     final isCurrentUser = data['isCurrentUser'] == true;
-    final avatarIndex = (data['avatarIndex'] as int?) ?? fallbackAvatarIndex(name);
+    final avatarIndex =
+        (data['avatarIndex'] as int?) ?? fallbackAvatarIndex(name);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (rank == 1)
-          const Icon(Icons.emoji_events_rounded, color: AppColors.accentYellow, size: 28)
+          const Icon(Icons.emoji_events_rounded,
+              color: AppColors.accentYellow, size: 28)
         else
           const SizedBox(height: 28),
         const SizedBox(height: 4),
@@ -575,7 +695,9 @@ class _PodiumEntry extends StatelessWidget {
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.15),
             shape: BoxShape.circle,
-            border: Border.all(color: isCurrentUser ? AppColors.accentTeal : color, width: isCurrentUser ? 3 : 2),
+            border: Border.all(
+                color: isCurrentUser ? AppColors.accentTeal : color,
+                width: isCurrentUser ? 3 : 2),
           ),
           padding: const EdgeInsets.all(3),
           child: ClipOval(
@@ -590,10 +712,29 @@ class _PodiumEntry extends StatelessWidget {
         const SizedBox(height: 4),
         SizedBox(
           width: 70,
-          child: Text(name, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, maxLines: 1, style: const TextStyle(fontFamily: 'Nunito', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(name,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                style: const TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary)),
+          ),
         ),
         const SizedBox(height: 2),
-        Text('$points pts', style: TextStyle(fontFamily: 'Nunito', fontSize: 10, fontWeight: FontWeight.w700, color: color)),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text('$points pts',
+              style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: color)),
+        ),
         const SizedBox(height: 4),
         Container(
           width: 60,
@@ -603,7 +744,13 @@ class _PodiumEntry extends StatelessWidget {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
             border: Border.all(color: color.withValues(alpha: 0.6), width: 1.5),
           ),
-          child: Center(child: Text('#$rank', style: TextStyle(fontFamily: 'Nunito', fontSize: 18, fontWeight: FontWeight.w800, color: color))),
+          child: Center(
+              child: Text('#$rank',
+                  style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: color))),
         ),
       ],
     );
@@ -613,7 +760,13 @@ class _PodiumEntry extends StatelessWidget {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     return Container(
       color: bg,
-      child: Center(child: Text(initial, style: const TextStyle(fontFamily: 'Nunito', fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white))),
+      child: Center(
+          child: Text(initial,
+              style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white))),
     );
   }
 }
@@ -638,19 +791,36 @@ class _RankRow extends StatelessWidget {
     final grade = data['gradeLevel'] ?? '?';
     final badgeCount = data['badgeCount'] ?? 0;
     final isCurrentUser = data['isCurrentUser'] == true;
-    final avatarIndex = (data['avatarIndex'] as int?) ?? fallbackAvatarIndex(name);
+    final avatarIndex =
+        (data['avatarIndex'] as int?) ?? fallbackAvatarIndex(name);
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.md),
       decoration: BoxDecoration(
-        color: isCurrentUser ? AppColors.accentTeal.withValues(alpha: 0.15) : AppColors.surface,
+        color: isCurrentUser
+            ? AppColors.accentTeal.withValues(alpha: 0.15)
+            : AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.medium),
-        border: Border.all(color: isCurrentUser ? AppColors.accentTeal : AppColors.border, width: isCurrentUser ? 2 : 1),
+        border: Border.all(
+            color: isCurrentUser ? AppColors.accentTeal : AppColors.border,
+            width: isCurrentUser ? 2 : 1),
       ),
       child: Row(
         children: [
-          SizedBox(width: 32, child: Text('#$rank', style: TextStyle(fontFamily: 'Nunito', fontSize: 15, fontWeight: FontWeight.w800, color: _rankColor()))),
+          SizedBox(
+              width: 32,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text('#$rank',
+                    style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: _rankColor())),
+              )),
           const SizedBox(width: AppSpacing.sm),
           Container(
             width: 40,
@@ -658,7 +828,9 @@ class _RankRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.accentTeal.withValues(alpha: 0.12),
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.accentTeal.withValues(alpha: 0.4), width: 1.5),
+              border: Border.all(
+                  color: AppColors.accentTeal.withValues(alpha: 0.4),
+                  width: 1.5),
             ),
             padding: const EdgeInsets.all(2),
             child: ClipOval(
@@ -675,22 +847,53 @@ class _RankRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(isCurrentUser ? '$name (you)' : name, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: 'Nunito', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                Text('Grade $grade', style: AppText.caption),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(isCurrentUser ? '$name (you)' : name,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontFamily: 'Nunito',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary)),
+                ),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text('Grade $grade', style: AppText.caption),
+                ),
               ],
             ),
           ),
           if (badgeCount > 0) ...[
             Row(
               children: [
-                const Icon(Icons.emoji_events_rounded, color: AppColors.accentYellow, size: 16),
+                const Icon(Icons.emoji_events_rounded,
+                    color: AppColors.accentYellow, size: 16),
                 const SizedBox(width: 2),
-                Text('$badgeCount', style: const TextStyle(fontFamily: 'Nunito', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textYellow)),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('$badgeCount',
+                      style: const TextStyle(
+                          fontFamily: 'Nunito',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textYellow)),
+                ),
               ],
             ),
             const SizedBox(width: AppSpacing.sm),
           ],
-          Text('$points pts', style: const TextStyle(fontFamily: 'Nunito', fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textYellow)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text('$points pts',
+                style: const TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textYellow)),
+          ),
         ],
       ),
     );
@@ -700,7 +903,13 @@ class _RankRow extends StatelessWidget {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     return Container(
       color: AppColors.accentTeal,
-      child: Center(child: Text(initial, style: const TextStyle(fontFamily: 'Nunito', fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white))),
+      child: Center(
+          child: Text(initial,
+              style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white))),
     );
   }
 }
@@ -710,7 +919,8 @@ class _TabButton extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  const _TabButton({required this.label, required this.selected, required this.onTap});
+  const _TabButton(
+      {required this.label, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -723,10 +933,20 @@ class _TabButton extends StatelessWidget {
             color: selected ? AppColors.surface : Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadius.small),
           ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w700, fontSize: 13, color: selected ? AppColors.accentTeal : AppColors.textMuted),
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color:
+                        selected ? AppColors.accentTeal : AppColors.textMuted),
+              ),
+            ),
           ),
         ),
       ),

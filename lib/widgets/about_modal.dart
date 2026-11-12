@@ -96,21 +96,23 @@ class AboutModal {
                   _sectionLabel('Developed By'),
                   const SizedBox(height: AppSpacing.sm),
                   const _PersonRow(
+                    name: 'Chricielle Jhoebeth M. Gapay',
+                    role: 'Project Manager',
+                  ),
+                  const _PersonRow(
+                    name: 'Margarette B. Cipriano',
+                    role: 'Lead Documenter',
+                  ),
+                  const _PersonRow(
                     name: 'Nikcol F. Estabaya',
                     role: 'Lead Full-Stack Developer',
                   ),
                   const _PersonRow(
                     name: 'Kevin V. Agapay',
-                    role: 'Researcher',
+                    role: 'QA Tester',
                   ),
-                  const _PersonRow(
-                    name: 'Margarette B. Cipriano',
-                    role: 'Researcher',
-                  ),
-                  const _PersonRow(
-                    name: 'Chricielle Jhoebeth M. Gapay',
-                    role: 'Researcher',
-                  ),
+                  
+                  
 
                   const SizedBox(height: AppSpacing.lg),
                   _sectionLabel('Project Guidance'),

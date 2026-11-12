@@ -34,7 +34,6 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
   Timer? _lockTimer;
   Duration _lockRemaining = Duration.zero;
 
-  // Safer getter for Hot Reload safety
   Student? get _student {
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is Student) return args;
@@ -176,7 +175,6 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
       await DatabaseService.instance.clearPinAttempts(id);
     }
 
-    // Record activity, extends the 30-day session TTL.
     await CredentialStorage.instance.touchSession();
 
     setState(() => _dotState = PinDotState.success);
@@ -218,102 +216,13 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
   }
 
   Future<bool> _promptForPassword(Student student) async {
-    final passwordController = TextEditingController();
-
-    final result = await showDialog<bool>(
+    final password = await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-        ),
-        backgroundColor: AppColors.surface,
-        title: const Text(
-          'One-Time Setup',
-          style: TextStyle(
-            fontFamily: 'Nunito',
-            fontWeight: FontWeight.w800,
-            fontSize: 18,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hi ${student.displayName}! Please enter your password once. '
-              'You won\'t need to do this again, just PIN from now on.',
-              style: const TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 13,
-                color: AppColors.textMuted,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'Password',
-                filled: true,
-                fillColor: AppColors.studentBg,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.medium),
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.medium),
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.medium),
-                  borderSide:
-                      const BorderSide(color: AppColors.accentTeal, width: 2),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              SfxService.tap();
-              Navigator.of(ctx).pop(false);
-            },
-            child: const Text(
-              'Cancel',
-              style: TextStyle(fontFamily: 'Nunito', color: AppColors.textMuted),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              SfxService.tap();
-              if (passwordController.text.isEmpty) return;
-              Navigator.of(ctx).pop(true);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentTeal,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text(
-              'Continue',
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
+      builder: (ctx) => _PasswordPromptDialog(student: student),
     );
 
-    if (result != true || !mounted) return false;
+    if (password == null || password.isEmpty || !mounted) return false;
 
     final currentStudent = context.read<StudentProvider>().currentStudent;
     final authProvider = context.read<AuthProvider>();
@@ -322,10 +231,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
     final syntheticEmail = '${currentStudent!.username}@readease.app';
 
     try {
-      final ok = await authProvider.signIn(
-        syntheticEmail,
-        passwordController.text,
-      );
+      final ok = await authProvider.signIn(syntheticEmail, password);
       if (ok) {
         debugPrint('Password verified + credentials saved');
         return true;
@@ -367,9 +273,212 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
       );
     }
 
+    final isTablet = Responsive.isTablet(context);
+    final horizontalPadding = Responsive.horizontalPadding(context);
+    final avatarSize = Responsive.imageSize(context, base: 72);
+    final buttonHeight = Responsive.buttonHeight(context);
+
+    Widget mainContent = Padding(
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: avatarSize,
+            height: avatarSize,
+            decoration: BoxDecoration(
+              color: AppColors.accentTeal.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.accentTeal.withValues(alpha: 0.4),
+                width: 2,
+              ),
+            ),
+            padding: const EdgeInsets.all(3),
+            child: ClipOval(
+              child: Image.asset(
+                avatarAssetPath(student.avatarIndex),
+                fit: BoxFit.cover,
+                cacheWidth: (avatarSize * 2).toInt(),
+                errorBuilder: (_, _, _) => const Icon(
+                  Icons.person,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(student.displayName, style: AppText.h2),
+          ),
+
+          if (_isLocked) ...[
+            const SizedBox(height: AppSpacing.xl),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.large),
+                border: Border.all(color: AppColors.accentCoral, width: 2),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.lock_rounded,
+                      size: 44, color: AppColors.accentCoral),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Text(
+                    'PROFILE LOCKED',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      color: AppColors.textCoral,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Too many incorrect attempts.\n'
+                      'Try again in ${_formatRemaining(_lockRemaining)}.',
+                      textAlign: TextAlign.center,
+                      style: AppText.caption,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            SizedBox(
+              height: buttonHeight,
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  SfxService.tap();
+                  Navigator.of(context)
+                      .pushReplacementNamed('/student-signin');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentTeal,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.large),
+                  ),
+                ),
+                child: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Log In with Password',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            SizedBox(
+              height: buttonHeight,
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  SfxService.tap();
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      '/student-profile-list',
+                      (route) => false,
+                    );
+                  }
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textMuted,
+                  side: const BorderSide(color: AppColors.border),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.large),
+                  ),
+                ),
+                child: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Back to Profiles',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: AppSpacing.xs),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: AppText.caption.copyWith(
+                color: _attemptsRemaining <= 1
+                    ? AppColors.textCoral
+                    : AppColors.textMuted,
+              ),
+              child: Text('$_attemptsRemaining attempts remaining'),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
+            PinDots(
+              filledCount: _enteredPin.length,
+              state: _dotState,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+
+            SizedBox(
+              height: 22,
+              child: _dotState == PinDotState.error
+                  ? Text(
+                      'Oops! Try again',
+                      style: AppText.caption.copyWith(
+                        color: AppColors.textCoral,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    )
+                  : _dotState == PinDotState.success
+                      ? Text(
+                          'Welcome back!',
+                          style: AppText.caption.copyWith(
+                            color: kPinSuccessColor,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
+            NumberPad(
+              enabled: !_isVerifying,
+              onDigit: (d) => _onDigitPressed(d, student),
+              onBackspace: _onBackspace,
+            ),
+          ],
+        ],
+      ),
+    );
+
+    if (isTablet) {
+      mainContent = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: mainContent,
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.studentBg,
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
+        maintainBottomViewPadding: true,
         child: Stack(
           children: [
             Positioned(
@@ -395,188 +504,161 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
                 tooltip: 'Back to Profiles',
               ),
             ),
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 600),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 72,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          color: AppColors.accentTeal.withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.accentTeal.withValues(alpha: 0.4),
-                            width: 2,
-                          ),
-                        ),
-                        padding: const EdgeInsets.all(3),
-                        child: ClipOval(
-                          child: Image.asset(
-                            avatarAssetPath(student.avatarIndex),
-                            fit: BoxFit.cover,
-                            cacheWidth: 144,
-                            errorBuilder: (_, _, _) => const Icon(
-                              Icons.person,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(student.displayName, style: AppText.h2),
-
-                      if (_isLocked) ...[
-                        const SizedBox(height: AppSpacing.xl),
-                        Container(
-                          padding: const EdgeInsets.all(AppSpacing.lg),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(AppRadius.large),
-                            border: Border.all(color: AppColors.accentCoral, width: 2),
-                          ),
-                          child: Column(
-                            children: [
-                              const Icon(Icons.lock_rounded,
-                                  size: 44, color: AppColors.accentCoral),
-                              const SizedBox(height: AppSpacing.sm),
-                              const Text(
-                                'PROFILE LOCKED',
-                                style: TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 16,
-                                  color: AppColors.textCoral,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.xs),
-                              Text(
-                                'Too many incorrect attempts.\n'
-                                'Try again in ${_formatRemaining(_lockRemaining)}.',
-                                textAlign: TextAlign.center,
-                                style: AppText.caption,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        SizedBox(
-                          height: 52,
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              SfxService.tap();
-                              Navigator.of(context)
-                                  .pushReplacementNamed('/student-signin');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.accentTeal,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppRadius.large),
-                              ),
-                            ),
-                            child: const Text(
-                              'Log In with Password',
-                              style: TextStyle(
-                                fontFamily: 'Nunito',
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        SizedBox(
-                          height: 50,
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: () {
-                              SfxService.tap();
-                              if (Navigator.of(context).canPop()) {
-                                Navigator.of(context).pop();
-                              } else {
-                                Navigator.of(context).pushNamedAndRemoveUntil(
-                                  '/student-profile-list',
-                                  (route) => false,
-                                );
-                              }
-                            },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.textMuted,
-                              side: const BorderSide(color: AppColors.border),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppRadius.large),
-                              ),
-                            ),
-                            child: const Text(
-                              'Back to Profiles',
-                              style: TextStyle(
-                                fontFamily: 'Nunito',
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ] else ...[
-                        const SizedBox(height: AppSpacing.xs),
-                        AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 200),
-                          style: AppText.caption.copyWith(
-                            color: _attemptsRemaining <= 1
-                                ? AppColors.textCoral
-                                : AppColors.textMuted,
-                          ),
-                          child: Text('$_attemptsRemaining attempts remaining'),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-
-                        PinDots(
-                          filledCount: _enteredPin.length,
-                          state: _dotState,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-
-                        SizedBox(
-                          height: 22,
-                          child: _dotState == PinDotState.error
-                              ? Text(
-                                  'Oops! Try again',
-                                  style: AppText.caption.copyWith(
-                                    color: AppColors.textCoral,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                )
-                              : _dotState == PinDotState.success
-                                  ? Text(
-                                      'Welcome back!',
-                                      style: AppText.caption.copyWith(
-                                        color: kPinSuccessColor,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    )
-                                  : const SizedBox.shrink(),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-
-                        NumberPad(
-                          enabled: !_isVerifying,
-                          onDigit: (d) => _onDigitPressed(d, student),
-                          onBackspace: _onBackspace,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            mainContent,
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PasswordPromptDialog extends StatefulWidget {
+  final Student student;
+
+  const _PasswordPromptDialog({required this.student});
+
+  @override
+  State<_PasswordPromptDialog> createState() => _PasswordPromptDialogState();
+}
+
+class _PasswordPromptDialogState extends State<_PasswordPromptDialog> {
+  final _controller = TextEditingController();
+  bool _obscure = true;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    SfxService.tap();
+    final text = _controller.text;
+    if (text.isEmpty) return;
+    Navigator.of(context).pop(text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      scrollable: true,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+      ),
+      backgroundColor: AppColors.surface,
+      title: const Text(
+        'One-Time Setup',
+        style: TextStyle(
+          fontFamily: 'Nunito',
+          fontWeight: FontWeight.w800,
+          fontSize: 18,
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Hi ${widget.student.displayName}! Please enter your password '
+            'once to connect this device to your cloud account.',
+            style: const TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 13,
+              color: AppColors.textMuted,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _controller,
+            obscureText: _obscure,
+            autofocus: true,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+            decoration: InputDecoration(
+              hintText: 'Password',
+              filled: true,
+              fillColor: AppColors.studentBg,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              suffixIcon: IconButton(
+                onPressed: () {
+                  SfxService.tap();
+                  setState(() => _obscure = !_obscure);
+                },
+                icon: Icon(
+                  _obscure
+                      ? Icons.visibility_rounded
+                      : Icons.visibility_off_rounded,
+                  size: 20,
+                ),
+                color: AppColors.textMuted,
+                tooltip: _obscure ? 'Show password' : 'Hide password',
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+                borderSide:
+                    const BorderSide(color: AppColors.accentTeal, width: 2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              'Note: Your password verifies that you own this '
+              'account. It\'s used only once to reconnect this device to '
+              'your cloud account, so your progress, points, and badges '
+              'stay in sync. After this, you can continue using your '
+              '4-digit PIN.',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 11,
+                color: AppColors.textMuted,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            SfxService.tap();
+            Navigator.of(context).pop();
+          },
+          child: const Text(
+            'Cancel',
+            style: TextStyle(fontFamily: 'Nunito', color: AppColors.textMuted),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: _submit,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.accentTeal,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: const Text(
+            'Continue',
+            style: TextStyle(
+              fontFamily: 'Nunito',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
