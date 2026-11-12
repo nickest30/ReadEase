@@ -63,13 +63,15 @@ The application imports all content JSON files on first launch. This takes 1 to 
 
 Lesson content is bundled as six JSON files in assets/data/:
 
-File	Grade	Words	Passages
-grade1.json	Grade 1	23	None
-grade2.json	Grade 2	36	None
-grade3.json	Grade 3	39	None
-grade4.json	Grade 4	39	3
-grade5.json	Grade 5	42	3
-grade6.json	Grade 6	42	3
+| File | Grade | Words | Passages |
+|---|---|---|---|
+| `grade1.json` | Grade 1 | 23 | None |
+| `grade2.json` | Grade 2 | 36 | None |
+| `grade3.json` | Grade 3 | 39 | None |
+| `grade4.json` | Grade 4 | 39 | 3 |
+| `grade5.json` | Grade 5 | 42 | 3 |
+| `grade6.json` | Grade 6 | 42 | 3 |
+
 On first launch, the ContentImporter service reads each JSON file and inserts the content into SQLite. The importer is idempotent. Re-importing the same content does not duplicate rows and does not lose user progress. When a JSON file's content_version field is updated, the importer detects the change and re-imports only that grade.
 
 ---
@@ -78,13 +80,13 @@ On first launch, the ContentImporter service reads each JSON file and inserts th
 
 ReadEase was evaluated using the ISO/IEC 25010 software product quality model on four characteristics:
 
-**Functional Suitability**: whether lessons, games, badges, and leaderboards work correctly for all user types
+- **Functional Suitability**: whether lessons, games, badges, and leaderboards work correctly for all user types
 
-**Performance Efficiency**: whether the application responds within acceptable time limits on entry-level Android devices
+- **Performance Efficiency**: whether the application responds within acceptable time limits on entry-level Android devices
 
-**Interaction Capability**: whether the application is easy to navigate and appropriate for young learners
+- **Interaction Capability**: whether the application is easy to navigate and appropriate for young learners
 
-**Reliability**: whether the application behaves consistently during offline use, session resumption, and local data storage
+- **Reliability**: whether the application behaves consistently during offline use, session resumption, and local data storage
 
 Evaluation respondents were learners (n = 100), parents or guardians (n = 10), teachers (n = 6), and IT experts (n = 5). The full evaluation results are documented in Chapter 4 of the capstone manuscript.
 
@@ -92,30 +94,31 @@ Evaluation respondents were learners (n = 100), parents or guardians (n = 10), t
 
 ## Documentation
 
-Document	Location
-Capstone manuscript	Submitted separately
-Database schema (v23)	assets/docs/schema.md
-User's Guide	Appendix E of the capstone manuscript
-Prompt Glossary	Appendix of the capstone manuscript
-Source code excerpts	Appendix B of the capstone manuscript
+| Document | Location |
+|---|---|
+| Capstone manuscript | Submitted separately |
+| Database schema (v23) | `assets/docs/schema.md` |
+| User's Guide | Appendix E of the capstone manuscript |
+| Prompt Glossary | Appendix of the capstone manuscript |
+| Source code excerpts | Appendix B of the capstone manuscript |
 
 ---
 
 ## Team
 
-Kevin V. Agapay
+- Kevin V. Agapay
 
-Margarette B. Cipriano
+- Margarette B. Cipriano
 
-Nikcol F. Estabaya
+- Nikcol F. Estabaya
 
-Chricielle Jhobeth M. Gapay
+- Chricielle Jhobeth M. Gapay
 
-Institution: STI College Global City, Bachelor of Science in Information Technology
+**Institution**: STI College Global City, Bachelor of Science in Information Technology
 
-Adviser: Ms. Leny Z. Laya
+**Adviser**: Ms. Leny Z. Laya
 
-Project Type: Capstone Project
+**Project Type**: Capstone Project
 
 ---
 
